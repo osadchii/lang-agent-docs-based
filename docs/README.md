@@ -51,7 +51,7 @@
 🟢 Готово | 🟡 В процессе | ⚪ Не начато
 
 - 🟢 product-vision.md
-- ⚪ use-cases.md
+- 🟢 use-cases.md
 - ⚪ architecture.md
 - ⚪ backend-api.md
 - ⚪ backend-telegram.md
