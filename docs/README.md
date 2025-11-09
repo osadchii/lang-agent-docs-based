@@ -50,9 +50,12 @@
 
 🟢 Готово | 🟡 В процессе | ⚪ Не начато
 
+### Общее
 - 🟢 product-vision.md
 - 🟢 use-cases.md
-- ⚪ architecture.md
+- 🟢 architecture.md
+
+### Backend
 - ⚪ backend-api.md
 - ⚪ backend-telegram.md
 - ⚪ backend-llm.md
@@ -62,9 +65,13 @@
 - ⚪ backend-bot-responses.md
 - ⚪ backend-auth.md
 - ⚪ backend-subscriptions.md
-- ⚪ frontend-structure.md
-- ⚪ frontend-screens.md
-- ⚪ frontend-navigation.md
+
+### Frontend
+- 🟢 frontend-structure.md
+- 🟢 frontend-screens.md
+- 🟢 frontend-navigation.md
+
+### Разработка и развертывание
 - ⚪ deployment.md
 - ⚪ ci-cd.md
 - ⚪ development-guidelines.md
