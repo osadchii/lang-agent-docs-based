@@ -13,17 +13,20 @@
 ### Backend
 
 #### Инфраструктура и API
+
 - **[backend-api.md](backend-api.md)** - Спецификация REST API
 - **[backend-telegram.md](backend-telegram.md)** - Интеграция с Telegram Bot API и Mini App
 - **[backend-database.md](backend-database.md)** - Схема базы данных
 
 #### Бизнес-логика
+
 - **[backend-llm.md](backend-llm.md)** - Работа с LLM (промпты, обработка)
 - **[backend-flashcards.md](backend-flashcards.md)** - Система карточек и алгоритмы повторения
 - **[backend-exercises.md](backend-exercises.md)** - Типы и логика упражнений
 - **[backend-bot-responses.md](backend-bot-responses.md)** - Формирование ответов бота
 
 #### Безопасность и монетизация
+
 - **[backend-auth.md](backend-auth.md)** - Аутентификация и безопасность
 - **[backend-subscriptions.md](backend-subscriptions.md)** - Монетизация и подписки
 
@@ -51,30 +54,34 @@
 🟢 Готово | 🟡 В процессе | ⚪ Не начато
 
 ### Общее
+
 - 🟢 product-vision.md
 - 🟢 use-cases.md
 - 🟢 architecture.md
 
 ### Backend
-- ⚪ backend-api.md
-- ⚪ backend-telegram.md
-- ⚪ backend-llm.md
-- ⚪ backend-database.md
-- ⚪ backend-flashcards.md
-- ⚪ backend-exercises.md
-- ⚪ backend-bot-responses.md
-- ⚪ backend-auth.md
-- ⚪ backend-subscriptions.md
+
+- 🟢 backend-api.md
+- 🟢 backend-telegram.md
+- 🟢 backend-llm.md
+- 🟢 backend-database.md
+- 🟢 backend-flashcards.md
+- 🟢 backend-exercises.md
+- 🟢 backend-bot-responses.md
+- 🟢 backend-auth.md
+- 🟢 backend-subscriptions.md
 
 ### Frontend
+
 - 🟢 frontend-structure.md
 - 🟢 frontend-screens.md
 - 🟢 frontend-navigation.md
 
 ### Разработка и развертывание
-- ⚪ deployment.md
-- ⚪ ci-cd.md
-- ⚪ development-guidelines.md
+
+- 🟢 deployment.md
+- 🟢 ci-cd.md
+- 🟢 development-guidelines.md
 
 ## Порядок заполнения (рекомендуемый)
 
@@ -82,7 +89,7 @@
 2. architecture.md - спроектировать общую структуру
 3. backend-database.md - спроектировать модели данных
 4. backend-api.md - определить контракты API
-5. backend-* (остальные) - детализировать бизнес-логику
-6. frontend-* - спроектировать UI/UX
+5. backend-\* (остальные) - детализировать бизнес-логику
+6. frontend-\* - спроектировать UI/UX
 7. development-guidelines.md - установить правила разработки
 8. deployment.md, ci-cd.md - настроить инфраструктуру
