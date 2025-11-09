@@ -45,12 +45,12 @@ Docs: docs/backend-database.md
 ## 2. Конфигурация, безопасность и аутентификация
 Docs: docs/backend-auth.md, docs/backend-api.md
 
-- [ ] Конфигурация: загрузка переменных окружения (`SECRET_KEY`, `DATABASE_URL`, `REDIS_URL`, `TELEGRAM_BOT_TOKEN`, `OPENAI_API_KEY`, `ENVIRONMENT`, JWT TTL и пр.).
-- [ ] JWT утилиты: создание/проверка токена (HS256, TTL 30 минут).
-- [ ] Валидация Telegram WebApp `initData` (HMAC-SHA256) строго по алгоритму из `docs/backend-auth.md`.
-- [ ] Endpoint `POST /api/auth/validate` (возвращает `user`, `token`, `expires_at`).
-- [ ] Auth dependency: извлечение `user` из заголовка `Authorization: Bearer <token>`.
-- [ ] CORS и заголовки безопасности (минимально необходимые под Mini App + Bot webhook).
+- [x] Конфигурация: загрузка переменных окружения (`SECRET_KEY`, `DATABASE_URL`, `REDIS_URL`, `TELEGRAM_BOT_TOKEN`, `OPENAI_API_KEY`, `ENVIRONMENT`, JWT TTL и пр.).
+- [x] JWT утилиты: создание/проверка токена (HS256, TTL 30 минут).
+- [x] Валидация Telegram WebApp `initData` (HMAC-SHA256) строго по алгоритму из `docs/backend-auth.md`.
+- [x] Endpoint `POST /api/auth/validate` (возвращает `user`, `token`, `expires_at`).
+- [x] Auth dependency: извлечение `user` из заголовка `Authorization: Bearer <token>`.
+- [x] CORS и заголовки безопасности (минимально необходимые под Mini App + Bot webhook).
 
 ---
 

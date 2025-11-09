@@ -5,7 +5,7 @@ This module creates and configures the FastAPI application according to
 docs/architecture.md (Backend structure).
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routers import router
@@ -38,6 +38,39 @@ app.add_middleware(
 
 # Include API routers
 app.include_router(router, prefix="/api", tags=["api"])
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """Add security headers required by docs/backend-auth.md."""
+
+    response = await call_next(request)
+
+    if settings.SECURITY_HEADERS_ENABLED:
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("X-XSS-Protection", "1; mode=block")
+        if request.url.scheme == "https" or settings.ENVIRONMENT != "development":
+            response.headers.setdefault(
+                "Strict-Transport-Security",
+                "max-age=31536000; includeSubDomains",
+            )
+        response.headers.setdefault(
+            "Content-Security-Policy",
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: https:; "
+            "connect-src 'self' https://api.telegram.org",
+        )
+        response.headers.setdefault(
+            "Referrer-Policy", "strict-origin-when-cross-origin"
+        )
+        response.headers.setdefault(
+            "Permissions-Policy", "geolocation=(), microphone=(), camera=()"
+        )
+
+    return response
 
 
 @app.on_event("startup")

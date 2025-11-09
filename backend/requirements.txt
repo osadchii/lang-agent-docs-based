@@ -23,7 +23,7 @@ python-telegram-bot[webhooks]==20.7
 openai==1.6.1
 
 # HTTP client
-httpx==0.26.0
+httpx==0.25.2
 
 # JWT authentication
 python-jose[cryptography]==3.3.0
@@ -36,7 +36,7 @@ stripe==8.0.0
 pytest==7.4.4
 pytest-asyncio==0.23.3
 pytest-cov==4.1.0
-httpx==0.26.0
+httpx==0.25.2
 
 # Code quality
 black==24.1.1
