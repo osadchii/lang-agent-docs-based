@@ -155,7 +155,7 @@ docker run -p 8000:8000 --env-file .env langagent-backend:latest
 
 ## Миграции базы данных
 
-После реализации Alembic:
+Alembic настроен в `backend/migrations/` (см. `backend/alembic.ini`). Все команды выполняются из директории `backend/`:
 
 ```bash
 cd backend
