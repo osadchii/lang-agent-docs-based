@@ -187,7 +187,7 @@ def validate_init_data(request: InitDataRequest):
     return {
         'user': serialize_user(user),
         'token': token,
-        'expires_at': datetime.utcnow() + timedelta(hours=24)
+        'expires_at': datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     }
 ```
 
@@ -234,9 +234,69 @@ HMACSHA256(
 #### Параметры токена
 
 - **Algorithm:** HS256 (HMAC-SHA256)
-- **TTL (Time To Live):** 24 часа
+- **TTL (Time To Live):** 30 минут
 - **Secret Key:** Хранится в переменных окружения, НЕ в коде
-- **Refresh:** Нет refresh token (при истечении - запросить новый через initData)
+- **Refresh:** Нет refresh token в MVP (при истечении - запросить новый через initData)
+
+**Обоснование TTL:**
+- 30 минут достаточно для активной сессии пользователя
+- Короткий срок повышает безопасность (минимизирует риск при компрометации токена)
+- Telegram Mini App позволяет легко перевалидировать через `initData` при необходимости
+- Для production можно добавить refresh token со сроком 7 дней для меньшего количества перевалидаций
+
+#### Генерация токена
+
+```python
+from datetime import datetime, timedelta
+import jwt
+from config import settings
+
+def create_jwt_token(user: User) -> str:
+    """
+    Создает JWT access token для пользователя.
+
+    Args:
+        user: Объект пользователя из БД
+
+    Returns:
+        JWT token (строка)
+    """
+    # Время создания и истечения
+    now = datetime.utcnow()
+    expires_at = now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+
+    # Payload токена
+    payload = {
+        'user_id': str(user.id),
+        'telegram_id': user.telegram_id,
+        'is_premium': user.is_premium,
+        'iat': int(now.timestamp()),      # issued at
+        'exp': int(expires_at.timestamp())  # expiration time
+    }
+
+    # Создаем токен
+    token = jwt.encode(
+        payload,
+        settings.JWT_SECRET_KEY,
+        algorithm='HS256'
+    )
+
+    return token
+```
+
+**Конфигурация (settings.py):**
+```python
+from pydantic_settings import BaseSettings
+
+class Settings(BaseSettings):
+    JWT_SECRET_KEY: str  # Генерируется один раз и хранится в .env
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30  # По умолчанию 30 минут
+
+    class Config:
+        env_file = '.env'
+
+settings = Settings()
+```
 
 #### Использование токена
 
@@ -312,7 +372,7 @@ def create_card(
 
 #### Обновление токена
 
-Когда токен истекает (24 часа):
+Когда токен истекает (30 минут):
 
 1. Frontend перехватывает 401 ответ
 2. Запрашивает новый токен через `/api/auth/validate` с актуальным initData

@@ -5,8 +5,8 @@
 Система построена как **монолитное backend приложение** с разделением на Backend (Python), Frontend (React Mini App) и внешние сервисы.
 
 **Backend** - это **одно приложение (FastAPI)** с двумя точками входа:
-1. **Bot Handler** (`POST /webhook/telegram`) - обрабатывает запросы от Telegram Bot API
-2. **REST API** (`/api/v1/*`) - обрабатывает запросы от Mini App
+1. **Bot Handler** (`POST /telegram-webhook/{bot_token}`) - обрабатывает запросы от Telegram Bot API
+2. **REST API** (`/api/*`) - обрабатывает запросы от Mini App
 
 Оба используют одни и те же бизнес-сервисы, базу данных и инфраструктуру.
 
@@ -129,24 +129,24 @@ from api.routes import router as api_router
 app = FastAPI()
 
 # Bot webhook endpoint
-app.include_router(setup_bot_webhook(), prefix="/webhook")
+app.include_router(setup_bot_webhook(), prefix="/telegram-webhook")
 
 # Mini App REST API
-app.include_router(api_router, prefix="/api/v1")
+app.include_router(api_router, prefix="/api")
 ```
 
 **Endpoints:**
 ```
 Bot Handler:
-  POST /webhook/telegram  - Telegram webhook
+  POST /telegram-webhook/{bot_token}  - Telegram webhook
 
 Mini App REST API:
-  GET  /api/v1/users/me
-  GET  /api/v1/profiles
-  POST /api/v1/profiles
-  GET  /api/v1/cards
-  POST /api/v1/cards
-  POST /api/v1/sessions
+  GET  /api/users/me
+  GET  /api/profiles
+  POST /api/profiles
+  GET  /api/cards
+  POST /api/cards
+  POST /api/sessions
   ...
 ```
 
@@ -195,7 +195,7 @@ Mini App REST API:
 
 **Структура:**
 ```
-/api/v1/
+/api/
   /auth
     POST /validate       - Validate Telegram initData
   /users
@@ -760,7 +760,7 @@ notifications
 #### 4.2. OpenAI API
 
 **Models:**
-- **GPT-4.1-mini** (или gpt-4o-mini) - для всех текстовых задач
+- **GPT-4.1-mini** (gpt-4o-mini) - для всех текстовых задач
 - **Whisper** - Speech-to-Text
 - **GPT-4 Vision** (опционально) - для улучшения OCR
 
@@ -830,7 +830,7 @@ ratelimit:{user_id}:{action}:count  → counter (TTL: 24h)
 
 ```
 1. User → Telegram → Backend (Bot Handler)
-   POST /webhook/telegram
+   POST /telegram-webhook/{bot_token}
    {
      "message": {
        "from": {...},
@@ -867,7 +867,7 @@ ratelimit:{user_id}:{action}:count  → counter (TTL: 24h)
    - Frontend получает initData из Telegram WebApp API
 
 2. Frontend → Backend REST API
-   POST /api/v1/auth/validate
+   POST /api/auth/validate
    {
      "init_data": "query_id=...&user=...&hash=..."
    }
@@ -875,7 +875,7 @@ ratelimit:{user_id}:{action}:count  → counter (TTL: 24h)
    Response: { "user": {...}, "token": "..." }
 
 3. Frontend → Backend REST API
-   GET /api/v1/cards/next?deck_id=123
+   GET /api/cards/next?deck_id=123
    Headers: Authorization: Bearer {token}
 
 4. Backend (REST API) → Flashcards Service
@@ -898,7 +898,7 @@ ratelimit:{user_id}:{action}:count  → counter (TTL: 24h)
 7. User оценивает карточку (нажимает "Знаю")
 
 8. Frontend → Backend REST API
-   POST /api/v1/cards/rate
+   POST /api/cards/rate
    {
      "card_id": "card_id",
      "rating": "know"
@@ -924,7 +924,7 @@ ratelimit:{user_id}:{action}:count  → counter (TTL: 24h)
 
 ```
 1. User → Telegram → Backend (Bot Handler)
-   POST /webhook/telegram
+   POST /telegram-webhook/{bot_token}
    {
      "message": {
        "from": {...},
@@ -964,7 +964,7 @@ ratelimit:{user_id}:{action}:count  → counter (TTL: 24h)
 
 ```
 1. Owner → Mini App Frontend → Backend REST API
-   POST /api/v1/groups/{group_id}/materials
+   POST /api/groups/{group_id}/materials
    {
      "material_type": "deck",
      "material_id": "deck_123"
@@ -991,7 +991,7 @@ ratelimit:{user_id}:{action}:count  → counter (TTL: 24h)
      Send message: "[Owner] добавил колоду '[deck_name]' в группу"
 
 7. Owner → Mini App → Backend REST API
-   POST /api/v1/groups/{group_id}/members
+   POST /api/groups/{group_id}/members
    {
      "username": "@john_doe"
    }
@@ -1266,7 +1266,7 @@ Start Session
 
 Алгоритм:
 1. Frontend получает `initData` от Telegram WebApp API (`window.Telegram.WebApp.initData`)
-2. Frontend отправляет `initData` на backend endpoint `/api/v1/auth/validate`
+2. Frontend отправляет `initData` на backend endpoint `/api/auth/validate`
 3. Backend проверяет HMAC-SHA256 подпись:
    - `secret_key = HMAC-SHA256(bot_token, "WebAppData")`
    - `expected_hash = HMAC-SHA256(data_check_string, secret_key)`
@@ -1285,12 +1285,13 @@ Start Session
 - Telegram Bot API автоматически валидирует запросы
 - `telegram_update.message.from_user.id` уже проверен Telegram
 
-**JWT Tokens (опционально):**
-- После валидации `initData` выдается JWT token
+**JWT Tokens:**
+- После валидации `initData` выдается JWT access token
 - Payload: `{"user_id": 123456789, "exp": ..., "iat": ...}`
 - Подписан secret key сервера
-- TTL: 24 часа (или refresh token rotation)
-- Store refresh tokens в DB для возможности revoke
+- **Access Token TTL:** 30 минут (короткий срок для безопасности)
+- **Refresh Token (опционально):** 7 дней, хранится в DB для возможности revoke
+- При истечении access token клиент перевалидирует через `initData` или использует refresh token
 
 **Authorization:**
 - Role-based: user, premium_user, admin

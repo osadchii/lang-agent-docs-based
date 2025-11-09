@@ -131,6 +131,16 @@ jobs:
         ports:
           - 5432:5432
 
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -150,14 +160,16 @@ jobs:
       - name: Run linting
         run: |
           cd backend
-          pip install flake8 black mypy
-          flake8 app --max-line-length=120 --exclude=migrations
-          black --check app
+          pip install black isort ruff mypy
+          black --check --line-length 100 app
+          isort --check --profile black app
+          ruff check app
           mypy app --ignore-missing-imports
 
       - name: Run tests
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/langagent_test
+          REDIS_URL: redis://localhost:6379/0
           SECRET_KEY: test-secret-key-for-ci
           TELEGRAM_BOT_TOKEN: test-token
           OPENAI_API_KEY: test-openai-key
@@ -267,7 +279,7 @@ jobs:
         uses: appleboy/telegram-action@master
         with:
           to: ${{ secrets.TELEGRAM_DEPLOY_CHAT_ID }}
-          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          token: ${{ secrets.CI_TELEGRAM_BOT_TOKEN }}
           message: |
             ✅ Backend deployed successfully!
 
@@ -280,7 +292,7 @@ jobs:
         uses: appleboy/telegram-action@master
         with:
           to: ${{ secrets.TELEGRAM_DEPLOY_CHAT_ID }}
-          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          token: ${{ secrets.CI_TELEGRAM_BOT_TOKEN }}
           message: |
             ❌ Backend deployment failed!
 
@@ -415,8 +427,8 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "frontend/dist/*"
-          target: "/var/app/"
+          source: "frontend/dist"
+          target: "/var/app/frontend/"
           strip_components: 1
 
       - name: Reload Nginx
@@ -440,7 +452,7 @@ jobs:
         uses: appleboy/telegram-action@master
         with:
           to: ${{ secrets.TELEGRAM_DEPLOY_CHAT_ID }}
-          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          token: ${{ secrets.CI_TELEGRAM_BOT_TOKEN }}
           message: |
             ✅ Frontend deployed successfully!
 
@@ -453,7 +465,7 @@ jobs:
         uses: appleboy/telegram-action@master
         with:
           to: ${{ secrets.TELEGRAM_DEPLOY_CHAT_ID }}
-          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          token: ${{ secrets.CI_TELEGRAM_BOT_TOKEN }}
           message: |
             ❌ Frontend deployment failed!
 
@@ -505,8 +517,8 @@ jobs:
    - Позволяет быстро откатиться при проблемах
 
 3. **Upload на сервер**:
-   - SCP копирование `dist/` на сервер
-   - Размещение в `/var/app/frontend/dist/`
+   - SCP копирование `frontend/dist/` на сервер
+   - Размещение в `/var/app/frontend/dist/` (с `strip_components: 1` убирается префикс `frontend/`)
 
 4. **Reload Nginx**:
    - Проверка конфигурации: `nginx -t`
@@ -628,8 +640,11 @@ jobs:
 
 ### Notifications (опционально):
 - `TELEGRAM_DEPLOY_CHAT_ID` - ID чата для уведомлений о деплое
+- `CI_TELEGRAM_BOT_TOKEN` - токен отдельного бота для CI/CD уведомлений (НЕ основной бот приложения)
 
 **Важно**: Секреты приложения (DATABASE_URL, TELEGRAM_BOT_TOKEN, OPENAI_API_KEY и т.д.) НЕ добавляются в GitHub Secrets. Они хранятся только в файле `.env` на сервере.
+
+**Примечание**: `CI_TELEGRAM_BOT_TOKEN` - это токен отдельного бота для уведомлений CI/CD, не путать с `TELEGRAM_BOT_TOKEN` (основной бот приложения из .env файла).
 
 ## Notifications
 

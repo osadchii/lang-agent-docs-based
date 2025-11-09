@@ -7,10 +7,14 @@
 - Backend: `uvicorn` в режиме hot-reload
 - Frontend: `npm run dev` с Vite dev server
 - База данных: PostgreSQL в Docker контейнере
+- Redis: Redis в Docker контейнере
 - Telegram bot: webhook в режиме polling для локальной разработки
 
 Запуск:
 ```bash
+# Инфраструктура (PostgreSQL + Redis)
+docker-compose -f docker-compose.dev.yml up -d
+
 # Backend
 cd backend
 python -m venv venv
@@ -22,6 +26,34 @@ uvicorn app.main:app --reload
 cd frontend
 npm install
 npm run dev
+```
+
+**docker-compose.dev.yml:**
+```yaml
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: langagent_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+
+volumes:
+  postgres_dev_data:
+  redis_dev_data:
 ```
 
 ### Staging
@@ -62,6 +94,25 @@ PostgreSQL 15+:
   - `work_mem`: 16MB
 - Регулярные бэкапы (см. секцию Backup)
 - Репликация для высокой доступности (опционально)
+
+### Redis
+Redis 7+ для кэширования и управления состоянием:
+- **Использование:**
+  - Кэширование (hot data: активный профиль, user stats)
+  - Session storage (состояния диалогов бота FSM)
+  - Rate limiting (счетчики для лимитов API)
+  - LLM cache (переводы, лемматизация)
+- **Размещение:** Docker контейнер на том же сервере или managed service (AWS ElastiCache, DigitalOcean Managed Redis)
+- **Настройки:**
+  - `maxmemory`: 512MB - 1GB
+  - `maxmemory-policy`: allkeys-lru (вытеснение старых ключей)
+  - Persistence: AOF (append-only file) для сохранения данных
+- **Monitoring:**
+  - Использование памяти (`INFO memory`)
+  - Hit rate кэша
+  - Количество подключений
+
+**Примечание:** Redis является критичным компонентом для продакшена. Без Redis сервис не будет работать корректно.
 
 ### Storage
 Хранение файлов (изображения, аудио):
@@ -111,6 +162,7 @@ services:
       - .env
     depends_on:
       - db
+      - redis
     restart: unless-stopped
     networks:
       - app-network
@@ -125,8 +177,23 @@ services:
     networks:
       - app-network
 
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
 volumes:
   postgres_data:
+  redis_data:
 
 networks:
   app-network:
@@ -152,22 +219,25 @@ POSTGRES_PASSWORD=secure_password_here
 # Database URL (для backend)
 DATABASE_URL=postgresql://postgres:secure_password_here@db:5432/langagent
 
+# Redis
+REDIS_URL=redis://redis:6379/0
+
 # Telegram
 TELEGRAM_BOT_TOKEN=your_bot_token_here
 TELEGRAM_WEBHOOK_URL=https://yourdomain.com/api/webhook
 
 # OpenAI/LLM
 OPENAI_API_KEY=your_openai_api_key
-LLM_MODEL=gpt-4
+LLM_MODEL=gpt-4.1-mini
 LLM_TEMPERATURE=0.7
 
 # Anthropic (опционально)
 ANTHROPIC_API_KEY=your_anthropic_key
 
 # JWT/Security
-SECRET_KEY=your_secret_key_here
+SECRET_KEY=your_secret_key_here  # Генерируется один раз: openssl rand -hex 32
 ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
+ACCESS_TOKEN_EXPIRE_MINUTES=30  # TTL для JWT access token (30 минут для безопасности)
 
 # Environment
 ENVIRONMENT=production  # development | staging | production
@@ -329,6 +399,7 @@ server {
 - `SERVER_HOST` - IP адрес или домен сервера
 - `SERVER_USER` - SSH пользователь (например, `ubuntu`)
 - `TELEGRAM_DEPLOY_CHAT_ID` - ID чата для уведомлений о деплое (опционально)
+- `CI_TELEGRAM_BOT_TOKEN` - токен отдельного бота для CI/CD уведомлений (опционально, НЕ основной бот)
 
 **Важно**: Секреты приложения (API ключи, токены БД и т.д.) НЕ хранятся в GitHub Secrets. Они находятся только в `.env` файле на сервере.
 

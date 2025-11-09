@@ -108,7 +108,7 @@ if not user_id:
   ```
 
 #### Линтинг
-- **Ruff** (замена Flake8, pylint, mypy):
+- **Ruff** (замена Flake8 и pylint):
   ```bash
   ruff check backend/
   ```
@@ -119,6 +119,12 @@ if not user_id:
   target-version = "py311"
   select = ["E", "F", "I", "N", "W", "B", "ANN", "S", "C90"]
   ignore = ["ANN101", "ANN102"]  # Не требовать type hints для self, cls
+  ```
+
+#### Type Checking
+- **mypy** для проверки типов:
+  ```bash
+  mypy backend/
   ```
 
 #### Type Hints

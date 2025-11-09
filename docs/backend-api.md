@@ -43,9 +43,10 @@ Mini App использует Telegram WebApp `initData` для аутентиф
 }
 ```
 
-- **TTL:** 24 часа
+- **TTL:** 30 минут
 - **Algorithm:** HS256
 - **Header:** `Authorization: Bearer <token>`
+- **Note:** При истечении токена клиент запрашивает новый через `/api/auth/validate` с актуальным `initData`
 
 ### CORS
 ```
@@ -125,6 +126,71 @@ GET /api/cards?deck_id=123&status=new&sort=-created_at
 ---
 
 ## Endpoints
+
+### Health Check
+
+#### GET /health
+
+Health check endpoint для мониторинга состояния сервиса и его зависимостей.
+
+**Использование:**
+- CI/CD проверка после деплоя
+- Мониторинг и алертинг
+- Load balancer health checks
+- Docker healthcheck
+
+**Response 200 OK:**
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-01-09T12:00:00Z",
+  "checks": {
+    "database": "ok",
+    "redis": "ok",
+    "openai": "ok",
+    "stripe": "ok"
+  },
+  "version": "1.0.0"
+}
+```
+
+**Response 503 Service Unavailable:**
+```json
+{
+  "status": "unhealthy",
+  "timestamp": "2025-01-09T12:00:00Z",
+  "checks": {
+    "database": "ok",
+    "redis": "ok",
+    "openai": "error",
+    "stripe": "ok"
+  },
+  "errors": [
+    {
+      "service": "openai",
+      "message": "Connection timeout after 5s"
+    }
+  ],
+  "version": "1.0.0"
+}
+```
+
+**Проверки:**
+- **database** - PostgreSQL connectivity (SELECT 1)
+- **redis** - Redis connectivity (PING)
+- **openai** - OpenAI API availability (не обязательно блокирует 200, но отмечается в checks)
+- **stripe** - Stripe API availability (не обязательно блокирует 200, но отмечается в checks)
+
+**Статусы:**
+- `200 OK` - сервис полностью работоспособен, все критичные зависимости доступны (database, redis)
+- `503 Service Unavailable` - критичная зависимость недоступна
+
+**Примечание:**
+- Endpoint не требует аутентификации
+- Timeout: 5 секунд
+- Недоступность внешних API (OpenAI, Stripe) не переводит сервис в статус 503, но отмечается в `checks`
+
+---
 
 ### 1. Authentication
 
