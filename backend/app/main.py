@@ -5,12 +5,25 @@ This module creates and configures the FastAPI application according to
 docs/architecture.md (Backend structure).
 """
 
+from typing import Any, Dict
+from uuid import UUID
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from jose import JWTError
+from redis.exceptions import RedisError
 
 from app.api.routers import router
 from app.core.config import settings
-from app.core.logging import setup_logging, get_logger
+from app.core.logging import get_logger, setup_logging
+from app.core.redis import redis_manager
+from app.core.security import decode_access_token
+from app.services.rate_limit_service import (
+    RateLimitExceededError,
+    RateLimitResult,
+    get_rate_limit_service,
+)
 
 # Setup logging
 setup_logging()
@@ -73,6 +86,34 @@ async def add_security_headers(request: Request, call_next):
     return response
 
 
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    """Global rate limiting middleware."""
+
+    service = get_rate_limit_service()
+    client_ip = request.client.host if request.client else "unknown"
+    ip_result: RateLimitResult | None = None
+
+    try:
+        ip_result = await service.enforce_global_ip_limit(client_ip)
+
+        user_id = _extract_user_id(request)
+        if user_id is not None:
+            await service.enforce_global_user_limit(user_id)
+
+    except RateLimitExceededError as exc:
+        return _rate_limit_error_response(exc)
+
+    response = await call_next(request)
+
+    if ip_result is not None:
+        headers = ip_result.headers()
+        for header, value in headers.items():
+            response.headers.setdefault(header, value)
+
+    return response
+
+
 @app.on_event("startup")
 async def startup_event() -> None:
     """
@@ -88,7 +129,10 @@ async def startup_event() -> None:
         f"in {settings.ENVIRONMENT} mode"
     )
     # TODO: Initialize database connection
-    # TODO: Initialize Redis client
+    try:
+        await redis_manager.connect()
+    except RedisError as exc:
+        logger.warning("Redis connection failed during startup: %s", exc)
     # TODO: Setup Telegram bot webhook (production) or long polling (development)
 
 
@@ -101,7 +145,7 @@ async def shutdown_event() -> None:
     """
     logger.info("Shutting down application")
     # TODO: Close database connections
-    # TODO: Close Redis client
+    await redis_manager.close()
     # TODO: Stop background tasks
 
 
@@ -113,4 +157,52 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=8000,
         reload=settings.ENVIRONMENT == "development"
+    )
+
+
+def _extract_user_id(request: Request) -> UUID | None:
+    """Return user UUID from Authorization header if present."""
+
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return None
+
+    token = auth_header.replace("Bearer ", "", 1).strip()
+    if not token:
+        return None
+
+    try:
+        payload = decode_access_token(token)
+    except JWTError:
+        return None
+
+    user_id_str = payload.get("user_id")
+    if not user_id_str:
+        return None
+
+    try:
+        return UUID(user_id_str)
+    except ValueError:
+        return None
+
+
+def _rate_limit_error_response(error: RateLimitExceededError) -> JSONResponse:
+    """Format rate limit errors according to docs/backend-api.md."""
+
+    body: Dict[str, Any] = {
+        "error": {
+            "code": error.error_code,
+            "message": error.message,
+            "details": error.details or {},
+        }
+    }
+
+    if error.result.retry_after is not None:
+        body["error"]["retry_after"] = error.result.retry_after
+
+    headers = error.result.headers()
+    return JSONResponse(
+        status_code=429,
+        content=body,
+        headers=headers,
     )
