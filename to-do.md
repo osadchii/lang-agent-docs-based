@@ -67,14 +67,14 @@ Docs: docs/backend-api.md, docs/backend-subscriptions.md
 ## 4. Пользователи и профили
 Docs: docs/backend-api.md (Users, Language Profiles), docs/use-cases.md (UC-0)
 
-- [ ] `GET /api/users/me` (возвращает статусы лимитов и подписки).
-- [ ] `PATCH /api/users/me` (ограниченные поля: имя/фамилия и т.п.).
-- [ ] `GET /api/profiles` (список профилей пользователя).
-- [ ] `POST /api/profiles` (создание с проверкой лимитов free/premium и уникальности языка).
-- [ ] `GET /api/profiles/{id}`.
-- [ ] `PATCH /api/profiles/{id}` (нельзя менять `language`).
-- [ ] `DELETE /api/profiles/{id}` (soft delete, запрет удаления последнего профиля).
-- [ ] `POST /api/profiles/{id}/activate` (единственный активный профиль).
+- [x] `GET /api/users/me` (возвращает статусы лимитов и подписки).
+- [x] `PATCH /api/users/me` (ограниченные поля: имя/фамилия и т.п.).
+- [x] `GET /api/profiles` (список профилей пользователя).
+- [x] `POST /api/profiles` (создание с проверкой лимитов free/premium и уникальности языка).
+- [x] `GET /api/profiles/{id}`.
+- [x] `PATCH /api/profiles/{id}` (нельзя менять `language`).
+- [x] `DELETE /api/profiles/{id}` (soft delete, запрет удаления последнего профиля).
+- [x] `POST /api/profiles/{id}/activate` (единственный активный профиль).
 
 ---
 

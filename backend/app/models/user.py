@@ -19,7 +19,9 @@ class User(BaseModel):
     last_name: Optional[str] = None
     username: Optional[str] = None
     is_premium: bool = False
+    premium_expires_at: Optional[datetime] = None
     trial_ends_at: Optional[datetime] = None
     created_at: datetime
+    updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

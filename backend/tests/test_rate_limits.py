@@ -42,6 +42,7 @@ def override_service(rate_limit_service):
 def _make_user(is_premium: bool = False) -> User:
     """Helper to create user objects for tests."""
 
+    now = datetime.now(timezone.utc)
     return User(
         id=uuid4(),
         telegram_id=123456,
@@ -49,7 +50,8 @@ def _make_user(is_premium: bool = False) -> User:
         last_name="User",
         username="test_user",
         is_premium=is_premium,
-        created_at=datetime.now(timezone.utc),
+        created_at=now,
+        updated_at=now,
     )
 
 
