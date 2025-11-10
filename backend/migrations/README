@@ -1,3 +1,0 @@
-This directory stores Alembic migration scripts.
-
-See docs/backend-database.md for the required schema and migration order.
