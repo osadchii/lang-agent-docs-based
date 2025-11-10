@@ -12,15 +12,15 @@
 ## 0. Подготовка репозитория (foundation)
 Docs: docs/architecture.md, docs/deployment.md, docs/development-guidelines.md
 
-- [x] Создать структуру каталогов `backend/`, `frontend/`, `.github/workflows/`, `infra/` (если потребуется позже).
-- [x] Backend: сгенерировать базовый проект FastAPI (`app/main.py`, `app/api/routers.py`, `app/core/config.py`, `app/core/logging.py`).
-- [x] Backend: добавить `requirements.txt` (FastAPI, Uvicorn, SQLAlchemy[async], Alembic, psycopg, python-telegram-bot, redis, pydantic, httpx/requests, openai==1.6.1, python-jose/jwt и др. строго по необходимости из docs).
-- [x] Backend: реализовать `/health` (GET) согласно `docs/backend-api.md` (пока возвращать статический 200 + версию из конфига).
-- [x] Backend: включить CORS под Telegram WebApp: `https://webapp.telegram.org` (см. `docs/backend-api.md`).
-- [x] Docker: добавить `backend/Dockerfile` по `docs/deployment.md`.
-- [x] Docker: добавить `docker-compose.dev.yml` из `docs/deployment.md` (PostgreSQL + Redis).
-- [x] Репозиторные мета-файлы: `.editorconfig`, `.gitignore`, `.env.example` (без секретов, список переменных из `docs/deployment.md`).
-- [x] Настроить форматирование/линтинг backend: Black, isort, Ruff, mypy (см. `docs/development-guidelines.md`).
+- [ ] Создать структуру каталогов `backend/`, `frontend/`, `.github/workflows/`, `infra/` (если потребуется позже).
+- [ ] Backend: сгенерировать базовый проект FastAPI (`app/main.py`, `app/api/routers.py`, `app/core/config.py`, `app/core/logging.py`).
+- [ ] Backend: добавить `requirements.txt` (FastAPI, Uvicorn, SQLAlchemy[async], Alembic, psycopg, python-telegram-bot, redis, pydantic, httpx/requests, openai==1.6.1, python-jose/jwt и др. строго по необходимости из docs).
+- [ ] Backend: реализовать `/health` (GET) согласно `docs/backend-api.md` (пока возвращать статический 200 + версию из конфига).
+- [ ] Backend: включить CORS под Telegram WebApp: `https://webapp.telegram.org` (см. `docs/backend-api.md`).
+- [ ] Docker: добавить `backend/Dockerfile` по `docs/deployment.md`.
+- [ ] Docker: добавить `docker-compose.dev.yml` из `docs/deployment.md` (PostgreSQL + Redis).
+- [ ] Репозиторные мета-файлы: `.editorconfig`, `.gitignore`, `.env.example` (без секретов, список переменных из `docs/deployment.md`).
+- [ ] Настроить форматирование/линтинг backend: Black, isort, Ruff, mypy (см. `docs/development-guidelines.md`).
 
 ---
 
