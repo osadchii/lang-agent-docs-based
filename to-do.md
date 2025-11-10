@@ -8,6 +8,7 @@
 - Тесты проходят, покрытие backend ≥85% (критичные модули — 100%)
 - Pipeline CI зелёный; при необходимости обновлён деплой
 - Нет секретов в репозитории; конфиги через `.env` и `Settings`
+- При закрытии каждой задачи обязательно отмечаем чекбокс в этом списке.
 
 ## Этап A. Инициализация проекта (Backend + общая структура)
 - [x] **1) Скелет репозитория**
@@ -32,7 +33,7 @@
    - Сервис и репозитории: `UserRepository`, `ConversationRepository`
    - Acceptance: `alembic upgrade head` применяет миграции, базовые CRUD тесты зелёные
 
-- [ ] **5) Локальное окружение**
+- [x] **5) Локальное окружение**
    - `docker-compose.local.yml`: `postgres`, `redis` (см. `docs/deployment.md`), сети/тома
    - Makefile или `scripts/` с командами: `local-up`, `local-down`, `test`, `lint`
    - Acceptance: `docker-compose -f docker-compose.local.yml up -d` поднимает сервисы; backend коннектится к БД

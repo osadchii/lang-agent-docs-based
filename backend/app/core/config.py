@@ -91,7 +91,7 @@ class Settings(BaseSettings):
         origins.update({origin.rstrip("/") for origin in self.backend_cors_origins})
 
         if self.production_app_origin:
-            origins.add(self.production_app_origin.rstrip("/"))
+            origins.add(str(self.production_app_origin).rstrip("/"))
 
         return sorted(origins)
 
