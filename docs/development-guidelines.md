@@ -862,6 +862,12 @@ backend/
 │   └── factories.py             # Test data factories
 ```
 
+**Запуск без внешней инфраструктуры**
+
+- Все unit и integration тесты обязаны выполняться **без Docker, PostgreSQL, Redis или других сервисов** — они используют in-memory SQLite, Fake Redis или мокнутые клиенты (`pytest` fixtures).
+- Любые обращения к сети (OpenAI, Stripe, Telegram) мокируются; тесты не должны зависеть от переменных окружения с секретами.
+- CI/CD запускает тот же набор команд, что и локально (`pytest --cov=app --cov-fail-under=85`), поэтому скорость критична: полный прогон ≤2 минут.
+
 #### Unit Tests (Services, Utilities)
 
 **Требования:**

@@ -1,0 +1,27 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.so
+
+# Virtual environments
+.venv/
+venv/
+.env
+.env.*
+
+# Tooling
+.mypy_cache/
+.pytest_cache/
+.cache/
+.coverage
+htmlcov/
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+
+# Editors
+.idea/
+.vscode/
+*.code-workspace
