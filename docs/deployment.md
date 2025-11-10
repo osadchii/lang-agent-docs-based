@@ -2,7 +2,7 @@
 
 ## Окружения
 
-### Development
+### Локальное окружение
 Локальная разработка выполняется с использованием:
 - Backend: `uvicorn` в режиме hot-reload
 - Frontend: `npm run dev` с Vite dev server
@@ -13,7 +13,7 @@
 Запуск:
 ```bash
 # Инфраструктура (PostgreSQL + Redis)
-docker-compose -f docker-compose.dev.yml up -d
+docker-compose -f docker-compose.local.yml up -d
 
 # Backend
 cd backend
@@ -28,7 +28,7 @@ npm install
 npm run dev
 ```
 
-**docker-compose.dev.yml:**
+**docker-compose.local.yml (пример):**
 ```yaml
 version: '3.8'
 
@@ -36,32 +36,27 @@ services:
   postgres:
     image: postgres:15
     environment:
-      POSTGRES_DB: langagent_dev
+      POSTGRES_DB: langagent_local
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: dev_password
+      POSTGRES_PASSWORD: local_password
     ports:
       - "5432:5432"
     volumes:
-      - postgres_dev_data:/var/lib/postgresql/data
+      - postgres_local_data:/var/lib/postgresql/data
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
     volumes:
-      - redis_dev_data:/data
+      - redis_local_data:/data
 
 volumes:
-  postgres_dev_data:
-  redis_dev_data:
+  postgres_local_data:
+  redis_local_data:
 ```
 
-### Staging
-Тестовое окружение для проверки изменений перед продакшеном:
-- Отдельный VPS сервер
-- Копия производственной БД (анонимизированные данные)
-- Тестовый Telegram бот
-- Интеграция с CI/CD для автоматического деплоя из ветки `staging`
+Опционально: для локальной отладки можно добавить Grafana и Loki в `docker-compose.local.yml` для просмотра логов и простых дашборд (см. этап C в `to-do.md`).
 
 ### Production
 Продакшн окружение:
@@ -240,7 +235,7 @@ ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30  # TTL для JWT access token (30 минут для безопасности)
 
 # Environment
-ENVIRONMENT=production  # development | staging | production
+ENVIRONMENT=production  # local | production
 
 # Stripe (для подписок)
 STRIPE_SECRET_KEY=your_stripe_secret_key
@@ -380,7 +375,6 @@ server {
 Переменные окружения для фронтенда настраиваются через `.env` файлы:
 
 - `.env.development` - для локальной разработки
-- `.env.staging` - для staging окружения
 - `.env.production` - для продакшена
 
 При деплое через CI/CD переменные подставляются автоматически из GitHub Secrets.
@@ -422,7 +416,7 @@ chown $USER:$USER /var/app/.env
 Рекомендации:
 - Менять `SECRET_KEY` каждые 90 дней
 - API ключи менять при компрометации
-- Использовать разные ключи для dev/staging/production
+- Использовать разные ключи для local/production
 - При ротации секретов:
   1. Обновить `.env` файл на сервере
   2. Перезапустить контейнеры: `docker-compose restart backend`

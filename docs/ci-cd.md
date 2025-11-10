@@ -540,7 +540,7 @@ docker-compose run --rm backend alembic upgrade head
 
 **Безопасность миграций**:
 - Используйте reversible миграции (`alembic downgrade`)
-- Тестируйте миграции на staging перед production
+- Тестируйте миграции локально перед production
 - Избегайте breaking changes в одном деплое
 - Используйте `op.batch_alter_table()` для больших таблиц
 
@@ -621,7 +621,7 @@ jobs:
           cd frontend
           npm run test:e2e
         env:
-          BASE_URL: https://staging.yourdomain.com
+          BASE_URL: https://yourdomain.com
 ```
 
 ## Required GitHub Secrets
@@ -739,6 +739,6 @@ docker-compose logs -f backend
    - Запускайте E2E тесты перед релизами
 
 5. **Deploy strategy**:
-   - Деплой в staging перед production
+   - Проводите smoke‑тест сразу после прод‑деплоя
    - Используйте feature flags для крупных изменений
-   - Канареечные деплои для критичных обновлений
+   - Готовьте план rollback и бэкапы БД

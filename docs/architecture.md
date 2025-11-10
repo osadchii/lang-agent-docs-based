@@ -1485,12 +1485,7 @@ Start Session
    - SQLite или local PostgreSQL
    - Mock external services (LLM, Stripe)
 
-2. **Staging:**
-   - Kubernetes namespace
-   - Shared DB instance
-   - Real external services (test keys)
-
-3. **Production:**
+2. **Production:**
    - Dedicated cluster/namespace
    - Managed DB with backups
    - Real external services
@@ -1510,9 +1505,9 @@ GitHub Actions
 1. Run tests
 2. Build Docker images
 3. Push to registry
-4. Deploy to staging (auto)
-5. Run E2E tests
-6. Deploy to production (manual approval)
+4. Deploy to production (auto)
+5. Health check and smoke tests
+6. Notifications (Telegram/Slack)
   ↓
 Kubernetes
 ```
