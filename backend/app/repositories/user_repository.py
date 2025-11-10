@@ -31,7 +31,6 @@ class UserRepository:
                         "first_name": telegram_user.first_name,
                         "last_name": telegram_user.last_name,
                         "username": telegram_user.username,
-                        "updated_at": now,
                     }
                 )
                 self._users[existing_id] = updated_user
@@ -43,7 +42,6 @@ class UserRepository:
                 first_name=telegram_user.first_name,
                 last_name=telegram_user.last_name,
                 username=telegram_user.username,
-                updated_at=now,
                 created_at=now,
             )
             self._users[user.id] = user
@@ -54,59 +52,6 @@ class UserRepository:
         """Return user by identifier if present."""
 
         return self._users.get(user_id)
-
-    def update_user(
-        self,
-        user_id: UUID,
-        *,
-        first_name: Optional[str] = None,
-        last_name: Optional[str] = None,
-    ) -> Optional[User]:
-        """Update mutable user fields and return the updated entity."""
-
-        with self._lock:
-            user = self._users.get(user_id)
-            if not user:
-                return None
-
-            updates = {}
-            if first_name is not None:
-                updates["first_name"] = first_name
-            if last_name is not None:
-                updates["last_name"] = last_name
-
-            if not updates:
-                return user
-
-            updates["updated_at"] = datetime.now(timezone.utc)
-            updated_user = user.model_copy(update=updates)
-            self._users[user_id] = updated_user
-            return updated_user
-
-    def set_premium_status(
-        self,
-        user_id: UUID,
-        *,
-        is_premium: bool,
-        trial_ends_at: Optional[datetime] = None,
-        premium_expires_at: Optional[datetime] = None,
-    ) -> Optional[User]:
-        """Update premium flags for a user (primarily for tests/admin flows)."""
-
-        with self._lock:
-            user = self._users.get(user_id)
-            if not user:
-                return None
-
-            updates = {
-                "is_premium": is_premium,
-                "trial_ends_at": trial_ends_at,
-                "premium_expires_at": premium_expires_at,
-                "updated_at": datetime.now(timezone.utc),
-            }
-            updated_user = user.model_copy(update=updates)
-            self._users[user_id] = updated_user
-            return updated_user
 
     def reset(self) -> None:
         """Clear stored users (used in tests)."""
