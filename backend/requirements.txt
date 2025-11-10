@@ -13,6 +13,7 @@ redis==5.0.1
 sqlalchemy==2.0.27
 tenacity==8.2.3
 uvicorn[standard]==0.27.1
+aiosqlite==0.20.0
 
 # Dev dependencies
 anyio==4.2.0

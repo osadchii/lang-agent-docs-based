@@ -21,12 +21,12 @@
    - Подготовить CORS (строго: `https://webapp.telegram.org` + домен продакшена из ENV)
    - Acceptance: `uvicorn app.main:app --reload` и `GET /health` → 200 JSON (без внешних проверок пока)
 
-- [ ] **3) Логирование (структурированное)**
+- [x] **3) Логирование (структурированное)**
    - `app/core/logging.py`: JSON‑логи, уровень из ENV, кореляционный `request_id`
    - Встроить middleware для `request_id` и access‑логов
    - Acceptance: логи в stdout в JSON, поля: level, ts, method, path, status, request_id
 
-- [ ] **4) База данных и миграции**
+- [x] **4) База данных и миграции**
    - PostgreSQL (SQLAlchemy 2.x, async) + Alembic
    - Сразу добавить модели и миграции для: `users`, `conversation_history` (см. `docs/backend-database.md`)
    - Сервис и репозитории: `UserRepository`, `ConversationRepository`

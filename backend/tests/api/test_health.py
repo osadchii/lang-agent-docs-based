@@ -23,3 +23,37 @@ async def test_health_returns_expected_payload() -> None:
 
     # Ensure timestamp is ISO-8601 parsable
     datetime.fromisoformat(payload["timestamp"])
+
+
+@pytest.mark.asyncio
+async def test_request_id_header_generated() -> None:
+    async with AsyncClient(app=app, base_url="http://testserver") as client:
+        response = await client.get("/health")
+
+    request_id = response.headers.get("X-Request-ID")
+    assert request_id
+    assert len(request_id) >= 8
+
+
+@pytest.mark.asyncio
+async def test_request_id_header_preserved_from_client() -> None:
+    desired_request_id = "test-request-id-123"
+    async with AsyncClient(app=app, base_url="http://testserver") as client:
+        response = await client.get("/health", headers={"X-Request-ID": desired_request_id})
+
+    assert response.headers.get("X-Request-ID") == desired_request_id
+
+
+@pytest.mark.asyncio
+async def test_access_log_contains_request_metadata(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level("INFO", logger="app.access")
+
+    async with AsyncClient(app=app, base_url="http://testserver") as client:
+        await client.get("/health")
+
+    log_record = next(record for record in caplog.records if record.name == "app.access")
+
+    assert getattr(log_record, "http_method", None) == "GET"
+    assert getattr(log_record, "http_path", None) == "/health"
+    assert getattr(log_record, "status_code", None) == 200
+    assert isinstance(getattr(log_record, "duration_ms", None), float)

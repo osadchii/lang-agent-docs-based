@@ -8,9 +8,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import api_router
 from app.core.config import settings
 from app.core.version import APP_VERSION
+from app.core.logging import configure_logging
+from app.core.middleware import AccessLogMiddleware, RequestIDMiddleware
 
 ALLOWED_METHODS = ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"]
 ALLOWED_HEADERS = ["Authorization", "Content-Type", "Accept", "X-Requested-With"]
+
+configure_logging(settings.log_level)
 
 
 def create_app() -> FastAPI:
@@ -32,6 +36,9 @@ def create_app() -> FastAPI:
         allow_headers=ALLOWED_HEADERS,
         max_age=86400,
     )
+
+    application.add_middleware(RequestIDMiddleware)
+    application.add_middleware(AccessLogMiddleware)
 
     application.include_router(api_router)
 
