@@ -16,7 +16,7 @@
    - Настроить `app.core.config.Settings` (строгая типизация, чтение `.env`)
    - Acceptance: локальный импорт/запуск без ошибок
 
-- [ ] **2) FastAPI приложение и health endpoint**
+- [x] **2) FastAPI приложение и health endpoint**
    - `app/main.py` с FastAPI, роут `/health` (см. `docs/backend-api.md` → Health Check)
    - Подготовить CORS (строго: `https://webapp.telegram.org` + домен продакшена из ENV)
    - Acceptance: `uvicorn app.main:app --reload` и `GET /health` → 200 JSON (без внешних проверок пока)
