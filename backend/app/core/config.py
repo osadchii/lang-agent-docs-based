@@ -5,9 +5,7 @@ Loads settings from environment variables using Pydantic.
 Follows the settings specification from docs/deployment.md.
 """
 
-from functools import lru_cache
 from typing import Optional
-
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -40,7 +38,6 @@ class Settings(BaseSettings):
     # Telegram
     TELEGRAM_BOT_TOKEN: str = ""
     TELEGRAM_WEBHOOK_URL: Optional[str] = None
-    TELEGRAM_INIT_DATA_TTL_SECONDS: int = 3600
 
     # OpenAI/LLM
     OPENAI_API_KEY: str = ""
@@ -54,7 +51,6 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "dev-secret-key-change-in-production"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    SECURITY_HEADERS_ENABLED: bool = True
 
     # Stripe
     STRIPE_SECRET_KEY: Optional[str] = None
@@ -63,11 +59,4 @@ class Settings(BaseSettings):
     STRIPE_PRICE_ID_PREMIUM: Optional[str] = None
 
 
-@lru_cache
-def get_settings() -> Settings:
-    """Return cached application settings instance."""
-
-    return Settings()
-
-
-settings = get_settings()
+settings = Settings()
