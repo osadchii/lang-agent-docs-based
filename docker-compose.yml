@@ -67,6 +67,7 @@ services:
         condition: service_healthy
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=app-network"
       - "traefik.http.routers.grafana-secure.rule=Host(`${GRAFANA_DOMAIN:?GRAFANA_DOMAIN is required}`)"
       - "traefik.http.routers.grafana-secure.entrypoints=websecure"
       - "traefik.http.routers.grafana-secure.service=grafana"
