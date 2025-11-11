@@ -83,7 +83,7 @@ services:
 
   nginx:
     image: nginxproxy/nginx-proxy:1.6.0
-    container_name: lang-agent-nginx
+    container_name: nginx-proxy
     ports:
       - "80:80"
       - "443:443"
@@ -100,11 +100,11 @@ services:
     image: nginxproxy/acme-companion:2.4.0
     depends_on:
       - nginx
-    container_name: lang-agent-nginx-acme
+    container_name: nginx-proxy-acme
     environment:
       DEFAULT_EMAIL: "${TRAEFIK_ACME_EMAIL:-ops@example.com}"
-      NGINX_PROXY_CONTAINER: lang-agent-nginx
-      NGINX_DOCKER_GEN_CONTAINER: lang-agent-nginx
+      NGINX_PROXY_CONTAINER: nginx-proxy
+      NGINX_DOCKER_GEN_CONTAINER: nginx-proxy
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - nginx_certs:/etc/nginx/certs
