@@ -494,20 +494,20 @@ docker-compose logs --tail=100 backend
    ```
    Promtail требует доступа к Docker socket и каталогу `/var/lib/docker/containers`, поэтому команду выполняйте от пользователя с правами на чтение этих путей (обычно `docker` группа).
 4. **Доступ.**
-   - Grafana доступна по `https://<GRAFANA_DOMAIN>` через Traefik; авторизация — `GRAFANA_ADMIN_*`.
+   - Grafana доступна по `https://<GRAFANA_DOMAIN>` через связку `nginx-proxy` + `acme-companion`; авторизация — `GRAFANA_ADMIN_*`.
    - Loki доступен только из внутренней сети `app-network`.
    - Первый логин в Grafana использует `GRAFANA_ADMIN_*`; при старте автоматически импортируется datasource `Loki` и дашборд `Backend Observability`.
-5. **Traefik + HTTPS.**
-   - Traefik контейнер уже включён в `docker-compose.yml` и автоматически поднимает роутер на портах `80`/`443`.
-   - В `.env` задайте `GRAFANA_DOMAIN` (например, `monitor.lang-agent.app`) и `TRAEFIK_ACME_EMAIL` — они используются в Traefik labels/ACME.
-   - Снаружи доступна только Grafana по `https://<GRAFANA_DOMAIN>`; backend, Loki и Promtail остаются внутри сети `app-network`.
-   - Первичная валидация проходит через HTTP-01 challenge, поэтому порт `80` должен быть доступен из интернета.
-   - Переменная `DOCKER_API_VERSION=1.44` проброшена в сервис Traefik, чтобы Docker 24+ корректно принимал запросы клиента; при использовании старого демона уменьшите версию или обновите Docker.
+5. **Nginx + Let's Encrypt.**
+   - Контейнер `nginx` (образ `nginxproxy/nginx-proxy`) уже включён в `docker-compose.yml` и автоматически слушает порты `80`/`443`, проксируя трафик к Grafana.
+   - Пара `GRAFANA_DOMAIN` + `TRAEFIK_ACME_EMAIL` (email для Let's Encrypt) используется в переменных `VIRTUAL_HOST`/`LETSENCRYPT_*`; заполните их перед деплоем.
+   - Контейнер `nginx-acme` (образ `nginxproxy/acme-companion`) выпускает и обновляет сертификаты через HTTP-01 challenge, поэтому порт `80` должен быть открыт наружу.
+   - За пределы сервера попадает только Grafana по `https://<GRAFANA_DOMAIN>`; backend, Loki и Promtail продолжают жить внутри `app-network`.
 6. **Проверка.**
    ```bash
    docker compose logs -f promtail
    docker compose logs -f loki
-   docker compose logs -f traefik
+   docker compose logs -f nginx
+   docker compose logs -f nginx-acme
    ```
    После появления запросов API в Grafana → `Dashboards` → `Lang Agent / Backend Observability` появятся графики и таблицы.
 

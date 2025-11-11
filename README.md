@@ -7,15 +7,15 @@
 - Инженерные соглашения: `pyproject.toml`, `requirements.txt`, `.editorconfig`, `.gitignore`, `.env.example`
 - GitHub Actions workflow `.github/workflows/backend-deploy.yml` (тесты на каждом push/PR, build & GHCR push + автодеплой на сервер для `main`)
 - Согласование с документацией в `docs/` — текущий репозиторий стартует строго по плану `to-do.md`
-- Продовый `backend/Dockerfile` + корневой `docker-compose.yml` (backend/db/redis + Loki/Promtail/Grafana + Traefik, healthchecks, Alembic перед стартом)
+- Продовый `backend/Dockerfile` + корневой `docker-compose.yml` (backend/db/redis + Loki/Promtail/Grafana + Nginx proxy, healthchecks, Alembic перед стартом)
 - Провиженинг Grafana (`infra/`) с готовым дашбордом (RPS, p95 latency, 4xx/5xx, top endpoints)
-- Traefik reverse proxy с автоматическим Let's Encrypt сертификатом для Grafana (наружу торчит только HTTPS)
+- Nginx reverse proxy + ACME companion, который автоматически выпускает Let's Encrypt сертификат для Grafana (наружу торчит только HTTPS)
 
 ## 📁 Структура репозитория
 ```text
 .
 ├── README.md
-├── docker-compose.yml       # Продовый стак backend/db/redis + Loki/Promtail/Grafana + Traefik
+├── docker-compose.yml       # Продовый стак backend/db/redis + Loki/Promtail/Grafana + Nginx proxy
 ├── docker-compose.local.yml # Локальные Postgres + Redis для разработки
 ├── infra/                   # Конфиги наблюдаемости (Loki, Promtail, Grafana)
 ├── docs/                     # Источник правды по архитектуре, API и процессам
@@ -61,14 +61,14 @@ PY`
    pre-commit install
    ```
 ### 🐳 Продовый docker-compose (backend + db + redis + observability)
-1. Скопируйте `.env.example` → `.env`, заполните `POSTGRES_*`, `BACKEND_IMAGE`, `BACKEND_IMAGE_TAG`, `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD`, `GRAFANA_DOMAIN` и `TRAEFIK_ACME_EMAIL`. Для работы внутри Docker-сети обновите `DATABASE_URL` и `REDIS_URL` на `postgresql+asyncpg://<user>:<pass>@db:5432/<db>` и `redis://redis:6379/0`.
+1. Скопируйте `.env.example` → `.env`, заполните `POSTGRES_*`, `BACKEND_IMAGE`, `BACKEND_IMAGE_TAG`, `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD`, `GRAFANA_DOMAIN` и `TRAEFIK_ACME_EMAIL` (email для Let's Encrypt). Для работы внутри Docker-сети обновите `DATABASE_URL` и `REDIS_URL` на `postgresql+asyncpg://<user>:<pass>@db:5432/<db>` и `redis://redis:6379/0`.
 2. Скопируйте на сервер сам `docker-compose.yml` вместе с каталогом `infra/` — Grafana и Loki читают конфиги именно оттуда.
-3. Откройте на сервере порты `80`/`443` (Traefik делает HTTP-01 проверку и раздаёт HTTPS для Grafana).
+3. Откройте на сервере порты `80`/`443` (nginx-proxy+acme-companion выполняют HTTP-01 проверку и раздают HTTPS для Grafana).
 4. Получите и поднимите стек с образами из GHCR:
    ```bash
    docker compose pull backend
    docker compose up -d backend db redis loki promtail grafana
-   docker compose up -d traefik
+   docker compose up -d nginx nginx-acme
    ```
    > Если нужна локальная проверка до пуша в GHCR, пересоберите образ командами `docker compose build backend` и `docker compose up ...`.
 5. Проверьте здоровье и логи:
@@ -76,17 +76,17 @@ PY`
    docker compose ps
    docker compose logs -f backend
    docker compose logs -f promtail
-   docker compose logs -f traefik
+   docker compose logs -f nginx
+   docker compose logs -f nginx-acme
    ```
    Точка входа `docker-entrypoint.sh` автоматически выполняет `alembic upgrade head` перед запуском `uvicorn`.
 
 #### 📊 Observability stack (Grafana + Loki)
-- Grafana доступна только по `https://<GRAFANA_DOMAIN>` через Traefik; логин/пароль берутся из `GRAFANA_ADMIN_USER/PASSWORD`.
+- Grafana доступна только по `https://<GRAFANA_DOMAIN>` благодаря связке `nginx-proxy` + `acme-companion`; логин/пароль берутся из `GRAFANA_ADMIN_USER/PASSWORD`.
 - Loki хранит данные в volume `loki_data` и принимает пуши Promtail только по внутренней сети compose (`app-network`). Публичные порты для Loki не открываются.
 - Promtail подключается к Docker socket и забирает JSON-логи контейнера `backend`, парсит поля (`http_method`, `status_code`, `duration_ms`, `request_id`) и пушит их в Loki.
 - При первом старте Grafana автоматически импортирует datasoure `Loki` и дашборд `Backend Observability` из `infra/grafana/provisioning/dashboards/backend-observability.json` (RPS, p95 latency, 4xx/5xx, top endpoints).
-- Traefik автоматически выпускает Let's Encrypt сертификат для `GRAFANA_DOMAIN`, пробрасывает только Grafana наружу (`https://<GRAFANA_DOMAIN>`), закрывая backend/infra из внешней сети. Для повторных запусков сертификаты кэшируются в volume `traefik_acme`.
-- Переменная `DOCKER_API_VERSION=1.44` проброшена в Traefik, чтобы он общался с современным Docker API; при более старом демоне можно понизить значение, но рекомендуется обновить Docker.
+- Nginx proxy автоматически выпускает Let's Encrypt сертификат для `GRAFANA_DOMAIN`, пробрасывает только Grafana наружу (`https://<GRAFANA_DOMAIN>`), закрывая backend/infra из внешней сети. Для повторных запусков сертификаты кэшируются в volume `nginx_certs` / `nginx_acme`.
 
 ### 🔐 GitHub Secrets для CI/CD
 Добавьте в Settings → Secrets and variables → Actions:

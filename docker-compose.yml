@@ -58,6 +58,10 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:-admin}"
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_AUTH_ANONYMOUS_ENABLED: "false"
+      VIRTUAL_HOST: "${GRAFANA_DOMAIN:?GRAFANA_DOMAIN is required}"
+      VIRTUAL_PORT: "3000"
+      LETSENCRYPT_HOST: "${GRAFANA_DOMAIN:?GRAFANA_DOMAIN is required}"
+      LETSENCRYPT_EMAIL: "${TRAEFIK_ACME_EMAIL:-ops@example.com}"
     volumes:
       - grafana_data:/var/lib/grafana
       - ./infra/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
@@ -65,42 +69,37 @@ services:
     depends_on:
       loki:
         condition: service_healthy
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=app-network"
-      - "traefik.http.routers.grafana-secure.rule=Host(`${GRAFANA_DOMAIN:?GRAFANA_DOMAIN is required}`)"
-      - "traefik.http.routers.grafana-secure.entrypoints=websecure"
-      - "traefik.http.routers.grafana-secure.service=grafana"
-      - "traefik.http.routers.grafana-secure.tls=true"
-      - "traefik.http.routers.grafana-secure.tls.certresolver=letsencrypt"
-      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
-      - "traefik.http.routers.grafana-http.rule=Host(`${GRAFANA_DOMAIN:?GRAFANA_DOMAIN is required}`)"
-      - "traefik.http.routers.grafana-http.entrypoints=web"
-      - "traefik.http.routers.grafana-http.middlewares=grafana-redirect"
-      - "traefik.http.middlewares.grafana-redirect.redirectscheme.scheme=https"
     restart: unless-stopped
     networks:
       - app-network
 
-  traefik:
-    image: traefik:v3.1
-    command:
-      - --providers.docker=true
-      - --providers.docker.exposedbydefault=false
-      - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
-      - --certificatesresolvers.letsencrypt.acme.email=${TRAEFIK_ACME_EMAIL}
-      - --certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme/acme.json
-      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
-      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
-    environment:
-      DOCKER_API_VERSION: "1.44"
+  nginx:
+    image: nginxproxy/nginx-proxy:1.6.0
     ports:
       - "80:80"
       - "443:443"
     volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - nginx_certs:/etc/nginx/certs
+      - nginx_vhost:/etc/nginx/vhost.d
+      - nginx_html:/usr/share/nginx/html
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  nginx-acme:
+    image: nginxproxy/acme-companion:2.4.0
+    depends_on:
+      - nginx
+    environment:
+      DEFAULT_EMAIL: "${TRAEFIK_ACME_EMAIL:-ops@example.com}"
+      NGINX_PROXY_CONTAINER: nginx
+    volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - traefik_acme:/etc/traefik/acme
+      - nginx_certs:/etc/nginx/certs
+      - nginx_vhost:/etc/nginx/vhost.d
+      - nginx_html:/usr/share/nginx/html
+      - nginx_acme:/etc/acme.sh
     restart: unless-stopped
     networks:
       - app-network
@@ -144,7 +143,10 @@ volumes:
   loki_data:
   grafana_data:
   promtail_positions:
-  traefik_acme:
+  nginx_certs:
+  nginx_vhost:
+  nginx_html:
+  nginx_acme:
 
 networks:
   app-network:
