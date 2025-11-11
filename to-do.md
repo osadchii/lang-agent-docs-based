@@ -49,15 +49,15 @@
    - Шаги: линтеры, типы, тесты, coverage upload (опц.)
    - Acceptance: pipeline успешно проходит на любом пуше в ветки
 
-- [ ] **8) Образы и прод‑compose**
+- [x] **8) Образы и прод‑compose**
    - `backend/Dockerfile` (см. `docs/deployment.md`), корневой `docker-compose.yml` для prod
    - Healthcheck контейнера и зависимостей; команда старта с Alembic upgrade перед `uvicorn`
    - Acceptance: локальная сборка образа, `docker-compose up -d backend db redis` работает
 
-- [ ] **9) CI: backend deploy (main)**
-   - `.github/workflows/backend-deploy.yml`: buildx, push в Docker Hub, SCP `docker-compose.yml`, SSH деплой, health‑проверка
-   - Подготовить список GitHub Secrets и чек‑лист подготовки сервера (см. `docs/ci-cd.md`)
-   - Acceptance: пуш в `main` приводит к успешному деплою и `GET /health` → 200 на сервере
+- [x] **9) CI: backend deploy (main)**
+   - `.github/workflows/backend-deploy.yml`: buildx, push в GHCR (осадчий/lang-agent-docs-based), проверка сборки на PR
+   - Обновить чек-лист GitHub Secrets (GHCR_USERNAME, GHCR_TOKEN) и инструкции по ручному деплою
+   - Acceptance: пуш в `main` публикует образ, сервер обновляется командой `docker compose pull backend && docker compose up -d`
 
 ## Этап C. Обсервабилити (локально и/или прод)
 

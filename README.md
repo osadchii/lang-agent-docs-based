@@ -6,16 +6,22 @@
 - Базовая конфигурация `Settings` (строгая типизация, валидация CORS, единый источник правды)
 - Инженерные соглашения: `pyproject.toml`, `requirements.txt`, `.editorconfig`, `.gitignore`, `.env.example`
 - GitHub Actions workflow `.github/workflows/backend-test.yml` (линтинг, типы, тесты, coverage)
+- GitHub Actions workflow `.github/workflows/backend-deploy.yml` (собирает backend-образ и пушит в GHCR на каждом push в `main`)
 - Согласование с документацией в `docs/` — текущий репозиторий стартует строго по плану `to-do.md`
+- Продовый `backend/Dockerfile` + корневой `docker-compose.yml` (backend + db + redis, healthchecks, Alembic перед стартом)
 
 ## 📁 Структура репозитория
 ```text
 .
 ├── README.md
+├── docker-compose.yml       # Продовый стак backend/db/redis + healthchecks
+├── docker-compose.local.yml # Локальные Postgres + Redis для разработки
 ├── docs/                     # Источник правды по архитектуре, API и процессам
 ├── .github/
-│   └── workflows/            # CI пайплайны (backend-test.yml)
+│   └── workflows/            # CI пайплайны (backend-test.yml, backend-deploy.yml)
 └── backend/
+    ├── Dockerfile           # Продовый образ backend (uvicorn + alembic upgrade head)
+    ├── docker-entrypoint.sh # Точка входа: прогон миграций и запуск сервера
     ├── app/
     │   ├── api/             # FastAPI роуты (задача #2+)
     │   ├── core/            # Config, логирование, middleware
@@ -52,6 +58,25 @@ PY`
    source .venv/bin/activate  # либо .\.venv\Scripts\Activate.ps1 в PowerShell
    pre-commit install
    ```
+### 🐳 Продовый docker-compose (backend + db + redis)
+1. Скопируйте `.env.example` → `.env` и заполните секции `POSTGRES_*`, `BACKEND_IMAGE`, `BACKEND_IMAGE_TAG`. Для работы внутри Docker-сети обновите `DATABASE_URL` и `REDIS_URL` на `postgresql+asyncpg://<user>:<pass>@db:5432/<db>` и `redis://redis:6379/0`.
+2. Получите и поднимите стек с образами из GHCR:
+   ```bash
+   docker compose pull backend
+   docker compose up -d backend db redis
+   ```
+   > Если нужна локальная проверка до пуша в GHCR, пересоберите образ командами `docker compose build backend` и `docker compose up ...`.
+3. Проверьте здоровье и логи:
+   ```bash
+   docker compose ps
+   docker compose logs -f backend
+   ```
+   Точка входа `docker-entrypoint.sh` автоматически выполняет `alembic upgrade head` перед запуском `uvicorn`.
+
+### 🔐 GitHub Secrets для сборки образа
+Добавьте в Settings → Secrets and variables → Actions:
+- `GHCR_USERNAME` — имя владельца GHCR (для репо `osadchii/lang-agent-docs-based` укажите `osadchii`).
+- `GHCR_TOKEN` — GitHub Personal Access Token c правами `write:packages` (рекомендуется отдельный fine-grained token).
 
 ## 📚 Документация (обязательна к прочтению перед задачами)
 | Блок | Цель | Файл |
@@ -76,8 +101,8 @@ PY`
 5. ✅ Docker Compose для локального окружения + Makefile
 6. ✅ Pytest + quality gates
 7. ✅ CI: backend tests (GitHub Actions)
-8. ⏳ Образы и продовый docker-compose
-9. ⏳ CI: backend deploy (main)
+8. ✅ Образы и продовый docker-compose
+9. ✅ CI: backend deploy (build -> GHCR)
 10. ⏳ ... (бот, интеграции, продовый релиз)
 
 > 💡 Следуя этому README и документации внутри `docs/`, можно безопасно продолжать реализацию следующих этапов без расхождений.

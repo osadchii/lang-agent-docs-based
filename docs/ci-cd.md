@@ -5,18 +5,14 @@
 CI/CD pipeline автоматизирует процесс тестирования, сборки и развертывания приложения:
 
 - **На push в любой бранч**: запуск тестов и линтинга
-- **На push в main или merge PR в main**: build Docker образов + автоматический deploy на сервер
+- **На push в main или merge PR в main**: сборка backend-образа и публикация в GHCR (`ghcr.io/osadchii/lang-agent-docs-based/backend`)
 - **Secrets**: секреты для CI/CD хранятся в GitHub Secrets, секреты приложения - в `.env` файле на сервере
 
 ## Как работает деплой
 
-1. **GitHub Actions** собирает Docker образы и пушит их в Docker Hub
-2. **GitHub Actions** копирует `docker-compose.yml` из репозитория на сервер
-3. На сервере выполняется:
-   - `docker-compose pull` - скачивание новых образов
-   - `docker-compose stop` - остановка старых контейнеров
-   - Применение миграций БД
-   - `docker-compose up -d` - запуск новых контейнеров
+1. **GitHub Actions** собирает backend-образ и пушит его в GHCR
+2. **Push в main** публикует теги `latest`, `sha`, `branch`; PR ветки проверяют только сборку
+3. **На сервере** владелец вручную запускает `docker compose pull backend && docker compose up -d backend db redis`
 4. Файл `.env` с переменными окружения **уже существует на сервере** и создается владельцем вручную перед первым деплоем
 
 ## Подготовка сервера (первый раз)
@@ -58,7 +54,8 @@ sudo nano .env
 
 Вставить содержимое (см. `docs/deployment.md` для полного списка переменных):
 ```bash
-DOCKER_USERNAME=your_dockerhub_username
+BACKEND_IMAGE=ghcr.io/osadchii/lang-agent-docs-based/backend
+BACKEND_IMAGE_TAG=latest
 POSTGRES_DB=langagent
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=secure_password
@@ -186,7 +183,7 @@ jobs:
 
 #### Файл: `.github/workflows/backend-deploy.yml`
 
-Запускается при **push в main** или **merge PR в main**:
+Запускается при **push в `main`** (build + push образа) и при **pull_request → main** (только build для валидации):
 
 ```yaml
 name: Backend Deploy
@@ -195,113 +192,56 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'backend/**'
-      - 'docker-compose.yml'
-      - '.github/workflows/backend-deploy.yml'
+  pull_request:
+    branches:
+      - main
+
+env:
+  IMAGE_NAME: ghcr.io/osadchii/lang-agent-docs-based/backend
 
 jobs:
-  build-and-deploy:
+  build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Extract metadata
+      - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKER_USERNAME }}/langagent-backend
+          images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=sha,prefix=,format=short
             type=raw,value=latest
+            type=sha,format=short
+            type=ref,event=branch
 
-      - name: Build and push Docker image
+      - name: Log in to GitHub Container Registry
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build backend image
         uses: docker/build-push-action@v5
         with:
           context: ./backend
-          push: true
+          file: ./backend/Dockerfile
+          push: ${{ github.event_name == 'push' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/langagent-backend:buildcache
-          cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/langagent-backend:buildcache,mode=max
-
-      - name: Copy docker-compose.yml to server
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "docker-compose.yml"
-          target: "/var/app/"
-          overwrite: true
-
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd /var/app
-
-            # Pull latest images
-            docker-compose pull backend
-
-            # Stop old containers
-            docker-compose stop backend
-
-            # Run database migrations
-            docker-compose run --rm backend alembic upgrade head
-
-            # Start new containers
-            docker-compose up -d backend
-
-            # Wait for health check
-            sleep 10
-            curl -f http://localhost:8000/health || exit 1
-
-            # Cleanup old images
-            docker image prune -f
-
-      - name: Notify on success
-        if: success()
-        uses: appleboy/telegram-action@master
-        with:
-          to: ${{ secrets.TELEGRAM_DEPLOY_CHAT_ID }}
-          token: ${{ secrets.CI_TELEGRAM_BOT_TOKEN }}
-          message: |
-            ✅ Backend deployed successfully!
-
-            Branch: ${{ github.ref_name }}
-            Commit: ${{ github.sha }}
-            Author: ${{ github.actor }}
-
-      - name: Notify on failure
-        if: failure()
-        uses: appleboy/telegram-action@master
-        with:
-          to: ${{ secrets.TELEGRAM_DEPLOY_CHAT_ID }}
-          token: ${{ secrets.CI_TELEGRAM_BOT_TOKEN }}
-          message: |
-            ❌ Backend deployment failed!
-
-            Branch: ${{ github.ref_name }}
-            Commit: ${{ github.sha }}
-            Author: ${{ github.actor }}
-
-            Check: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 ```
+
+Push-эвенты авторизуются в GHCR и публикуют теги `latest`, `sha` и `branch`. На pull_request (`push=false`) проверяется только сборка. После публикации сервер вручную тянет образ и перезапускает `docker-compose` (см. `docs/deployment.md` → Backend deployment).
 
 ### Workflow для frontend
 
@@ -480,30 +420,25 @@ jobs:
 
 ### Backend deploy steps
 
-1. **Build Docker image**:
+1. **Checkout + Build**:
    - Используется `docker/build-push-action`
-   - Образ тегируется с commit SHA и `latest`
-   - Кешируется для ускорения последующих сборок
+   - Собирает `backend/Dockerfile` внутри workflow
+   - В событии `pull_request` push отключён (build-only)
 
-2. **Push в Docker Hub**:
-   - Авторизация через `DOCKER_USERNAME` и `DOCKER_PASSWORD` из GitHub Secrets
-   - Push образа в Docker Hub registry
+2. **Генерация тегов**:
+   - `docker/metadata-action` добавляет `latest`, `sha`, `branch`
+   - Эти теги попадут в GHCR
 
-3. **Копирование docker-compose.yml на сервер**:
-   - SCP копирование `docker-compose.yml` из репозитория в `/var/app/`
-   - Перезаписывает существующий файл (`overwrite: true`)
-   - `.env` файл на сервере **не трогается** - он уже создан владельцем
+3. **Публикация образа в GHCR**:
+   - Авторизация через `GHCR_USERNAME`/`GHCR_TOKEN`
+   - Push выполняется только на push в `main`
+   - При необходимости можно добавить кэш (`cache-from/to`)
 
-4. **Deploy на сервер**:
-   - SSH подключение через `SSH_PRIVATE_KEY`
-   - `docker-compose pull backend` - скачивание нового образа
-   - `docker-compose stop backend` - остановка старого контейнера
-   - `docker-compose run --rm backend alembic upgrade head` - применение миграций БД
-   - `docker-compose up -d backend` - запуск нового контейнера
-   - Health check для проверки: `curl -f http://localhost:8000/health`
-
-5. **Cleanup**:
-   - `docker image prune -f` - удаление старых образов для освобождения места
+4. **Ручной деплой на сервер**:
+   - Подключиться к серверу и выполнить `docker compose pull backend`
+   - Применить миграции: `docker compose run --rm backend alembic upgrade head`
+   - Перезапустить сервис: `docker compose up -d backend db redis`
+   - Проверить `/health` (curl или мониторинг)
 
 ### Frontend deploy steps
 
@@ -527,22 +462,19 @@ jobs:
 
 ### Database migrations
 
-Миграции применяются автоматически в backend deploy workflow:
+Миграции исполняются внутри контейнера через `docker-entrypoint.sh` (команда `alembic upgrade head` запускается перед `uvicorn`). При ручном деплое:
 
 ```bash
-docker-compose run --rm backend alembic upgrade head
+docker compose pull backend
+docker compose up -d backend
 ```
 
-**Важно**:
-- Миграции применяются **до** запуска нового контейнера
-- Если миграция падает, деплой останавливается
-- Логи миграций сохраняются в output GitHub Actions
+Контейнер выполнит миграции автоматически при старте. Если требуется отдельный запуск (например, перед выкладкой), выполните `docker compose run --rm backend alembic upgrade head`.
 
-**Безопасность миграций**:
-- Используйте reversible миграции (`alembic downgrade`)
-- Тестируйте миграции локально перед production
-- Избегайте breaking changes в одном деплое
-- Используйте `op.batch_alter_table()` для больших таблиц
+**Важно**:
+- Следите за логами `docker compose logs -f backend` — ошибки миграций проявятся до старта приложения
+- Перед продом проверяйте миграции локально
+- Избегайте breaking changes без плана отката (`alembic downgrade`)
 
 ## Testing в CI
 
@@ -628,66 +560,24 @@ jobs:
 
 Настройте следующие секреты в Settings → Secrets and variables → Actions:
 
-### Backend & Deploy (обязательные):
-- `DOCKER_USERNAME` - имя пользователя Docker Hub
-- `DOCKER_PASSWORD` - пароль Docker Hub (или access token)
-- `SERVER_HOST` - IP адрес или домен сервера (например, `192.168.1.100` или `example.com`)
-- `SERVER_USER` - SSH пользователь (например, `ubuntu`, `root`)
-- `SSH_PRIVATE_KEY` - приватный SSH ключ для доступа к серверу
+### Backend image publishing (обязательные):
+- `GHCR_USERNAME` — владелец контейнерного реестра (для текущего репо `osadchii`)
+- `GHCR_TOKEN` — GitHub Personal Access Token с правами `write:packages` (и `read:packages`)
+
+### Server deploy (опционально, для будущей автоматизации):
+- `SERVER_HOST`, `SERVER_USER`, `SSH_PRIVATE_KEY` — понадобятся, когда добавим автоматический SSH-деплой
+- `TELEGRAM_DEPLOY_CHAT_ID`, `CI_TELEGRAM_BOT_TOKEN` — для уведомлений о выкладке (пока не подключены)
 
 ### Frontend (обязательные):
 - `VITE_API_BASE_URL` - URL бэкенд API (например, `https://api.yourdomain.com`)
 
-### Notifications (опционально):
-- `TELEGRAM_DEPLOY_CHAT_ID` - ID чата для уведомлений о деплое
-- `CI_TELEGRAM_BOT_TOKEN` - токен отдельного бота для CI/CD уведомлений (НЕ основной бот приложения)
-
 **Важно**: Секреты приложения (DATABASE_URL, TELEGRAM_BOT_TOKEN, OPENAI_API_KEY и т.д.) НЕ добавляются в GitHub Secrets. Они хранятся только в файле `.env` на сервере.
-
-**Примечание**: `CI_TELEGRAM_BOT_TOKEN` - это токен отдельного бота для уведомлений CI/CD, не путать с `TELEGRAM_BOT_TOKEN` (основной бот приложения из .env файла).
 
 ## Notifications
 
-Уведомления о статусе деплоя отправляются через Telegram:
-
-- ✅ **Успешный деплой**: сообщение с деталями (branch, commit, автор)
-- ❌ **Ошибка деплоя**: сообщение с ссылкой на GitHub Actions logs
-
-Альтернативные способы:
-- **Email**: GitHub может отправлять email при провале workflow
-- **Slack**: используйте `slack-github-action`
-- **Discord**: используйте webhook интеграцию
+Пока используем стандартные уведомления GitHub Actions (email / UI). Telegram‑бот подключаем после добавления автоматического деплоя.
 
 ## Rollback mechanism
-
-### Автоматический rollback при ошибках
-
-Health check уже встроен в deploy workflow. Если он падает, деплой останавливается.
-
-Для автоматического rollback можно добавить в `.github/workflows/backend-deploy.yml`:
-
-```yaml
-- name: Rollback on failure
-  if: failure()
-  uses: appleboy/ssh-action@v1.0.3
-  with:
-    host: ${{ secrets.SERVER_HOST }}
-    username: ${{ secrets.SERVER_USER }}
-    key: ${{ secrets.SSH_PRIVATE_KEY }}
-    script: |
-      cd /var/app
-
-      # Откатить на предыдущий образ (сохраненный SHA)
-      docker pull ${{ secrets.DOCKER_USERNAME }}/langagent-backend:PREVIOUS_SHA
-      docker tag ${{ secrets.DOCKER_USERNAME }}/langagent-backend:PREVIOUS_SHA \
-                 ${{ secrets.DOCKER_USERNAME }}/langagent-backend:latest
-
-      # Откатить миграции
-      docker-compose exec backend alembic downgrade -1
-
-      # Перезапустить
-      docker-compose restart backend
-```
 
 ### Ручной rollback
 
@@ -698,12 +588,9 @@ Health check уже встроен в deploy workflow. Если он падае�
 ssh user@your-server
 cd /var/app
 
-# Посмотреть доступные образы
-docker images | grep langagent-backend
-
 # Откатить на конкретный SHA (например, abc1234)
-docker pull username/langagent-backend:abc1234
-docker tag username/langagent-backend:abc1234 username/langagent-backend:latest
+docker pull ghcr.io/osadchii/lang-agent-docs-based/backend:abc1234
+docker tag ghcr.io/osadchii/lang-agent-docs-based/backend:abc1234 ghcr.io/osadchii/lang-agent-docs-based/backend:latest
 
 # Откатить миграции
 docker-compose exec backend alembic downgrade -1
@@ -725,7 +612,7 @@ docker-compose logs -f backend
 
 2. **Secrets rotation**:
    - Регулярно обновляйте SSH ключи
-   - Меняйте Docker Hub пароли
+   - Переиздавайте GHCR токены (`GHCR_TOKEN`)
    - Ротация API ключей
 
 3. **Monitoring**:

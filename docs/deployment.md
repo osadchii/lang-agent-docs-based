@@ -127,37 +127,66 @@ Redis 7+ для кэширования и управления состояни�
 ## Backend deployment
 
 ### Docker
-Dockerfile для бэкенда (`backend/Dockerfile`):
+Dockerfile для бэкенда (`backend/Dockerfile`) повторяет продовый сценарий запуска:
 ```dockerfile
 FROM python:3.11-slim
 
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
 WORKDIR /app
 
-# Установка зависимостей
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN apt-get update \
+    && apt-get install --no-install-recommends -y curl build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
-# Копирование кода
+COPY requirements.txt .
+RUN pip install --upgrade pip && pip install -r requirements.txt
+
 COPY . .
 
-# Запуск приложения
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+RUN adduser --disabled-password --gecos "" appuser \
+    && chown -R appuser:appuser /app \
+    && chmod +x /app/docker-entrypoint.sh
+
+USER appuser
+ENV PYTHONPATH=/app
+
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
+```
+
+Точка входа (`backend/docker-entrypoint.sh`) перед стартом `uvicorn` выполняет миграции:
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+alembic upgrade head
+
+exec uvicorn app.main:app --host "0.0.0.0" --port "${PORT:-8000}"
 ```
 
 Docker Compose для деплоя (`docker-compose.yml` в корне репозитория):
 ```yaml
-version: '3.8'
+version: '3.9'
 
 services:
   backend:
-    image: ${DOCKER_USERNAME}/langagent-backend:latest
+    image: "${BACKEND_IMAGE:-ghcr.io/osadchii/lang-agent-docs-based/backend}:${BACKEND_IMAGE_TAG:-latest}"
     ports:
       - "8000:8000"
     env_file:
       - .env
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
     networks:
       - app-network
@@ -168,6 +197,15 @@ services:
       - .env
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
     networks:
       - app-network
@@ -177,14 +215,14 @@ services:
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
-    restart: unless-stopped
-    networks:
-      - app-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 3s
-      retries: 3
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - app-network
 
 volumes:
   postgres_data:
@@ -195,7 +233,7 @@ networks:
     driver: bridge
 ```
 
-**Важно**: Docker Compose использует уже собранный образ из Docker Hub, а не собирает локально.
+**Важно**: Docker Compose использует уже собранный образ из GitHub Container Registry (`ghcr.io/osadchii/lang-agent-docs-based/backend`). Для smoke‑тестов по-прежнему можно выполнить `docker compose build backend`, но продакшн сценарий тянет готовые теги командой `docker compose pull backend`.
 
 ### Environment variables
 
@@ -203,8 +241,9 @@ networks:
 
 **Содержимое `.env` файла:**
 ```bash
-# Docker Hub (используется в docker-compose.yml)
-DOCKER_USERNAME=your_dockerhub_username
+# Контейнеры
+BACKEND_IMAGE=ghcr.io/osadchii/lang-agent-docs-based/backend
+BACKEND_IMAGE_TAG=latest
 
 # Database (для PostgreSQL контейнера)
 POSTGRES_DB=langagent
@@ -387,8 +426,8 @@ server {
 - Settings → Secrets and variables → Actions → New repository secret
 
 Необходимые секреты для GitHub Actions:
-- `DOCKER_USERNAME` - логин Docker Hub
-- `DOCKER_PASSWORD` - пароль Docker Hub
+- `GHCR_USERNAME` - владелец контейнерного реестра (например, `osadchii`)
+- `GHCR_TOKEN` - GitHub Personal Access Token с правами `write:packages`
 - `SSH_PRIVATE_KEY` - приватный SSH ключ для доступа к серверу
 - `SERVER_HOST` - IP адрес или домен сервера
 - `SERVER_USER` - SSH пользователь (например, `ubuntu`)
