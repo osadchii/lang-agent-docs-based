@@ -9,9 +9,10 @@ single source of truth.
 from __future__ import annotations
 
 from functools import lru_cache
+import json
 from typing import Literal
 
-from pydantic import AnyHttpUrl, Field, SecretStr, field_validator
+from pydantic import AnyHttpUrl, Field, SecretStr, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -60,24 +61,32 @@ class Settings(BaseSettings):
         default=None,
         alias="PRODUCTION_APP_ORIGIN",
     )
-    backend_cors_origins: list[str] = Field(
-        default_factory=list,
+    raw_backend_cors_origins: str | None = Field(
+        default=None,
         alias="BACKEND_CORS_ORIGINS",
         description="Comma-separated list or JSON array of allowed CORS origins.",
     )
 
-    @field_validator("backend_cors_origins", mode="before")
-    @classmethod
-    def parse_cors_origins(cls, value: str | list[str] | None) -> list[str]:
-        """Normalize string or list inputs into a list of stripped origins."""
+    @computed_field(return_type=list[str])
+    @property
+    def backend_cors_origins(self) -> list[str]:
+        return self._parse_backend_cors_origins(self.raw_backend_cors_origins)
+
+    @staticmethod
+    def _parse_backend_cors_origins(value: str | None) -> list[str]:
         if value is None:
             return []
-        if isinstance(value, str):
-            cleaned = [origin.strip() for origin in value.split(",") if origin.strip()]
-            return cleaned
-        if isinstance(value, list):
-            return [origin.strip() for origin in value if origin]
-        raise ValueError("BACKEND_CORS_ORIGINS must be a comma-separated string or a list")
+        normalized = value.strip()
+        if not normalized:
+            return []
+        if normalized.startswith("["):
+            try:
+                parsed = json.loads(normalized)
+                if isinstance(parsed, list):
+                    return [str(origin).strip().rstrip("/") for origin in parsed if str(origin).strip()]
+            except json.JSONDecodeError:
+                pass
+        return [origin.strip().rstrip("/") for origin in normalized.split(",") if origin.strip()]
 
     @property
     def cors_origins(self) -> list[str]:
