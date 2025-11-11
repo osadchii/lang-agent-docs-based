@@ -15,6 +15,7 @@ mypy app                 # строгая проверка типов
 pytest --cov=app --cov-fail-under=85  # тесты и целевой порог покрытия
 ```
 Когда появится приложение, используем `uvicorn app.main:app --reload` для локального прогона и `alembic upgrade head` перед стартом, чтобы схемы совпадали.
+- Перед сдачей работы агент обязательно запускает те же проверки, что и прекоммит (`pre-commit run --all-files` или эквивалентные команды: end-of-file/trailing-whitespace, `black`, `isort`, `ruff`, `mypy` на `backend/app`) и исправляет замечания до зелёного статуса.
 
 ## Coding Style & Naming Conventions
 - Python 3.11+, 4‑пробельные отступы; максимум 300 строк на файл (см. `docs/development-guidelines.md`).
