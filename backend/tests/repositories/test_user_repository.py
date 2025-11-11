@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.repositories.user import UserRepository
 
 
 @pytest.mark.asyncio
-async def test_user_repository_create_and_fetch(db_session):
+async def test_user_repository_create_and_fetch(db_session: AsyncSession) -> None:
     repo = UserRepository(db_session)
 
     created = await repo.create(telegram_id=123456, first_name="Alice")
@@ -18,7 +19,7 @@ async def test_user_repository_create_and_fetch(db_session):
 
 
 @pytest.mark.asyncio
-async def test_user_repository_soft_delete_and_list(db_session):
+async def test_user_repository_soft_delete_and_list(db_session: AsyncSession) -> None:
     repo = UserRepository(db_session)
 
     u1 = await repo.create(telegram_id=1, first_name="User1")

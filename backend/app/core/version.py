@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
+import tomllib
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import Final
-
-import tomllib
 
 
 def _read_pyproject_version() -> str | None:

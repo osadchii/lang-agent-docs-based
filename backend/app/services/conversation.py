@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import uuid
-from typing import Sequence
 
 from app.models.conversation import ConversationMessage, MessageRole
 from app.repositories.conversation import ConversationRepository

@@ -37,7 +37,9 @@ class UserService:
     async def get_by_telegram(self, telegram_id: int) -> User | None:
         return await self.repository.get_by_telegram_id(telegram_id)
 
-    async def update_last_activity(self, user_id: uuid.UUID, *, timestamp: datetime | None = None) -> None:
+    async def update_last_activity(
+        self, user_id: uuid.UUID, *, timestamp: datetime | None = None
+    ) -> None:
         await self.repository.touch_last_activity(user_id, timestamp=timestamp)
 
 

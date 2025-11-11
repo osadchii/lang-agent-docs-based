@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import uuid
 from datetime import date
+from typing import Callable, cast
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     CheckConstraint,
-    Date,
     ForeignKey,
     Index,
     Integer,
-    JSON,
     String,
     Text,
     text,
@@ -21,7 +21,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.mutable import MutableList
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base, GUID, SoftDeleteMixin, TimestampMixin
+from app.models.base import GUID, Base, SoftDeleteMixin, TimestampMixin
 
 
 class LanguageProfile(SoftDeleteMixin, TimestampMixin, Base):
@@ -40,15 +40,22 @@ class LanguageProfile(SoftDeleteMixin, TimestampMixin, Base):
     current_level: Mapped[str] = mapped_column(String(2), nullable=False)
     target_level: Mapped[str] = mapped_column(String(2), nullable=False)
 
-    JSONType = MutableList.as_mutable(JSON().with_variant(JSONB(astext_type=Text()), "postgresql"))
+    _jsonb_factory: Callable[..., JSON] = cast(Callable[..., JSON], JSONB)
+    JSONType = MutableList.as_mutable(
+        JSON().with_variant(_jsonb_factory(astext_type=Text()), "postgresql")
+    )
     goals: Mapped[list[str]] = mapped_column(JSONType, default=list, nullable=False)
 
-    interface_language: Mapped[str] = mapped_column(String(10), nullable=False, server_default=text("'ru'"))
+    interface_language: Mapped[str] = mapped_column(
+        String(10), nullable=False, server_default=text("'ru'")
+    )
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
 
     streak: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
     best_streak: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
-    total_active_days: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    total_active_days: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default=text("0")
+    )
     last_activity_date: Mapped[date | None]
 
     user = relationship("User", back_populates="language_profiles")
@@ -59,8 +66,14 @@ class LanguageProfile(SoftDeleteMixin, TimestampMixin, Base):
     )
 
     __table_args__ = (
-        CheckConstraint("current_level IN ('A1','A2','B1','B2','C1','C2')", name="ck_language_profiles_current_level"),
-        CheckConstraint("target_level IN ('A1','A2','B1','B2','C1','C2')", name="ck_language_profiles_target_level"),
+        CheckConstraint(
+            "current_level IN ('A1','A2','B1','B2','C1','C2')",
+            name="ck_language_profiles_current_level",
+        ),
+        CheckConstraint(
+            "target_level IN ('A1','A2','B1','B2','C1','C2')",
+            name="ck_language_profiles_target_level",
+        ),
         CheckConstraint(
             """
             CASE target_level

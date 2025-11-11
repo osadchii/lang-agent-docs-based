@@ -1,15 +1,16 @@
 from __future__ import annotations
 
 import pytest
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.conversation import MessageRole
 from app.models.language_profile import LanguageProfile
 from app.repositories.conversation import ConversationRepository
 from app.repositories.user import UserRepository
-from app.models.conversation import MessageRole
 
 
 @pytest.mark.asyncio
-async def test_add_and_fetch_conversation_messages(db_session):
+async def test_add_and_fetch_conversation_messages(db_session: AsyncSession) -> None:
     user_repo = UserRepository(db_session)
     conversation_repo = ConversationRepository(db_session)
 
@@ -51,7 +52,7 @@ async def test_add_and_fetch_conversation_messages(db_session):
 
 
 @pytest.mark.asyncio
-async def test_delete_conversation_history(db_session):
+async def test_delete_conversation_history(db_session: AsyncSession) -> None:
     user_repo = UserRepository(db_session)
     conversation_repo = ConversationRepository(db_session)
 

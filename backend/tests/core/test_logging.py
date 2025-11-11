@@ -29,7 +29,10 @@ def test_configure_logging_installs_json_formatter(fresh_logging_module: ModuleT
 
     root_logger = logging.getLogger()
     assert root_logger.level == logging.DEBUG
-    assert any(isinstance(handler.formatter, logging_module.JsonLogFormatter) for handler in root_logger.handlers)
+    assert any(
+        isinstance(handler.formatter, logging_module.JsonLogFormatter)
+        for handler in root_logger.handlers
+    )
 
 
 def test_configure_logging_is_idempotent(fresh_logging_module: ModuleType) -> None:

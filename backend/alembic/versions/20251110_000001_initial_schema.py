@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects import postgresql
-
 
 revision = "20251110_000001"
 down_revision = None
@@ -26,13 +25,25 @@ def upgrade() -> None:
         sa.Column("trial_ends_at", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.Column("trial_used", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("is_admin", sa.Boolean(), nullable=False, server_default=sa.text("false")),
-        sa.Column("timezone", sa.String(length=50), nullable=False, server_default=sa.text("'UTC'")),
+        sa.Column(
+            "timezone", sa.String(length=50), nullable=False, server_default=sa.text("'UTC'")
+        ),
         sa.Column("language_code", sa.String(length=10), nullable=True),
         sa.Column("last_activity", sa.TIMESTAMP(timezone=True), nullable=True),
         sa.Column("deleted", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("deleted_at", sa.TIMESTAMP(timezone=True), nullable=True),
-        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.text("timezone('utc', now())")),
-        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.text("timezone('utc', now())")),
+        sa.Column(
+            "created_at",
+            sa.TIMESTAMP(timezone=True),
+            nullable=False,
+            server_default=sa.text("timezone('utc', now())"),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.TIMESTAMP(timezone=True),
+            nullable=False,
+            server_default=sa.text("timezone('utc', now())"),
+        ),
     )
     op.create_index(
         "ux_users_telegram_id_active",
@@ -63,8 +74,18 @@ def upgrade() -> None:
         sa.Column("language_name", sa.String(length=100), nullable=False),
         sa.Column("current_level", sa.String(length=2), nullable=False),
         sa.Column("target_level", sa.String(length=2), nullable=False),
-        sa.Column("goals", postgresql.JSONB(astext_type=sa.Text()), nullable=False, server_default=sa.text("'[]'::jsonb")),
-        sa.Column("interface_language", sa.String(length=10), nullable=False, server_default=sa.text("'ru'")),
+        sa.Column(
+            "goals",
+            postgresql.JSONB(astext_type=sa.Text()),
+            nullable=False,
+            server_default=sa.text("'[]'::jsonb"),
+        ),
+        sa.Column(
+            "interface_language",
+            sa.String(length=10),
+            nullable=False,
+            server_default=sa.text("'ru'"),
+        ),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("streak", sa.Integer(), nullable=False, server_default=sa.text("0")),
         sa.Column("best_streak", sa.Integer(), nullable=False, server_default=sa.text("0")),
@@ -72,11 +93,27 @@ def upgrade() -> None:
         sa.Column("last_activity_date", sa.Date(), nullable=True),
         sa.Column("deleted", sa.Boolean(), nullable=False, server_default=sa.text("false")),
         sa.Column("deleted_at", sa.TIMESTAMP(timezone=True), nullable=True),
-        sa.Column("created_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.text("timezone('utc', now())")),
-        sa.Column("updated_at", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.text("timezone('utc', now())")),
+        sa.Column(
+            "created_at",
+            sa.TIMESTAMP(timezone=True),
+            nullable=False,
+            server_default=sa.text("timezone('utc', now())"),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.TIMESTAMP(timezone=True),
+            nullable=False,
+            server_default=sa.text("timezone('utc', now())"),
+        ),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
-        sa.CheckConstraint("current_level IN ('A1','A2','B1','B2','C1','C2')", name="ck_language_profiles_current_level"),
-        sa.CheckConstraint("target_level IN ('A1','A2','B1','B2','C1','C2')", name="ck_language_profiles_target_level"),
+        sa.CheckConstraint(
+            "current_level IN ('A1','A2','B1','B2','C1','C2')",
+            name="ck_language_profiles_current_level",
+        ),
+        sa.CheckConstraint(
+            "target_level IN ('A1','A2','B1','B2','C1','C2')",
+            name="ck_language_profiles_target_level",
+        ),
         sa.CheckConstraint(
             """
             CASE target_level
@@ -140,7 +177,12 @@ def upgrade() -> None:
         sa.Column("role", message_role_enum, nullable=False),
         sa.Column("content", sa.Text(), nullable=False),
         sa.Column("tokens", sa.Integer(), nullable=False, server_default=sa.text("0")),
-        sa.Column("timestamp", sa.TIMESTAMP(timezone=True), nullable=False, server_default=sa.text("timezone('utc', now())")),
+        sa.Column(
+            "timestamp",
+            sa.TIMESTAMP(timezone=True),
+            nullable=False,
+            server_default=sa.text("timezone('utc', now())"),
+        ),
         sa.ForeignKeyConstraint(["profile_id"], ["language_profiles.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
     )

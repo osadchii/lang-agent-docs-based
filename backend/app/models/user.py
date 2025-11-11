@@ -8,7 +8,7 @@ from datetime import datetime
 from sqlalchemy import BigInteger, Boolean, DateTime, Index, String, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base, GUID, SoftDeleteMixin, TimestampMixin
+from app.models.base import GUID, Base, SoftDeleteMixin, TimestampMixin
 
 
 class User(SoftDeleteMixin, TimestampMixin, Base):

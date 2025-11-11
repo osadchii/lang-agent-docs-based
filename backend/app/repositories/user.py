@@ -62,13 +62,11 @@ class UserRepository(BaseRepository[User]):
         stmt = update(User).where(User.id == user_id).values(deleted=True, deleted_at=now)
         await self.session.execute(stmt)
 
-    async def touch_last_activity(self, user_id: uuid.UUID, *, timestamp: datetime | None = None) -> None:
+    async def touch_last_activity(
+        self, user_id: uuid.UUID, *, timestamp: datetime | None = None
+    ) -> None:
         ts = timestamp or datetime.now(tz=timezone.utc)
-        stmt = (
-            update(User)
-            .where(User.id == user_id)
-            .values(last_activity=ts)
-        )
+        stmt = update(User).where(User.id == user_id).values(last_activity=ts)
         await self.session.execute(stmt)
 
 

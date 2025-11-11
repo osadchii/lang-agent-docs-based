@@ -9,7 +9,7 @@ from datetime import datetime
 from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, Text, func, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base, GUID
+from app.models.base import GUID, Base
 
 
 class MessageRole(str, enum.Enum):
@@ -38,7 +38,9 @@ class ConversationMessage(Base):
         nullable=False,
     )
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    tokens: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default=text("0"))
+    tokens: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
     timestamp: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

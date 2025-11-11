@@ -8,8 +8,9 @@ from typing import Any
 
 from sqlalchemy import Boolean, DateTime, MetaData, func, text
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlalchemy.engine import Dialect
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from sqlalchemy.types import CHAR, TypeDecorator
+from sqlalchemy.types import CHAR, TypeDecorator, TypeEngine
 
 
 class GUID(TypeDecorator[uuid.UUID]):
@@ -21,19 +22,27 @@ class GUID(TypeDecorator[uuid.UUID]):
     impl = CHAR
     cache_ok = True
 
-    def load_dialect_impl(self, dialect):
+    def load_dialect_impl(self, dialect: Dialect) -> TypeEngine[Any]:
         if dialect.name == "postgresql":
             return dialect.type_descriptor(PGUUID(as_uuid=True))
         return dialect.type_descriptor(CHAR(36))
 
-    def process_bind_param(self, value: uuid.UUID | str | None, dialect) -> str | uuid.UUID | None:
+    def process_bind_param(
+        self,
+        value: uuid.UUID | str | None,
+        dialect: Dialect,
+    ) -> str | uuid.UUID | None:
         if value is None:
             return value
         if isinstance(value, uuid.UUID):
             return value if dialect.name == "postgresql" else str(value)
         return str(uuid.UUID(str(value)))
 
-    def process_result_value(self, value: Any, dialect) -> uuid.UUID | None:
+    def process_result_value(
+        self,
+        value: uuid.UUID | str | None,
+        dialect: Dialect,
+    ) -> uuid.UUID | None:
         if value is None:
             return None
         if isinstance(value, uuid.UUID):

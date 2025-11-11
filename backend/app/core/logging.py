@@ -76,13 +76,13 @@ def configure_logging(level_name: str) -> None:
 
 def _resolve_level(level_name: str) -> int:
     try:
-        level_value = logging.getLevelName(level_name.upper())
+        level_value: int | str = logging.getLevelName(level_name.upper())
     except AttributeError:
         return logging.INFO
 
     if isinstance(level_value, str):
         return logging.INFO
-    return level_value
+    return int(level_value)
 
 
 def bind_request_id(request_id: str) -> Token[str | None]:
