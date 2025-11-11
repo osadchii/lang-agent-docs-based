@@ -3,6 +3,7 @@ services:
     image: "${BACKEND_IMAGE:-ghcr.io/osadchii/lang-agent-docs-based/backend}:${BACKEND_IMAGE_TAG:-latest}"
     env_file:
       - .env
+    container_name: lang-agent-backend
     ports:
       - "8000:8000"
     depends_on:
@@ -23,6 +24,7 @@ services:
   loki:
     image: grafana/loki:2.9.6
     command: -config.file=/etc/loki/config.yml
+    container_name: lang-agent-loki
     volumes:
       - loki_data:/loki
       - ./infra/loki/config.yml:/etc/loki/config.yml:ro
@@ -39,6 +41,7 @@ services:
   promtail:
     image: grafana/promtail:2.9.6
     command: -config.file=/etc/promtail/config.yml
+    container_name: lang-agent-promtail
     volumes:
       - ./infra/promtail/config.yml:/etc/promtail/config.yml:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -53,6 +56,7 @@ services:
 
   grafana:
     image: grafana/grafana:10.4.6
+    container_name: lang-agent-grafana
     environment:
       GF_SECURITY_ADMIN_USER: "${GRAFANA_ADMIN_USER:-admin}"
       GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD:-admin}"
@@ -96,6 +100,7 @@ services:
     image: nginxproxy/acme-companion:2.4.0
     depends_on:
       - nginx
+    container_name: lang-agent-nginx-acme
     environment:
       DEFAULT_EMAIL: "${TRAEFIK_ACME_EMAIL:-ops@example.com}"
       NGINX_PROXY_CONTAINER: lang-agent-nginx
@@ -114,6 +119,7 @@ services:
     image: postgres:15
     env_file:
       - .env
+    container_name: lang-agent-db
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -132,6 +138,7 @@ services:
   redis:
     image: redis:7-alpine
     command: redis-server --appendonly yes
+    container_name: lang-agent-redis
     volumes:
       - redis_data:/data
     healthcheck:
