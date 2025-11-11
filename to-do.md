@@ -44,7 +44,7 @@
    - Acceptance: локальный запуск тестов зелёный, покрытие ≥85%
 
 ## Этап B. CI/CD и деплой (сразу после скелета)
-- [ ] **7) CI: backend tests**
+- [x] **7) CI: backend tests**
    - Добавить `.github/workflows/backend-test.yml` (см. `docs/ci-cd.md`), сервисы Postgres/Redis в job
    - Шаги: линтеры, типы, тесты, coverage upload (опц.)
    - Acceptance: pipeline успешно проходит на любом пуше в ветки
