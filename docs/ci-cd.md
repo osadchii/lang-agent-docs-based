@@ -94,23 +94,32 @@ cat ~/.ssh/github_actions
 
 ### Workflow для backend
 
-#### Файл: `.github/workflows/backend-test.yml`
+Весь backend pipeline живёт в одном workflow `.github/workflows/backend-deploy.yml`. Он включает:
 
-Запускается при **каждом push** в любой бранч:
+- `tests` — запускается на **каждом push и pull request** для любых веток. Поднимает Postgres/Redis через services, ставит зависимости и гоняет `pytest --cov`.
+- `build-and-push` — зависит от `tests` и выполняется **только для push в `main`**. Если тесты упали, сборка/публикация образа не стартует.
+
+#### Файл: `.github/workflows/backend-deploy.yml`
+
+Запускается при **каждом push / pull request** (обязательные тесты). Build/push выполняется только для push в `main`:
 
 ```yaml
-name: Backend Tests
+name: Backend Deploy
 
 on:
   push:
     branches:
       - '**'
-    paths:
-      - 'backend/**'
-      - '.github/workflows/backend-test.yml'
+  pull_request:
+    branches:
+      - '**'
+
+env:
+  IMAGE_NAME: ghcr.io/osadchii/lang-agent-docs-based/backend
 
 jobs:
-  test:
+  tests:
+    name: Backend Tests
     runs-on: ubuntu-latest
 
     services:
@@ -120,87 +129,55 @@ jobs:
           POSTGRES_USER: test
           POSTGRES_PASSWORD: test
           POSTGRES_DB: langagent_test
+        ports:
+          - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U test -d langagent_test"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-        ports:
-          - 5432:5432
 
       redis:
         image: redis:7-alpine
+        ports:
+          - 6379:6379
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-        ports:
-          - 6379:6379
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
 
       - name: Install dependencies
         run: |
           cd backend
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pytest pytest-cov pytest-asyncio
-
-      - name: Run linting
-        run: |
-          cd backend
-          pip install black isort ruff mypy
-          black --check --line-length 100 app
-          isort --check --profile black app
-          ruff check app
-          mypy app --ignore-missing-imports
 
       - name: Run tests
         env:
-          DATABASE_URL: postgresql://test:test@localhost:5432/langagent_test
+          DATABASE_URL: postgresql+asyncpg://test:test@localhost:5432/langagent_test
           REDIS_URL: redis://localhost:6379/0
           SECRET_KEY: test-secret-key-for-ci
-          TELEGRAM_BOT_TOKEN: test-token
+          TELEGRAM_BOT_TOKEN: test-telegram-token
           OPENAI_API_KEY: test-openai-key
         run: |
           cd backend
-          pytest tests/ -v --cov=app --cov-report=xml --cov-report=term
+          pytest tests/ -v --cov=app --cov-report=term --cov-fail-under=85
 
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./backend/coverage.xml
-          flags: backend
-```
-
-#### Файл: `.github/workflows/backend-deploy.yml`
-
-Запускается при **push в `main`** (build + push образа) и при **pull_request → main** (только build для валидации):
-
-```yaml
-name: Backend Deploy
-
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
-
-env:
-  IMAGE_NAME: ghcr.io/osadchii/lang-agent-docs-based/backend
-
-jobs:
   build-and-push:
+    needs: tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -224,7 +201,6 @@ jobs:
             type=ref,event=branch
 
       - name: Log in to GitHub Container Registry
-        if: github.event_name == 'push'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -236,12 +212,12 @@ jobs:
         with:
           context: ./backend
           file: ./backend/Dockerfile
-          push: ${{ github.event_name == 'push' }}
+          push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 ```
 
-Push-эвенты авторизуются в GHCR и публикуют теги `latest`, `sha` и `branch`. На pull_request (`push=false`) проверяется только сборка. После публикации сервер вручную тянет образ и перезапускает `docker-compose` (см. `docs/deployment.md` → Backend deployment).
+Push-эвенты авторизуются в GHCR и публикуют теги `latest`, `sha` и `branch`. Job `build-and-push` запускается **только после успешного прохождения `tests`**, поэтому образ никогда не собирается при красных тестах. На pull_request (`push=false`) проверяется только сборка. После публикации сервер вручную тянет образ и перезапускает `docker-compose` (см. `docs/deployment.md` → Backend deployment).
 
 ### Workflow для frontend
 
@@ -420,21 +396,25 @@ jobs:
 
 ### Backend deploy steps
 
-1. **Checkout + Build**:
+1. **Backend tests**:
+   - Job `tests` поднимает сервисы Postgres/Redis и гоняет `pytest --cov`
+   - Без зелёных тестов дальнейшие шаги не выполняются
+
+2. **Checkout + Build**:
    - Используется `docker/build-push-action`
    - Собирает `backend/Dockerfile` внутри workflow
    - В событии `pull_request` push отключён (build-only)
 
-2. **Генерация тегов**:
+3. **Генерация тегов**:
    - `docker/metadata-action` добавляет `latest`, `sha`, `branch`
    - Эти теги попадут в GHCR
 
-3. **Публикация образа в GHCR**:
+4. **Публикация образа в GHCR**:
    - Авторизация через `GHCR_USERNAME`/`GHCR_TOKEN`
    - Push выполняется только на push в `main`
    - При необходимости можно добавить кэш (`cache-from/to`)
 
-4. **Ручной деплой на сервер**:
+5. **Ручной деплой на сервер**:
    - Подключиться к серверу и выполнить `docker compose pull backend`
    - Применить миграции: `docker compose run --rm backend alembic upgrade head`
    - Перезапустить сервис: `docker compose up -d backend db redis`

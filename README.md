@@ -5,8 +5,7 @@
 - Структура `backend/app/{api,core,models,repositories,services}` и тестовый пакет
 - Базовая конфигурация `Settings` (строгая типизация, валидация CORS, единый источник правды)
 - Инженерные соглашения: `pyproject.toml`, `requirements.txt`, `.editorconfig`, `.gitignore`, `.env.example`
-- GitHub Actions workflow `.github/workflows/backend-test.yml` (линтинг, типы, тесты, coverage)
-- GitHub Actions workflow `.github/workflows/backend-deploy.yml` (собирает backend-образ и пушит в GHCR на каждом push в `main`)
+- GitHub Actions workflow `.github/workflows/backend-deploy.yml` (один pipeline: тесты на каждом push/PR, build & GHCR push только для `main`)
 - Согласование с документацией в `docs/` — текущий репозиторий стартует строго по плану `to-do.md`
 - Продовый `backend/Dockerfile` + корневой `docker-compose.yml` (backend + db + redis, healthchecks, Alembic перед стартом)
 
@@ -18,7 +17,7 @@
 ├── docker-compose.local.yml # Локальные Postgres + Redis для разработки
 ├── docs/                     # Источник правды по архитектуре, API и процессам
 ├── .github/
-│   └── workflows/            # CI пайплайны (backend-test.yml, backend-deploy.yml)
+│   └── workflows/            # CI pipeline (backend-deploy.yml)
 └── backend/
     ├── Dockerfile           # Продовый образ backend (uvicorn + alembic upgrade head)
     ├── docker-entrypoint.sh # Точка входа: прогон миграций и запуск сервера

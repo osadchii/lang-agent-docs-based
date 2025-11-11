@@ -45,7 +45,7 @@
 
 ## Этап B. CI/CD и деплой (сразу после скелета)
 - [x] **7) CI: backend tests**
-   - Добавить `.github/workflows/backend-test.yml` (см. `docs/ci-cd.md`), сервисы Postgres/Redis в job
+   - Настроить job `tests` в `.github/workflows/backend-deploy.yml` (см. `docs/ci-cd.md`), сервисы Postgres/Redis в job
    - Шаги: линтеры, типы, тесты, coverage upload (опц.)
    - Acceptance: pipeline успешно проходит на любом пуше в ветки
 
