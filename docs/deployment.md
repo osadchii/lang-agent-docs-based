@@ -30,8 +30,6 @@ npm run dev
 
 **docker-compose.local.yml (пример):**
 ```yaml
-version: '3.8'
-
 services:
   postgres:
     image: postgres:15
@@ -167,8 +165,6 @@ exec uvicorn app.main:app --host "0.0.0.0" --port "${PORT:-8000}"
 
 Docker Compose для деплоя (`docker-compose.yml` в корне репозитория):
 ```yaml
-version: '3.9'
-
 services:
   backend:
     image: "${BACKEND_IMAGE:-ghcr.io/osadchii/lang-agent-docs-based/backend}:${BACKEND_IMAGE_TAG:-latest}"
@@ -235,7 +231,7 @@ networks:
 
 **Важно**: Docker Compose использует уже собранный образ из GitHub Container Registry (`ghcr.io/osadchii/lang-agent-docs-based/backend`). Для smoke‑тестов по-прежнему можно выполнить `docker compose build backend`, но продакшн сценарий тянет готовые теги командой `docker compose pull backend`.
 
-CI/CD pipeline автоматически копирует актуальный `docker-compose.yml` на сервер в `/opt/lang-agent/docker-compose.yml` сразу после успешной публикации образа.
+CI/CD pipeline автоматически копирует актуальный `docker-compose.yml` на сервер в `/opt/lang-agent/docker-compose.yml`, логинится в GHCR и выполняет `docker compose pull && docker compose up -d --remove-orphans` сразу после успешной публикации образа.
 
 ### Environment variables
 
