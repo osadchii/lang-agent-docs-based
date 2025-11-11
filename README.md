@@ -5,7 +5,7 @@
 - Структура `backend/app/{api,core,models,repositories,services}` и тестовый пакет
 - Базовая конфигурация `Settings` (строгая типизация, валидация CORS, единый источник правды)
 - Инженерные соглашения: `pyproject.toml`, `requirements.txt`, `.editorconfig`, `.gitignore`, `.env.example`
-- GitHub Actions workflow `.github/workflows/backend-deploy.yml` (один pipeline: тесты на каждом push/PR, build & GHCR push только для `main`)
+- GitHub Actions workflow `.github/workflows/backend-deploy.yml` (тесты на каждом push/PR, build & GHCR push + автодеплой на сервер для `main`)
 - Согласование с документацией в `docs/` — текущий репозиторий стартует строго по плану `to-do.md`
 - Продовый `backend/Dockerfile` + корневой `docker-compose.yml` (backend + db + redis, healthchecks, Alembic перед стартом)
 
@@ -72,10 +72,14 @@ PY`
    ```
    Точка входа `docker-entrypoint.sh` автоматически выполняет `alembic upgrade head` перед запуском `uvicorn`.
 
-### 🔐 GitHub Secrets для сборки образа
+### 🔐 GitHub Secrets для CI/CD
 Добавьте в Settings → Secrets and variables → Actions:
 - `GHCR_USERNAME` — имя владельца GHCR (для репо `osadchii/lang-agent-docs-based` укажите `osadchii`).
-- `GHCR_TOKEN` — GitHub Personal Access Token c правами `write:packages` (рекомендуется отдельный fine-grained token).
+- `GHCR_TOKEN` — GitHub Personal Access Token с правами `write:packages` (рекомендуется отдельный fine-grained token).
+- `SSH_PRIVATE_KEY_LANG_AGENT` — приватный ключ с доступом к серверу деплоя (read/write в `/opt/lang-agent`).
+- `SSH_HOST` — адрес сервера.
+- `SSH_PORT` — SSH порт (обычно `22`).
+- `SSH_USER` — пользователь, от имени которого выполняются `scp` / `ssh` команды.
 
 ## 📚 Документация (обязательна к прочтению перед задачами)
 | Блок | Цель | Файл |

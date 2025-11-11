@@ -5,15 +5,15 @@
 CI/CD pipeline автоматизирует процесс тестирования, сборки и развертывания приложения:
 
 - **На push в любой бранч**: запуск тестов и линтинга
-- **На push в main или merge PR в main**: сборка backend-образа и публикация в GHCR (`ghcr.io/osadchii/lang-agent-docs-based/backend`)
-- **Secrets**: секреты для CI/CD хранятся в GitHub Secrets, секреты приложения - в `.env` файле на сервере
+- **На push в main (включая merge PR)**: сборка backend-образа, публикация в GHCR (`ghcr.io/osadchii/lang-agent-docs-based/backend`) и авто-деплой на сервер в `/opt/lang-agent`
+- **Secrets**: секреты для CI/CD (`GHCR_*`, `SSH_*`) хранятся в GitHub Secrets, секреты приложения — в `.env` файле на сервере
 
 ## Как работает деплой
 
-1. **GitHub Actions** собирает backend-образ и пушит его в GHCR
-2. **Push в main** публикует теги `latest`, `sha`, `branch`; PR ветки проверяют только сборку
-3. **На сервере** владелец вручную запускает `docker compose pull backend && docker compose up -d backend db redis`
-4. Файл `.env` с переменными окружения **уже существует на сервере** и создается владельцем вручную перед первым деплоем
+1. **Job `tests`** гоняет pytest/coverage для каждого push/PR. При любом падении пайплайн останавливается.
+2. **Job `build-and-push`** (только `push` в `main`) собирает backend-образ и пушит его в GHCR с тегами `latest`, `sha`, `branch`.
+3. **Job `deploy`** (только `push` в `main`) открывает SSH-сессию на сервер с помощью `SSH_PRIVATE_KEY_LANG_AGENT`, синхронизирует `docker-compose.yml` в `/opt/lang-agent`, затем выполняет `docker compose pull` и `docker compose up -d --remove-orphans`.
+4. `.env` с продовыми переменными **уже лежит на сервере** (`/opt/lang-agent/.env`) и не пересоздаётся пайплайном. Если переменные меняются — обновляем файл вручную перед следующим автодеплоем.
 
 ## Подготовка сервера (первый раз)
 
@@ -45,8 +45,8 @@ docker-compose --version
 
 ```bash
 # Создать директорию для приложения
-sudo mkdir -p /var/app
-cd /var/app
+sudo mkdir -p /opt/lang-agent
+cd /opt/lang-agent
 
 # Создать .env файл
 sudo nano .env
@@ -83,7 +83,7 @@ ssh-copy-id -i ~/.ssh/github_actions.pub user@your-server
 
 # Скопировать приватный ключ в буфер обмена
 cat ~/.ssh/github_actions
-# Добавить содержимое в GitHub Secrets как SSH_PRIVATE_KEY
+# Добавить содержимое в GitHub Secrets как SSH_PRIVATE_KEY_LANG_AGENT
 ```
 
 После этого можно запускать деплой через GitHub Actions!
@@ -98,6 +98,7 @@ cat ~/.ssh/github_actions
 
 - `tests` — запускается на **каждом push и pull request** для любых веток. Поднимает Postgres/Redis через services, ставит зависимости и гоняет `pytest --cov`.
 - `build-and-push` — зависит от `tests` и выполняется **только для push в `main`**. Если тесты упали, сборка/публикация образа не стартует.
+- `deploy` — зависит от `build-and-push`, копирует `docker-compose.yml` на сервер и выполняет `docker compose pull/up` только после успешной сборки образа.
 
 #### Файл: `.github/workflows/backend-deploy.yml`
 
@@ -215,9 +216,46 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+  deploy:
+    name: Deploy Backend
+    needs: build-and-push
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY_LANG_AGENT }}
+
+      - name: Copy docker-compose to server
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          ssh -o StrictHostKeyChecking=no -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "mkdir -p /opt/lang-agent"
+          scp -o StrictHostKeyChecking=no -P "$SSH_PORT" docker-compose.yml "$SSH_USER@$SSH_HOST":/opt/lang-agent/docker-compose.yml
+
+      - name: Pull images and restart stack
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          ssh -o StrictHostKeyChecking=no -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" <<'EOF'
+          set -euo pipefail
+          cd /opt/lang-agent
+          docker compose pull
+          docker compose up -d --remove-orphans
+          EOF
 ```
 
-Push-эвенты авторизуются в GHCR и публикуют теги `latest`, `sha` и `branch`. Job `build-and-push` запускается **только после успешного прохождения `tests`**, поэтому образ никогда не собирается при красных тестах. На pull_request (`push=false`) проверяется только сборка. После публикации сервер вручную тянет образ и перезапускает `docker-compose` (см. `docs/deployment.md` → Backend deployment).
+Push-эвенты авторизуются в GHCR и публикуют теги `latest`, `sha` и `branch`. Job `build-and-push` стартует **только после зелёных `tests`**, а `deploy` запускается только после успешной сборки. Pull requests выполняют только тесты (без публикации и деплоя). Автодеплой гарантирует, что сервер в `/opt/lang-agent` всегда получает свежий `docker-compose.yml`, выполняет `docker compose pull` и `docker compose up -d --remove-orphans` сразу после выхода нового образа.
 
 ### Workflow для frontend
 
@@ -397,28 +435,26 @@ jobs:
 ### Backend deploy steps
 
 1. **Backend tests**:
-   - Job `tests` поднимает сервисы Postgres/Redis и гоняет `pytest --cov`
+   - Job `tests` поднимает Postgres/Redis сервисы и гоняет `pytest --cov`
    - Без зелёных тестов дальнейшие шаги не выполняются
 
 2. **Checkout + Build**:
-   - Используется `docker/build-push-action`
-   - Собирает `backend/Dockerfile` внутри workflow
-   - В событии `pull_request` push отключён (build-only)
+   - `docker/build-push-action` собирает `backend/Dockerfile`
+   - В `pull_request` режиме push отключён (build-only)
 
 3. **Генерация тегов**:
    - `docker/metadata-action` добавляет `latest`, `sha`, `branch`
-   - Эти теги попадут в GHCR
+   - Эти теги попадают в GHCR
 
 4. **Публикация образа в GHCR**:
    - Авторизация через `GHCR_USERNAME`/`GHCR_TOKEN`
-   - Push выполняется только на push в `main`
-   - При необходимости можно добавить кэш (`cache-from/to`)
+   - Push выполняется только на `push` в `main`
 
-5. **Ручной деплой на сервер**:
-   - Подключиться к серверу и выполнить `docker compose pull backend`
-   - Применить миграции: `docker compose run --rm backend alembic upgrade head`
-   - Перезапустить сервис: `docker compose up -d backend db redis`
-   - Проверить `/health` (curl или мониторинг)
+5. **Автодеплой на сервер**:
+   - `webfactory/ssh-agent` загружает `SSH_PRIVATE_KEY_LANG_AGENT`
+   - Workflow гарантирует наличие `/opt/lang-agent`, копирует туда свежий `docker-compose.yml`
+   - Выполняются `docker compose pull` и `docker compose up -d --remove-orphans`
+   - `.env` на сервере не трогается; миграции запускаются entrypoint'ом контейнера
 
 ### Frontend deploy steps
 
