@@ -86,6 +86,7 @@ PY`
 - Promtail подключается к Docker socket и забирает JSON-логи контейнера `backend`, парсит поля (`http_method`, `status_code`, `duration_ms`, `request_id`) и пушит их в Loki.
 - При первом старте Grafana автоматически импортирует datasoure `Loki` и дашборд `Backend Observability` из `infra/grafana/provisioning/dashboards/backend-observability.json` (RPS, p95 latency, 4xx/5xx, top endpoints).
 - Traefik автоматически выпускает Let's Encrypt сертификат для `GRAFANA_DOMAIN`, пробрасывает только Grafana наружу (`https://<GRAFANA_DOMAIN>`), закрывая backend/infra из внешней сети. Для повторных запусков сертификаты кэшируются в volume `traefik_acme`.
+- Переменная `DOCKER_API_VERSION=1.44` проброшена в Traefik, чтобы он общался с современным Docker API; при более старом демоне можно понизить значение, но рекомендуется обновить Docker.
 
 ### 🔐 GitHub Secrets для CI/CD
 Добавьте в Settings → Secrets and variables → Actions:

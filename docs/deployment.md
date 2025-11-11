@@ -502,6 +502,7 @@ docker-compose logs --tail=100 backend
    - В `.env` задайте `GRAFANA_DOMAIN` (например, `monitor.lang-agent.app`) и `TRAEFIK_ACME_EMAIL` — они используются в Traefik labels/ACME.
    - Снаружи доступна только Grafana по `https://<GRAFANA_DOMAIN>`; backend, Loki и Promtail остаются внутри сети `app-network`.
    - Первичная валидация проходит через HTTP-01 challenge, поэтому порт `80` должен быть доступен из интернета.
+   - Переменная `DOCKER_API_VERSION=1.44` проброшена в сервис Traefik, чтобы Docker 24+ корректно принимал запросы клиента; при использовании старого демона уменьшите версию или обновите Docker.
 6. **Проверка.**
    ```bash
    docker compose logs -f promtail

@@ -93,6 +93,8 @@ services:
       - --certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme/acme.json
       - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
       - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+    environment:
+      DOCKER_API_VERSION: "1.44"
     ports:
       - "80:80"
       - "443:443"
