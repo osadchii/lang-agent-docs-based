@@ -480,6 +480,36 @@ docker-compose logs --tail=100 backend
 - Loki + Grafana
 - CloudWatch Logs (AWS)
 
+#### Loki + Grafana stack (production docker-compose)
+Наблюдаемость в продовом compose-файле разворачивается штатно вместе с приложением.
+
+1. **Конфиги.** Каталог `infra/` хранит все файлы, которые нужно копировать на сервер рядом с `docker-compose.yml`:
+   - `infra/loki/config.yml` — хранение чанк-файлов и ретеншн 7 дней;
+   - `infra/promtail/config.yml` — сборщик логов; парсит JSON-поля (`http_method`, `status_code`, `duration_ms`, `request_id`);
+   - `infra/grafana/provisioning/...` — datasources и дашборды (RPS, p95 latency, ошибки, top endpoints).
+2. **Переменные окружения.** В `.env` добавьте `GRAFANA_ADMIN_USER` и `GRAFANA_ADMIN_PASSWORD` (минимум 16 символов в проде).
+3. **Запуск.**
+   ```bash
+   docker compose up -d backend db redis loki promtail grafana
+   ```
+   Promtail требует доступа к Docker socket и каталогу `/var/lib/docker/containers`, поэтому команду выполняйте от пользователя с правами на чтение этих путей (обычно `docker` группа).
+4. **Доступ.**
+   - Grafana доступна по `https://<GRAFANA_DOMAIN>` через Traefik; авторизация — `GRAFANA_ADMIN_*`.
+   - Loki доступен только из внутренней сети `app-network`.
+   - Первый логин в Grafana использует `GRAFANA_ADMIN_*`; при старте автоматически импортируется datasource `Loki` и дашборд `Backend Observability`.
+5. **Traefik + HTTPS.**
+   - Traefik контейнер уже включён в `docker-compose.yml` и автоматически поднимает роутер на портах `80`/`443`.
+   - В `.env` задайте `GRAFANA_DOMAIN` (например, `monitor.lang-agent.app`) и `TRAEFIK_ACME_EMAIL` — они используются в Traefik labels/ACME.
+   - Снаружи доступна только Grafana по `https://<GRAFANA_DOMAIN>`; backend, Loki и Promtail остаются внутри сети `app-network`.
+   - Первичная валидация проходит через HTTP-01 challenge, поэтому порт `80` должен быть доступен из интернета.
+6. **Проверка.**
+   ```bash
+   docker compose logs -f promtail
+   docker compose logs -f loki
+   docker compose logs -f traefik
+   ```
+   После появления запросов API в Grafana → `Dashboards` → `Lang Agent / Backend Observability` появятся графики и таблицы.
+
 ### Алерты
 Уведомления об ошибках:
 

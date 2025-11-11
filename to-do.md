@@ -62,11 +62,11 @@
 ## Этап C. Обсервабилити (локально и/или прод)
 
 
-- [ ] **10) Loki + Grafana (локально и опционально на проде)**
-   - В `docker-compose.local.yml` добавить `loki`, `grafana`, `promtail` (или docker‑лог драйвер для Loki)
-   - Для продакшена — по желанию включить эти сервисы в `docker-compose.yml` или отдельный `docker-compose.observability.yml`
-   - Провиженинг Grafana (папка `infra/grafana/`), базовая дашборда: RPS, p95 latency, ошибки, 4xx/5xx, top endpoints
-   - Acceptance: логи backend попадают в Loki; дашборда показывает метрики/логи
+- [x] **10) Loki + Grafana (локально и опционально на проде)**
+   - Продовый `docker-compose.yml` расширен сервисами `loki`, `promtail`, `grafana`; промтейл читает docker‑логи backend и пушит их в Loki.
+   - Конфиги лежат в `infra/{loki,promtail,grafana}/` и провиженят datasource + дашборд (RPS, p95 latency, ошибки, 4xx/5xx, top endpoints).
+   - README + `docs/deployment.md` объясняют копирование `infra/`, настройки Grafana и порядок запуска.
+   - Acceptance: backend‑логи попадают в Loki, Grafana показывает готовый дашборд.
 
 - [ ] **11) Метрики и трассировки (минимум)**
    - Добавить Prometheus‑совместимые метрики через `prometheus_fastapi_instrumentator`

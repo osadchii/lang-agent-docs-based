@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: backend-observability
+    orgId: 1
+    folder: Lang Agent
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /etc/grafana/provisioning/dashboards
