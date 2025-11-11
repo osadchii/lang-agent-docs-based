@@ -70,7 +70,32 @@ class Settings(BaseSettings):
     @computed_field(return_type=list[str])
     @property
     def backend_cors_origins(self) -> list[str]:
-        return self._parse_backend_cors_origins(self.raw_backend_cors_origins)
+        return self.parse_cors_origins(self.raw_backend_cors_origins)
+
+    @staticmethod
+    def parse_cors_origins(origins: str | list[str] | None) -> list[str]:
+        """
+        Normalize the BACKEND_CORS_ORIGINS value into a list of origins.
+
+        Accepts either a comma-separated string, a JSON array string, or an
+        explicit list of strings. Any other type raises ValueError to make
+        misconfiguration obvious.
+        """
+        if origins is None:
+            return []
+        if isinstance(origins, list):
+            cleaned: list[str] = []
+            for origin in origins:
+                if not isinstance(origin, str):
+                    raise ValueError("CORS origin list entries must be strings.")
+                stripped = origin.strip()
+                if not stripped:
+                    raise ValueError("CORS origin list entries must be non-empty strings.")
+                cleaned.append(stripped.rstrip("/"))
+            return cleaned
+        if isinstance(origins, str):
+            return Settings._parse_backend_cors_origins(origins)
+        raise ValueError("CORS origins must be provided as a string or list of strings.")
 
     @staticmethod
     def _parse_backend_cors_origins(value: str | None) -> list[str]:
