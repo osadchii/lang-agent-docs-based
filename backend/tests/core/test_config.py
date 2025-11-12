@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 from pydantic import ValidationError
+from pydantic_settings import PydanticBaseSettingsSource
 
 from app.core.config import Settings
 
@@ -31,6 +32,17 @@ class NoEnvSettings(Settings):
 
     model_config = Settings.model_config.copy()
     model_config["env_file"] = ()
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[Settings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        return (init_settings,)
 
 
 def test_settings_cors_origins_merge_all_sources() -> None:
