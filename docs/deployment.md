@@ -110,7 +110,7 @@ Redis 7+ для кэширования и управления состояни�
 ### Storage
 Хранение файлов (изображения, аудио):
 - **Локальное хранение**: `/opt/lang-agent/media` на сервере (для небольших объемов)
-- **S3-совместимое хранилище**: AWS S3, MinIO, DigitalOcean Spaces (рекомендуется)
+- **Объектное хранилище**: MinIO, DigitalOcean Spaces или аналогичный сервис (опционально)
   - Автоматическое резервное копирование
   - CDN интеграция
   - Версионирование файлов
@@ -237,55 +237,38 @@ CI/CD pipeline автоматически копирует актуальный 
 
 Файл `.env` создается **вручную на сервере** владельцем проекта перед первым деплоем и хранится в `/opt/lang-agent/.env`.
 
-**Содержимое `.env` файла:**
-```bash
-# Контейнеры
-BACKEND_IMAGE=ghcr.io/osadchii/lang-agent-docs-based/backend
-BACKEND_IMAGE_TAG=latest
+**Содержимое `.env` файла:** (все значения задокументированы в `.env.example`)
 
-# Database (для PostgreSQL контейнера)
-POSTGRES_DB=langagent
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=secure_password_here
+| Переменная | Обязательна | Описание | Пример |
+| --- | --- | --- | --- |
+| `PROJECT_NAME` | нет | Отображаемое имя сервиса | Lang Agent Backend |
+| `APP_ENV` | нет | Окружение (`local/test/staging/production`) | production |
+| `DEBUG` | нет | Включает swagger и подробные ошибки | false |
+| `API_V1_PREFIX` | нет | Префикс REST API | /api |
+| `LOG_LEVEL` | нет | Уровень логирования | INFO |
+| `DATABASE_URL` | **да** | Подключение к PostgreSQL (`asyncpg`) | `postgresql+asyncpg://...` |
+| `REDIS_URL` | **да** | Подключение к Redis | `redis://redis:6379/0` |
+| `SECRET_KEY` | **да** | JWT‑секрет (`openssl rand -hex 32`) | `1a2b...` |
+| `JWT_ALGORITHM` | нет | Алгоритм подписи токенов | HS256 |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | нет | TTL access токена (мин) | 30 |
+| `TELEGRAM_BOT_TOKEN` | **да** | Токен BotFather | `123456:ABC...` |
+| `TELEGRAM_WEBHOOK_URL` | нет | Абсолютный URL вебхука | `https://api.example.com/api/webhook` |
+| `OPENAI_API_KEY` | **да** | Ключ OpenAI | `sk-...` |
+| `ANTHROPIC_API_KEY` | нет | Ключ Claude (если используем) | `sk-ant-...` |
+| `LLM_MODEL` | нет | Модель по умолчанию | gpt-4.1-mini |
+| `LLM_TEMPERATURE` | нет | Творчество LLM (`0..1`) | 0.7 |
+| `PRODUCTION_APP_ORIGIN` | нет | Боевой origin Mini App | https://mini.lang-agent.app |
+| `BACKEND_CORS_ORIGINS` | нет | Доп. whitelist (CSV/JSON) | https://mini.lang-agent.app |
+| `STRIPE_SECRET_KEY` | нет | Ключ Stripe (подписки) | `sk_live_...` |
+| `STRIPE_WEBHOOK_SECRET` | нет | Проверка событий Stripe | `whsec_...` |
+| `STRIPE_PRICE_ID_BASIC` / `STRIPE_PRICE_ID_PREMIUM` | нет | ID тарифов | `price_xxx` |
+Инфраструктурные переменные (используются Docker Compose и CI/CD):
 
-# Database URL (для backend)
-DATABASE_URL=postgresql://postgres:secure_password_here@db:5432/langagent
-
-# Redis
-REDIS_URL=redis://redis:6379/0
-
-# Telegram
-TELEGRAM_BOT_TOKEN=your_bot_token_here
-TELEGRAM_WEBHOOK_URL=https://yourdomain.com/api/webhook
-
-# OpenAI/LLM
-OPENAI_API_KEY=your_openai_api_key
-LLM_MODEL=gpt-4.1-mini
-LLM_TEMPERATURE=0.7
-
-# Anthropic (опционально)
-ANTHROPIC_API_KEY=your_anthropic_key
-
-# JWT/Security
-SECRET_KEY=your_secret_key_here  # Генерируется один раз: openssl rand -hex 32
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30  # TTL для JWT access token (30 минут для безопасности)
-
-# Environment
-ENVIRONMENT=production  # local | production
-
-# Stripe (для подписок)
-STRIPE_SECRET_KEY=your_stripe_secret_key
-STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
-STRIPE_PRICE_ID_BASIC=price_xxx
-STRIPE_PRICE_ID_PREMIUM=price_yyy
-
-# S3/Storage (опционально)
-S3_BUCKET=your_bucket_name
-S3_ACCESS_KEY=your_access_key
-S3_SECRET_KEY=your_secret_key
-S3_ENDPOINT=https://s3.amazonaws.com
-```
+| Переменная | Назначение |
+| --- | --- |
+| `BACKEND_IMAGE`, `BACKEND_IMAGE_TAG` | Тег backend‑образа в GHCR |
+| `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Настройки контейнера db |
+| `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD`, `GRAFANA_DOMAIN`, `TRAEFIK_ACME_EMAIL` | Настройка мониторинга и Let’s Encrypt |
 
 **Создание .env файла на сервере:**
 ```bash
@@ -403,10 +386,10 @@ server {
 - SSL сертификаты
 - Preview deployments для PR
 
-**3. AWS S3 + CloudFront:**
-- Статический хостинг
-- Глобальный CDN
-- Низкая стоимость
+**3. Object storage + CDN:**
+- Хранение статики в любом объектном хранилище (MinIO, Spaces и т.п.)
+- Раздача через CDN (CloudFront, Cloudflare R2, BunnyCDN)
+- Низкая стоимость при высокой географической доступности
 
 ### Environment configuration
 Переменные окружения для фронтенда настраиваются через `.env` файлы:
@@ -571,14 +554,14 @@ find $BACKUP_DIR -name "backup_*.sql.gz" -mtime +30 -delete
 0 2 * * * /usr/local/bin/backup.sh
 ```
 
-**Автоматическое копирование в S3:**
+**Копирование во внешнее хранилище:**
 ```bash
-aws s3 cp $BACKUP_DIR/backup_$DATE.sql.gz s3://my-backups/database/
+rclone copy $BACKUP_DIR/backup_$DATE.sql.gz object-storage:lang-agent/database/
 ```
 
 ### Файлы пользователей
-- Синхронизация в S3 (если используется локальное хранение)
-- Версионирование в S3
+- Синхронизация с объектным хранилищем (если используется локальное хранение)
+- Версионирование в выбранном хранилище
 - Регулярная проверка целостности
 
 ### Восстановление
@@ -586,8 +569,8 @@ aws s3 cp $BACKUP_DIR/backup_$DATE.sql.gz s3://my-backups/database/
 # Восстановление из бэкапа
 gunzip < backup_20250109.sql.gz | psql -h localhost -U postgres langagent
 
-# Восстановление из S3
-aws s3 cp s3://my-backups/database/backup_20250109.sql.gz .
+# Восстановление из внешнего хранилища
+rclone copy object-storage:lang-agent/database/backup_20250109.sql.gz .
 gunzip < backup_20250109.sql.gz | psql -h localhost -U postgres langagent
 ```
 

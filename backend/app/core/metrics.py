@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from typing import Callable
+from typing import Callable, cast
 
 from fastapi import FastAPI
 from fastapi.responses import Response
@@ -95,9 +95,17 @@ def _register_metrics_endpoint(app: FastAPI, registry: CollectorRegistry) -> Non
         active_registry = registry
         if "PROMETHEUS_MULTIPROC_DIR" in os.environ:
             active_registry = CollectorRegistry()
-            multiprocess.MultiProcessCollector(active_registry)
+            collector = cast(
+                Callable[[CollectorRegistry], None],
+                multiprocess.MultiProcessCollector,
+            )
+            collector(active_registry)
 
-        payload = generate_openmetrics(active_registry)
+        generate = cast(
+            Callable[[CollectorRegistry], bytes],
+            generate_openmetrics,
+        )
+        payload = generate(active_registry)
         media_type = "application/openmetrics-text; version=1.0.0; charset=utf-8"
         return Response(content=payload, media_type=media_type)
 

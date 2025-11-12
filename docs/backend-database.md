@@ -1176,8 +1176,8 @@ gzip "$BACKUP_DIR/langbot_$DATE.backup"
 # Удаление бэкапов старше 30 дней
 find $BACKUP_DIR -name "*.backup.gz" -mtime +30 -delete
 
-# Загрузка в S3 (или другое облачное хранилище)
-aws s3 cp "$BACKUP_DIR/langbot_$DATE.backup.gz" s3://my-bucket/backups/
+# Копирование архива во внешнее объектное хранилище (пример с rclone)
+rclone copy "$BACKUP_DIR/langbot_$DATE.backup.gz" object-storage:langbot/backups/
 ```
 
 **Cron:**

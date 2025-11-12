@@ -12,7 +12,16 @@ import json
 from functools import lru_cache
 from typing import Literal, cast
 
-from pydantic import AnyHttpUrl, Field, SecretStr, computed_field
+from pydantic import (
+    AliasChoices,
+    AnyHttpUrl,
+    Field,
+    SecretStr,
+    ValidationInfo,
+    computed_field,
+    field_validator,
+    model_validator,
+)
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -35,26 +44,23 @@ class Settings(BaseSettings):
     api_v1_prefix: str = Field(default="/api", alias="API_V1_PREFIX")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 
-    database_url: str = Field(
-        default="postgresql+asyncpg://postgres:postgres@localhost:5432/lang_agent",
-        alias="DATABASE_URL",
-    )
-    redis_url: str = Field(
-        default="redis://localhost:6379/0",
-        alias="REDIS_URL",
-    )
+    database_url: str = Field(alias="DATABASE_URL")
+    redis_url: str = Field(alias="REDIS_URL")
 
-    telegram_bot_token: SecretStr | None = Field(default=None, alias="TELEGRAM_BOT_TOKEN")
-    telegram_webhook_url: AnyHttpUrl | None = Field(
-        default=None,
-        alias="TELEGRAM_WEBHOOK_URL",
-    )
+    telegram_bot_token: SecretStr = Field(alias="TELEGRAM_BOT_TOKEN")
+    telegram_webhook_url: AnyHttpUrl | None = Field(alias="TELEGRAM_WEBHOOK_URL", default=None)
 
-    openai_api_key: SecretStr | None = Field(default=None, alias="OPENAI_API_KEY")
+    openai_api_key: SecretStr = Field(alias="OPENAI_API_KEY")
+    anthropic_api_key: SecretStr | None = Field(default=None, alias="ANTHROPIC_API_KEY")
     llm_model: str = Field(default="gpt-4.1-mini", alias="LLM_MODEL")
     llm_temperature: float = Field(default=0.7, alias="LLM_TEMPERATURE")
 
-    secret_key: SecretStr | None = Field(default=None, alias="SECRET_KEY")
+    secret_key: SecretStr = Field(alias="SECRET_KEY")
+    jwt_algorithm: Literal["HS256", "HS384", "HS512"] = Field(
+        default="HS256",
+        alias="JWT_ALGORITHM",
+        validation_alias=AliasChoices("JWT_ALGORITHM", "ALGORITHM"),
+    )
     access_token_expire_minutes: int = Field(default=30, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
 
     production_app_origin: AnyHttpUrl | None = Field(
@@ -66,6 +72,66 @@ class Settings(BaseSettings):
         alias="BACKEND_CORS_ORIGINS",
         description="Comma-separated list or JSON array of allowed CORS origins.",
     )
+
+    stripe_secret_key: SecretStr | None = Field(default=None, alias="STRIPE_SECRET_KEY")
+    stripe_webhook_secret: SecretStr | None = Field(default=None, alias="STRIPE_WEBHOOK_SECRET")
+    stripe_price_id_basic: str | None = Field(default=None, alias="STRIPE_PRICE_ID_BASIC")
+    stripe_price_id_premium: str | None = Field(default=None, alias="STRIPE_PRICE_ID_PREMIUM")
+
+    @field_validator("database_url", "redis_url", "llm_model", mode="before")
+    @classmethod
+    def _strip_string(cls, value: str | None, info: ValidationInfo) -> str:
+        if value is None:
+            field = (info.field_name or "value").upper()
+            raise ValueError(f"{field} must be provided.")
+        trimmed = value.strip()
+        if not trimmed:
+            field = (info.field_name or "value").upper()
+            raise ValueError(f"{field} must not be empty.")
+        return trimmed
+
+    @field_validator("llm_temperature")
+    @classmethod
+    def _validate_temperature(cls, value: float) -> float:
+        if not 0 <= value <= 1:
+            raise ValueError("LLM_TEMPERATURE must be within [0, 1].")
+        return value
+
+    @field_validator("access_token_expire_minutes")
+    @classmethod
+    def _validate_token_ttl(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("ACCESS_TOKEN_EXPIRE_MINUTES must be a positive integer.")
+        return value
+
+    @field_validator("secret_key", "telegram_bot_token", "openai_api_key", mode="after")
+    @classmethod
+    def _validate_secret(cls, secret: SecretStr, info: ValidationInfo) -> SecretStr:
+        if not secret.get_secret_value().strip():
+            field = (info.field_name or "value").upper()
+            raise ValueError(f"{field} must not be empty.")
+        return secret
+
+    @model_validator(mode="after")
+    def _validate_required_tokens(self) -> "Settings":
+        missing: list[str] = []
+
+        if not self.database_url:
+            missing.append("DATABASE_URL")
+        if not self.redis_url:
+            missing.append("REDIS_URL")
+        if not self.secret_key.get_secret_value():
+            missing.append("SECRET_KEY")
+        if not self.telegram_bot_token.get_secret_value():
+            missing.append("TELEGRAM_BOT_TOKEN")
+        if not self.openai_api_key.get_secret_value():
+            missing.append("OPENAI_API_KEY")
+
+        if missing:
+            joined = ", ".join(sorted(missing))
+            raise ValueError(f"Missing required environment variables: {joined}")
+
+        return self
 
     @computed_field(return_type=list[str])
     def backend_cors_origins(self) -> list[str]:
@@ -135,7 +201,8 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     """Return a cached Settings instance so configuration is evaluated once."""
-    return Settings()
+    # BaseSettings подтягивает обязательные значения из env/.env во время инстанцирования.
+    return Settings()  # type: ignore[call-arg]
 
 
 settings = get_settings()

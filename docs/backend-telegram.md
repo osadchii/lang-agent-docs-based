@@ -558,7 +558,7 @@ if __name__ == "__main__":
     bot = LanguageLearningBot(token=BOT_TOKEN)
 
     # Production: webhook
-    if os.getenv("ENVIRONMENT") == "production":
+    if os.getenv("APP_ENV") == "production":
         bot.run_webhook(webhook_url=WEBHOOK_URL)
     # Development: polling
     else:
@@ -1710,7 +1710,7 @@ async def send_streak_reminder(user):
 BOT_TOKEN=123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
 MINI_APP_URL=https://your-miniapp.com
 WEBHOOK_URL=https://your-api.com
-ENVIRONMENT=production
+APP_ENV=production
 ```
 
 ### 4.2. Docker
