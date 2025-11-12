@@ -8,9 +8,9 @@ single source of truth.
 
 from __future__ import annotations
 
-from functools import lru_cache
 import json
-from typing import Literal
+from functools import lru_cache
+from typing import Literal, cast
 
 from pydantic import AnyHttpUrl, Field, SecretStr, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -68,7 +68,6 @@ class Settings(BaseSettings):
     )
 
     @computed_field(return_type=list[str])
-    @property
     def backend_cors_origins(self) -> list[str]:
         return self.parse_cors_origins(self.raw_backend_cors_origins)
 
@@ -108,7 +107,9 @@ class Settings(BaseSettings):
             try:
                 parsed = json.loads(normalized)
                 if isinstance(parsed, list):
-                    return [str(origin).strip().rstrip("/") for origin in parsed if str(origin).strip()]
+                    return [
+                        str(origin).strip().rstrip("/") for origin in parsed if str(origin).strip()
+                    ]
             except json.JSONDecodeError:
                 pass
         return [origin.strip().rstrip("/") for origin in normalized.split(",") if origin.strip()]
@@ -122,7 +123,8 @@ class Settings(BaseSettings):
         origins supplied via configuration and the production app origin.
         """
         origins = {"https://webapp.telegram.org"}
-        origins.update({origin.rstrip("/") for origin in self.backend_cors_origins})
+        cors_base = cast(list[str], self.backend_cors_origins)
+        origins.update({origin.rstrip("/") for origin in cors_base})
 
         if self.production_app_origin:
             origins.add(str(self.production_app_origin).rstrip("/"))

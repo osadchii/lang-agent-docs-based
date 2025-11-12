@@ -7,8 +7,8 @@
 - Инженерные соглашения: `pyproject.toml`, `requirements.txt`, `.editorconfig`, `.gitignore`, `.env.example`
 - GitHub Actions workflow `.github/workflows/backend-deploy.yml` (тесты на каждом push/PR, build & GHCR push + автодеплой на сервер для `main`)
 - Согласование с документацией в `docs/` — текущий репозиторий стартует строго по плану `to-do.md`
-- Продовый `backend/Dockerfile` + корневой `docker-compose.yml` (backend/db/redis + Loki/Promtail/Grafana + Nginx proxy, healthchecks, Alembic перед стартом)
-- Провиженинг Grafana (`infra/`) с готовым дашбордом (RPS, p95 latency, 4xx/5xx, top endpoints)
+- Продовый `backend/Dockerfile` + корневой `docker-compose.yml` (backend/db/redis + Loki 3 + Promtail 3 + Grafana 12 + Nginx proxy, healthchecks, Alembic перед стартом)
+- Провиженинг Grafana 12 (`infra/`) с готовым дашбордом (RPS, p95 latency, 4xx/5xx, top endpoints)
 - Nginx reverse proxy + ACME companion, который автоматически выпускает Let's Encrypt сертификат для Grafana (наружу торчит только HTTPS)
 
 ## 📁 Структура репозитория
@@ -81,11 +81,11 @@ PY`
    ```
    Точка входа `docker-entrypoint.sh` автоматически выполняет `alembic upgrade head` перед запуском `uvicorn`.
 
-#### 📊 Observability stack (Grafana + Loki)
-- Grafana доступна только по `https://<GRAFANA_DOMAIN>` благодаря связке `nginx-proxy` + `acme-companion`; логин/пароль берутся из `GRAFANA_ADMIN_USER/PASSWORD`.
+#### 📊 Observability stack (Grafana 12 + Loki 3)
+- Grafana 12 доступна только по `https://<GRAFANA_DOMAIN>` благодаря связке `nginx-proxy` + `acme-companion`; логин/пароль берутся из `GRAFANA_ADMIN_USER/PASSWORD`.
 - Loki хранит данные в volume `loki_data` и принимает пуши Promtail только по внутренней сети compose (`app-network`). Публичные порты для Loki не открываются.
 - Promtail подключается к Docker socket и забирает JSON-логи контейнера `backend`, парсит поля (`http_method`, `status_code`, `duration_ms`, `request_id`) и пушит их в Loki.
-- При первом старте Grafana автоматически импортирует datasoure `Loki` и дашборд `Backend Observability` из `infra/grafana/provisioning/dashboards/backend-observability.json` (RPS, p95 latency, 4xx/5xx, top endpoints).
+- При первом старте Grafana 12 автоматически импортирует datasoure `Loki` и дашборд `Backend Observability` из `infra/grafana/provisioning/dashboards/backend-observability.json` (RPS, p95 latency, 4xx/5xx, top endpoints).
 - Nginx proxy автоматически выпускает Let's Encrypt сертификат для `GRAFANA_DOMAIN`, пробрасывает только Grafana наружу (`https://<GRAFANA_DOMAIN>`), закрывая backend/infra из внешней сети. Для повторных запусков сертификаты кэшируются в volume `nginx_certs` / `nginx_acme`.
 
 ### 🔐 GitHub Secrets для CI/CD
