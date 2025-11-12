@@ -39,6 +39,9 @@ scrape_configs:
             duration_ms: duration_ms
             client_ip: client_ip
             user_agent: user_agent
+      - template:
+          source: service_label
+          template: backend
       - timestamp:
           source: ts
           format: RFC3339
@@ -48,6 +51,6 @@ scrape_configs:
           http_method:
           http_path:
           status_code:
-          container:
+          service: service_label
       - output:
           source: message
