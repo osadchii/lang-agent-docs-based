@@ -86,3 +86,14 @@ async def test_cors_preflight_rejects_unknown_origin() -> None:
         response = await client.options("/health", headers=headers)
 
     assert response.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_unknown_route_returns_structured_error() -> None:
+    async with AsyncClient(app=app, base_url="http://testserver") as client:
+        response = await client.get("/non-existent")
+
+    assert response.status_code == 404
+    payload = response.json()
+    assert payload["error"]["code"] == "NOT_FOUND"
+    assert "message" in payload["error"]

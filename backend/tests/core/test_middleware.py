@@ -22,7 +22,9 @@ async def test_request_size_limit_rejects_large_payload() -> None:
         )
 
     assert response.status_code == status.HTTP_413_REQUEST_ENTITY_TOO_LARGE
-    assert response.json()["detail"].startswith("Request body exceeds")
+    payload = response.json()
+    assert payload["error"]["code"] == "PAYLOAD_TOO_LARGE"
+    assert payload["error"]["message"].startswith("Request body exceeds")
 
 
 @pytest.mark.asyncio

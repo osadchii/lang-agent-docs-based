@@ -64,6 +64,15 @@ Mini App использует Telegram WebApp `initData` для аутентиф
 ### Ограничение размера запросов
 - Любой HTTP-запрос с телом больше `MAX_REQUEST_BYTES` (по умолчанию 1 MiB) получает `413 Request Entity Too Large`.
 - Значение можно понизить/повысить через переменную окружения `MAX_REQUEST_BYTES`, держим запас против DoS.
+- Ответ везде следует контракту ошибок:
+  ```json
+  {
+    "error": {
+      "code": "PAYLOAD_TOO_LARGE",
+      "message": "Request body exceeds MAX_REQUEST_BYTES limit."
+    }
+  }
+  ```
 
 ### Rate Limiting
 
@@ -2276,6 +2285,12 @@ interface ActivityDay {
 #### Payment (402)
 - `PAYMENT_REQUIRED` (402) - Требуется премиум подписка
 - `SUBSCRIPTION_REQUIRED` (402) - Функция доступна только для премиум
+
+#### Transport & Infrastructure (4xx/5xx)
+- `NOT_FOUND` (404) - Маршрут или ресурс не найден
+- `METHOD_NOT_ALLOWED` (405) - HTTP метод не поддерживается данным endpoint
+- `PAYLOAD_TOO_LARGE` (413) - Превышен допустимый размер тела запроса
+- `CONFLICT` (409) - Общий конфликт запроса, когда нет более точного кода
 
 #### External Services (502, 503)
 - `LLM_SERVICE_ERROR` (502) - Ошибка LLM сервиса

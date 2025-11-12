@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import api_router
 from app.core.config import settings
+from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging
 from app.core.metrics import setup_metrics
 from app.core.middleware import (
@@ -33,6 +34,8 @@ def create_app() -> FastAPI:
         docs_url="/docs" if settings.debug else None,
         redoc_url="/redoc" if settings.debug else None,
     )
+
+    register_exception_handlers(application)
 
     application.add_middleware(
         CORSMiddleware,

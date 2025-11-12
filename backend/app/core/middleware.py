@@ -7,10 +7,10 @@ import time
 from uuid import uuid4
 
 from fastapi import Request, Response, status
-from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.types import ASGIApp, Message
 
+from app.core.errors import ErrorCode, error_response
 from app.core.logging import bind_request_id, reset_request_id
 
 
@@ -160,10 +160,11 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
         return cloned
 
     @staticmethod
-    def _payload_too_large_response() -> JSONResponse:
-        return JSONResponse(
-            {"detail": "Request body exceeds MAX_REQUEST_BYTES limit."},
+    def _payload_too_large_response() -> Response:
+        return error_response(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            code=ErrorCode.PAYLOAD_TOO_LARGE,
+            message="Request body exceeds MAX_REQUEST_BYTES limit.",
         )
 
 
