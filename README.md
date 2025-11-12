@@ -8,6 +8,7 @@
 - GitHub Actions workflow `.github/workflows/backend-deploy.yml` (тесты на каждом push/PR, build & GHCR push + автодеплой на сервер для `main`)
 - Согласование с документацией в `docs/` — текущий репозиторий стартует строго по плану `to-do.md`
 - Продовый `backend/Dockerfile` + корневой `docker-compose.yml` (backend/db/redis + Loki 3 + Promtail 3 + Grafana 12 + Nginx proxy, healthchecks, Alembic перед стартом)
+- Prometheus-инструментация /metrics через prometheus_fastapi_instrumentator (с request_id в гистограммах)
 - Провиженинг Grafana 12 (`infra/`) с готовым дашбордом (RPS, p95 latency, 4xx/5xx, top endpoints)
 - Nginx reverse proxy + ACME companion, который автоматически выпускает Let's Encrypt сертификат для Grafana (наружу торчит только HTTPS)
 
@@ -60,6 +61,12 @@ PY`
    source .venv/bin/activate  # либо .\.venv\Scripts\Activate.ps1 в PowerShell
    pre-commit install
    ```
+6. Проверьте, что /metrics уже отдаёт данные:
+   `ash
+   curl http://localhost:8000/metrics | head
+   `
+   Вы должны увидеть http_requests_total и pp_request_latency_seconds c
+equest_id (exemplar) — этого достаточно для подключения Prometheus.
 ### 🐳 Продовый docker-compose (backend + db + redis + observability)
 1. Скопируйте `.env.example` → `.env`, заполните `POSTGRES_*`, `BACKEND_IMAGE`, `BACKEND_IMAGE_TAG`, `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD`, `GRAFANA_DOMAIN` и `TRAEFIK_ACME_EMAIL` (email для Let's Encrypt). Для работы внутри Docker-сети обновите `DATABASE_URL` и `REDIS_URL` на `postgresql+asyncpg://<user>:<pass>@db:5432/<db>` и `redis://redis:6379/0`.
 2. Скопируйте на сервер сам `docker-compose.yml` вместе с каталогом `infra/` — Grafana и Loki читают конфиги именно оттуда.
@@ -85,6 +92,8 @@ PY`
 - Grafana 12 доступна только по `https://<GRAFANA_DOMAIN>` благодаря связке `nginx-proxy` + `acme-companion`; логин/пароль берутся из `GRAFANA_ADMIN_USER/PASSWORD`.
 - Loki хранит данные в volume `loki_data` и принимает пуши Promtail только по внутренней сети compose (`app-network`). Публичные порты для Loki не открываются.
 - Promtail подключается к Docker socket и забирает JSON-логи контейнера `backend`, парсит поля (`http_method`, `status_code`, `duration_ms`, `request_id`) и пушит их в Loki.
+- /metrics доступен локально: prometheus_fastapi_instrumentator снимает latency/кол-во запросов и сохраняет
+equest_id (exemplar) для корреляции с логами.
 - При первом старте Grafana 12 автоматически импортирует datasoure `Loki` и дашборд `Backend Observability` из `infra/grafana/provisioning/dashboards/backend-observability.json` (RPS, p95 latency, 4xx/5xx, top endpoints).
 - Nginx proxy автоматически выпускает Let's Encrypt сертификат для `GRAFANA_DOMAIN`, пробрасывает только Grafana наружу (`https://<GRAFANA_DOMAIN>`), закрывая backend/infra из внешней сети. Для повторных запусков сертификаты кэшируются в volume `nginx_certs` / `nginx_acme`.
 

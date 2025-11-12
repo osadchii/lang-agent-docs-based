@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import api_router
 from app.core.config import settings
 from app.core.logging import configure_logging
+from app.core.metrics import setup_metrics
 from app.core.middleware import AccessLogMiddleware, RequestIDMiddleware
 from app.core.version import APP_VERSION
 
@@ -37,8 +38,10 @@ def create_app() -> FastAPI:
         max_age=86400,
     )
 
-    application.add_middleware(RequestIDMiddleware)
+    setup_metrics(application)
+
     application.add_middleware(AccessLogMiddleware)
+    application.add_middleware(RequestIDMiddleware)
 
     application.include_router(api_router)
 

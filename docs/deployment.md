@@ -542,6 +542,8 @@ docker-compose logs --tail=100 backend
 - Количество активных пользователей
 - Использование LLM API (tokens, cost)
 - Успешность упражнений
+- FastAPI exposes `/metrics` via `prometheus_fastapi_instrumentator`, so Prometheus can scrape `http_requests_total`, latency histograms and in-progress gauges without sidecar exporters.
+- Custom histogram `app_request_latency_seconds` stores `request_id` as an exemplar value for each observed bucket, making it trivial to pivot from a Grafana chart to Loki logs with the same `request_id`.
 
 **Health checks:**
 - `/health` endpoint для проверки доступности

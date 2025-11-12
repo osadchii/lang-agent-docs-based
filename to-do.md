@@ -68,7 +68,7 @@
    - README + `docs/deployment.md` объясняют копирование `infra/`, настройки Grafana и порядок запуска.
    - Acceptance: backend‑логи попадают в Loki, Grafana показывает готовый дашборд.
 
-- [ ] **11) Метрики и трассировки (минимум)**
+- [x] **11) Метрики и трассировки (минимум)**
    - Добавить Prometheus‑совместимые метрики через `prometheus_fastapi_instrumentator`
    - Привязка `request_id` к логам/ошибкам; базовые алерты (если Grafana/Prometheus есть на проде)
    - Acceptance: `/metrics` доступен локально; при включении на проде — графики в Grafana
