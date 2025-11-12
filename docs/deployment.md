@@ -258,7 +258,8 @@ CI/CD pipeline автоматически копирует актуальный 
 | `LLM_MODEL` | нет | Модель по умолчанию | gpt-4.1-mini |
 | `LLM_TEMPERATURE` | нет | Творчество LLM (`0..1`) | 0.7 |
 | `PRODUCTION_APP_ORIGIN` | нет | Боевой origin Mini App | https://mini.lang-agent.app |
-| `BACKEND_CORS_ORIGINS` | нет | Доп. whitelist (CSV/JSON) | https://mini.lang-agent.app |
+| `BACKEND_CORS_ORIGINS` | нет | Локальный whitelist (только `http://localhost:<port>`) | http://localhost:4173 |
+| `MAX_REQUEST_BYTES` | нет | Лимит тела запроса (байты, default 1 MiB) | 1048576 |
 | `STRIPE_SECRET_KEY` | нет | Ключ Stripe (подписки) | `sk_live_...` |
 | `STRIPE_WEBHOOK_SECRET` | нет | Проверка событий Stripe | `whsec_...` |
 | `STRIPE_PRICE_ID_BASIC` / `STRIPE_PRICE_ID_PREMIUM` | нет | ID тарифов | `price_xxx` |

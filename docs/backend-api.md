@@ -49,12 +49,21 @@ Mini App использует Telegram WebApp `initData` для аутентиф
 - **Note:** При истечении токена клиент запрашивает новый через `/api/auth/validate` с актуальным `initData`
 
 ### CORS
-```
-Access-Control-Allow-Origin: https://webapp.telegram.org
-Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
-Access-Control-Allow-Headers: Content-Type, Authorization
-Access-Control-Max-Age: 86400
-```
+- Разрешённые origin:
+  - `https://webapp.telegram.org` (Telegram Mini App)
+  - `PRODUCTION_APP_ORIGIN` из конфигурации (боевой фронтенд)
+  - локальные клиенты `http://localhost:<port>` из `BACKEND_CORS_ORIGINS` (строго localhost)
+- Пример заголовков:
+  ```
+  Access-Control-Allow-Origin: https://webapp.telegram.org
+  Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+  Access-Control-Allow-Headers: Content-Type, Authorization
+  Access-Control-Max-Age: 86400
+  ```
+
+### Ограничение размера запросов
+- Любой HTTP-запрос с телом больше `MAX_REQUEST_BYTES` (по умолчанию 1 MiB) получает `413 Request Entity Too Large`.
+- Значение можно понизить/повысить через переменную окружения `MAX_REQUEST_BYTES`, держим запас против DoS.
 
 ### Rate Limiting
 

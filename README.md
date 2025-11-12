@@ -3,7 +3,7 @@
 
 ## 🏗️ Что уже готово
 - Структура `backend/app/{api,core,models,repositories,services}` и тестовый пакет
-- Базовая конфигурация `Settings` (строгая типизация, валидация CORS, единый источник правды)
+- Базовая конфигурация `Settings` (строгая типизация, жёсткий CORS — Telegram WebApp + PROD origin + localhost whitelist из ENV, лимит тела запроса, security headers/HSTS)
 - Полный перечень переменных окружения с комментариями (`.env.example` + README + `docs/deployment.md`) и жёсткой валидацией при старте
 - Инженерные соглашения: `pyproject.toml`, `requirements.txt`, `.editorconfig`, `.gitignore`, `.env.example`
 - GitHub Actions workflow `.github/workflows/backend-deploy.yml` (тесты на каждом push/PR, build & GHCR push + автодеплой на сервер для `main`)
@@ -161,7 +161,8 @@ equest_id (exemplar) для корреляции с логами.
 | `LLM_MODEL` | нет | Модель по умолчанию | `gpt-4.1-mini` |
 | `LLM_TEMPERATURE` | нет | Творчество LLM (`0..1`) | `0.7` |
 | `PRODUCTION_APP_ORIGIN` | нет | Боевой origin Mini App | — |
-| `BACKEND_CORS_ORIGINS` | нет | Доп. whitelist (CSV или JSON) | — |
+| `BACKEND_CORS_ORIGINS` | нет | Локальный whitelist (`http://localhost:<port>`) | `http://localhost:4173` |
+| `MAX_REQUEST_BYTES` | нет | Лимит тела запроса (байты, default 1 MiB) | `1048576` |
 | `STRIPE_SECRET_KEY` | нет | Платежи (будет нужно для подписок) | — |
 | `STRIPE_WEBHOOK_SECRET` | нет | Проверка подписей Stripe | — |
 | `STRIPE_PRICE_ID_BASIC/PREMIUM` | нет | Тарифы в Stripe | — |

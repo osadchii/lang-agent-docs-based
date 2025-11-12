@@ -116,8 +116,10 @@
 - Валидация входных данных (Pydantic models)
 - Аутентификация и авторизация
 - Rate limiting
-- CORS для Mini App
+- CORS для Mini App (Telegram WebApp + продовый origin, localhost только через ENV)
 - Логирование и мониторинг
+
+> **Security note:** HTTP слой режет любые тела запросов больше `MAX_REQUEST_BYTES` (1 MiB по умолчанию) ещё в middleware, а безопасные заголовки (Strict-Transport-Security, X-Frame-Options, Referrer-Policy) выставляются прямо в backend и дополнительно дублируются на уровне Nginx.
 
 **Структура приложения:**
 ```python

@@ -9,7 +9,12 @@ from app.api.routes import api_router
 from app.core.config import settings
 from app.core.logging import configure_logging
 from app.core.metrics import setup_metrics
-from app.core.middleware import AccessLogMiddleware, RequestIDMiddleware
+from app.core.middleware import (
+    AccessLogMiddleware,
+    RequestIDMiddleware,
+    RequestSizeLimitMiddleware,
+    SecurityHeadersMiddleware,
+)
 from app.core.version import APP_VERSION
 
 ALLOWED_METHODS = ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"]
@@ -40,7 +45,15 @@ def create_app() -> FastAPI:
 
     setup_metrics(application)
 
+    application.add_middleware(
+        SecurityHeadersMiddleware,
+        enable_hsts=settings.environment in {"staging", "production"},
+    )
     application.add_middleware(AccessLogMiddleware)
+    application.add_middleware(
+        RequestSizeLimitMiddleware,
+        max_request_bytes=settings.max_request_bytes,
+    )
     application.add_middleware(RequestIDMiddleware)
 
     application.include_router(api_router)

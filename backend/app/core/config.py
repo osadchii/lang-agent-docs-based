@@ -70,7 +70,12 @@ class Settings(BaseSettings):
     raw_backend_cors_origins: str | None = Field(
         default=None,
         alias="BACKEND_CORS_ORIGINS",
-        description="Comma-separated list or JSON array of allowed CORS origins.",
+        description="Comma-separated list or JSON array of localhost origins (http://localhost:PORT).",
+    )
+    max_request_bytes: int = Field(
+        default=1_048_576,
+        alias="MAX_REQUEST_BYTES",
+        description="Upper bound for request bodies in bytes (default 1 MiB).",
     )
 
     stripe_secret_key: SecretStr | None = Field(default=None, alias="STRIPE_SECRET_KEY")
@@ -104,6 +109,13 @@ class Settings(BaseSettings):
             raise ValueError("ACCESS_TOKEN_EXPIRE_MINUTES must be a positive integer.")
         return value
 
+    @field_validator("max_request_bytes")
+    @classmethod
+    def _validate_request_size(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("MAX_REQUEST_BYTES must be a positive integer.")
+        return value
+
     @field_validator("secret_key", "telegram_bot_token", "openai_api_key", mode="after")
     @classmethod
     def _validate_secret(cls, secret: SecretStr, info: ValidationInfo) -> SecretStr:
@@ -135,7 +147,8 @@ class Settings(BaseSettings):
 
     @computed_field(return_type=list[str])
     def backend_cors_origins(self) -> list[str]:
-        return self.parse_cors_origins(self.raw_backend_cors_origins)
+        parsed = self.parse_cors_origins(self.raw_backend_cors_origins)
+        return [self._validate_localhost_origin(origin) for origin in parsed]
 
     @staticmethod
     def parse_cors_origins(origins: str | list[str] | None) -> list[str]:
@@ -185,8 +198,8 @@ class Settings(BaseSettings):
         """
         Compile the effective list of CORS origins.
 
-        Always includes the Telegram WebApp origin in addition to the allowed
-        origins supplied via configuration and the production app origin.
+        Always includes the Telegram WebApp origin and the production app origin.
+        Localhost origins are opt-in via BACKEND_CORS_ORIGINS.
         """
         origins = {"https://webapp.telegram.org"}
         cors_base = cast(list[str], self.backend_cors_origins)
@@ -196,6 +209,18 @@ class Settings(BaseSettings):
             origins.add(str(self.production_app_origin).rstrip("/"))
 
         return sorted(origins)
+
+    @staticmethod
+    def _validate_localhost_origin(origin: str) -> str:
+        normalized = origin.strip().rstrip("/")
+        if not normalized:
+            raise ValueError("CORS origin entries must be non-empty strings.")
+        if not normalized.startswith("http://localhost"):
+            raise ValueError(
+                "BACKEND_CORS_ORIGINS only accepts http://localhost:* origins. "
+                "Configure PRODUCTION_APP_ORIGIN for deployed domains."
+            )
+        return normalized
 
 
 @lru_cache

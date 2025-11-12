@@ -35,13 +35,13 @@ class NoEnvSettings(Settings):
 
 def test_settings_cors_origins_merge_all_sources() -> None:
     settings = build_settings(
-        BACKEND_CORS_ORIGINS="https://foo.example.com, https://bar.example.com/",
+        BACKEND_CORS_ORIGINS="http://localhost:5173, http://localhost:3000/",
         PRODUCTION_APP_ORIGIN="https://prod.example.com/",
     )
 
     assert set(settings.cors_origins) == {
-        "https://bar.example.com",
-        "https://foo.example.com",
+        "http://localhost:3000",
+        "http://localhost:5173",
         "https://prod.example.com",
         "https://webapp.telegram.org",
     }
@@ -90,3 +90,15 @@ def test_settings_parse_cors_from_json_array() -> None:
 def test_settings_parse_cors_list_rejects_blank_entries() -> None:
     with pytest.raises(ValueError):
         Settings.parse_cors_origins(["https://ok.com", "   "])
+
+
+def test_settings_rejects_non_localhost_cors_origin() -> None:
+    settings = build_settings(BACKEND_CORS_ORIGINS="https://example.com")
+
+    with pytest.raises(ValueError):
+        _ = settings.backend_cors_origins
+
+
+def test_settings_rejects_invalid_max_request_bytes() -> None:
+    with pytest.raises(ValidationError):
+        build_settings(MAX_REQUEST_BYTES=0)

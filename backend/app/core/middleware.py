@@ -6,9 +6,10 @@ import logging
 import time
 from uuid import uuid4
 
-from fastapi import Request, Response
+from fastapi import Request, Response, status
+from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
-from starlette.types import ASGIApp
+from starlette.types import ASGIApp, Message
 
 from app.core.logging import bind_request_id, reset_request_id
 
@@ -77,4 +78,98 @@ class AccessLogMiddleware(BaseHTTPMiddleware):
         )
 
 
-__all__ = ["AccessLogMiddleware", "RequestIDMiddleware"]
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """
+    Attach a minimal set of security headers (HSTS, X-Frame-Options, etc.).
+
+    HSTS is only enabled when explicitly requested to avoid forcing HTTPS on
+    local development hosts.
+    """
+
+    def __init__(self, app: ASGIApp, enable_hsts: bool = False) -> None:
+        super().__init__(app)
+        self.enable_hsts = enable_hsts
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        response = await call_next(request)
+
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "same-origin")
+        response.headers.setdefault("Permissions-Policy", "camera=(), microphone=()")
+
+        if self.enable_hsts:
+            response.headers.setdefault(
+                "Strict-Transport-Security",
+                "max-age=31536000; includeSubDomains",
+            )
+
+        return response
+
+
+class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
+    """Reject requests whose body exceeds the configured upper bound."""
+
+    def __init__(self, app: ASGIApp, max_request_bytes: int) -> None:
+        if max_request_bytes <= 0:
+            raise ValueError("max_request_bytes must be greater than zero.")
+        super().__init__(app)
+        self.max_request_bytes = max_request_bytes
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        if request.scope["type"] != "http":
+            return await call_next(request)
+
+        content_length = request.headers.get("content-length")
+        if content_length:
+            try:
+                declared = int(content_length)
+                if declared > self.max_request_bytes:
+                    return self._payload_too_large_response()
+            except ValueError:
+                # Fall back to streaming check for malformed header.
+                pass
+
+        body = await self._read_body_with_limit(request)
+        if body is None:
+            return self._payload_too_large_response()
+
+        request = self._clone_request_with_body(request, body)
+        return await call_next(request)
+
+    async def _read_body_with_limit(self, request: Request) -> bytes | None:
+        buffer = bytearray()
+        async for chunk in request.stream():
+            buffer.extend(chunk)
+            if len(buffer) > self.max_request_bytes:
+                return None
+        return bytes(buffer)
+
+    def _clone_request_with_body(self, request: Request, body: bytes) -> Request:
+        sent = False
+
+        async def receive() -> Message:
+            nonlocal sent
+            if sent:
+                return {"type": "http.request", "body": b"", "more_body": False}
+            sent = True
+            return {"type": "http.request", "body": body, "more_body": False}
+
+        cloned = Request(request.scope, receive)
+        cloned._body = body
+        return cloned
+
+    @staticmethod
+    def _payload_too_large_response() -> JSONResponse:
+        return JSONResponse(
+            {"detail": "Request body exceeds MAX_REQUEST_BYTES limit."},
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+        )
+
+
+__all__ = [
+    "AccessLogMiddleware",
+    "RequestIDMiddleware",
+    "RequestSizeLimitMiddleware",
+    "SecurityHeadersMiddleware",
+]

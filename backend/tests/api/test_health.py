@@ -57,3 +57,32 @@ async def test_access_log_contains_request_metadata(caplog: pytest.LogCaptureFix
     assert getattr(log_record, "http_path", None) == "/health"
     assert getattr(log_record, "status_code", None) == 200
     assert isinstance(getattr(log_record, "duration_ms", None), float)
+
+
+@pytest.mark.asyncio
+async def test_cors_preflight_allows_telegram_origin() -> None:
+    headers = {
+        "Origin": "https://webapp.telegram.org",
+        "Access-Control-Request-Method": "GET",
+        "Access-Control-Request-Headers": "Authorization",
+    }
+
+    async with AsyncClient(app=app, base_url="http://testserver") as client:
+        response = await client.options("/health", headers=headers)
+
+    assert response.status_code == 200
+    assert response.headers.get("access-control-allow-origin") == "https://webapp.telegram.org"
+
+
+@pytest.mark.asyncio
+async def test_cors_preflight_rejects_unknown_origin() -> None:
+    headers = {
+        "Origin": "https://malicious.example.com",
+        "Access-Control-Request-Method": "GET",
+        "Access-Control-Request-Headers": "Authorization",
+    }
+
+    async with AsyncClient(app=app, base_url="http://testserver") as client:
+        response = await client.options("/health", headers=headers)
+
+    assert response.status_code == 400

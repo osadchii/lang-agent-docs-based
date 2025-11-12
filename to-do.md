@@ -79,7 +79,7 @@
    - JWT параметры, CORS, токены провайдеров, Redis URL, DB URL
    - Acceptance: приложение не стартует без обязательных переменных (чёткие ошибки)
 
-- [ ] **13) CORS и заголовки**
+- [x] **13) CORS и заголовки**
    - Разрешить только `https://webapp.telegram.org` и прод‑домен; для локального фронтенда — whitelisting `http://localhost:*` через ENV
    - Добавить security middleware (HSTS в Nginx), ограничить размер запросов
    - Acceptance: preflight проходит только для допустимых origin
