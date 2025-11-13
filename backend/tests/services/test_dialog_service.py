@@ -28,6 +28,22 @@ async def test_process_message_saves_to_database() -> None:
     mock_repo.session.commit = AsyncMock()
     mock_repo.session.refresh = AsyncMock()
 
+    # Create mock profile
+    profile_id = uuid.uuid4()
+    mock_profile = MagicMock()
+    mock_profile.id = profile_id
+    mock_profile.language = "es"
+    mock_profile.language_name = "Spanish"
+    mock_profile.current_level = "A2"
+    mock_profile.target_level = "B1"
+    mock_profile.goals = ["conversation", "travel"]
+    mock_profile.interface_language = "ru"
+
+    # Mock session.execute() to return profile
+    mock_execute_result = MagicMock()
+    mock_execute_result.scalar_one_or_none = MagicMock(return_value=mock_profile)
+    mock_repo.session.execute = AsyncMock(return_value=mock_execute_result)
+
     # Mock conversation history (empty)
     mock_repo.get_recent_for_profile = AsyncMock(return_value=[])
 
@@ -54,8 +70,6 @@ async def test_process_message_saves_to_database() -> None:
         created_at=datetime.now(tz=timezone.utc),
         updated_at=datetime.now(tz=timezone.utc),
     )
-
-    profile_id = uuid.uuid4()
 
     # Process message
     response = await service.process_message(
@@ -100,6 +114,22 @@ async def test_process_message_includes_history() -> None:
     mock_repo.session.commit = AsyncMock()
     mock_repo.session.refresh = AsyncMock()
 
+    # Create mock profile
+    profile_id = uuid.uuid4()
+    mock_profile = MagicMock()
+    mock_profile.id = profile_id
+    mock_profile.language = "es"
+    mock_profile.language_name = "Spanish"
+    mock_profile.current_level = "A2"
+    mock_profile.target_level = "B1"
+    mock_profile.goals = ["conversation", "travel"]
+    mock_profile.interface_language = "en"
+
+    # Mock session.execute() to return profile
+    mock_execute_result = MagicMock()
+    mock_execute_result.scalar_one_or_none = MagicMock(return_value=mock_profile)
+    mock_repo.session.execute = AsyncMock(return_value=mock_execute_result)
+
     # Mock conversation history with previous messages
     prev_user_msg = MagicMock()
     prev_user_msg.role = MessageRole.USER
@@ -130,8 +160,6 @@ async def test_process_message_includes_history() -> None:
         created_at=datetime.now(tz=timezone.utc),
         updated_at=datetime.now(tz=timezone.utc),
     )
-
-    profile_id = uuid.uuid4()
 
     await service.process_message(
         user=user,

@@ -43,6 +43,11 @@ class User(SoftDeleteMixin, TimestampMixin, Base):
         back_populates="user",
         cascade="all, delete-orphan",
     )
+    token_usage = relationship(
+        "TokenUsage",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
 
     __table_args__ = (
         Index(

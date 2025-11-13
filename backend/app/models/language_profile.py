@@ -64,6 +64,11 @@ class LanguageProfile(SoftDeleteMixin, TimestampMixin, Base):
         back_populates="profile",
         cascade="all, delete-orphan",
     )
+    token_usage = relationship(
+        "TokenUsage",
+        back_populates="profile",
+        cascade="all, delete-orphan",
+    )
 
     __table_args__ = (
         CheckConstraint(

@@ -152,6 +152,23 @@ class ExternalServiceError(ApplicationError):
         )
 
 
+class LLMParsingError(ApplicationError):
+    """Error when LLM response cannot be parsed."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        details: object | None = None,
+    ) -> None:
+        super().__init__(
+            code=ErrorCode.LLM_SERVICE_ERROR,
+            message=message,
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            details=details,
+        )
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     """Attach global exception handlers to the FastAPI app."""
 
@@ -342,6 +359,7 @@ __all__ = [
     "ConflictError",
     "ErrorCode",
     "ExternalServiceError",
+    "LLMParsingError",
     "NotFoundError",
     "application_error_handler",
     "build_error_payload",

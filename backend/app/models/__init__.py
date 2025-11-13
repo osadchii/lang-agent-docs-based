@@ -2,6 +2,7 @@
 
 from app.models.conversation import ConversationMessage, MessageRole
 from app.models.language_profile import LanguageProfile
+from app.models.token_usage import TokenUsage
 from app.models.user import User
 
-__all__ = ["ConversationMessage", "LanguageProfile", "MessageRole", "User"]
+__all__ = ["ConversationMessage", "LanguageProfile", "MessageRole", "TokenUsage", "User"]

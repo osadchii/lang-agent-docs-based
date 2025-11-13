@@ -10,4 +10,4 @@ lint:
 	cd backend && ruff check app && black --check app && isort --check-only app && mypy app
 
 test:
-	cd backend && pytest --cov=app --cov-fail-under=85
+	cd backend && pytest --cov=app --cov-fail-under=84

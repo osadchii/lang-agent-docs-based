@@ -6,7 +6,9 @@
       "Bash(ruff format:*)",
       "Bash(mypy:*)",
       "Bash(cat:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(alembic revision:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []
