@@ -15,6 +15,9 @@ jobs:
   tests:
     name: Backend Tests
     runs-on: ubuntu-latest
+    env:
+      TELEGRAM_DEPLOY_CHAT_ID: ${{ secrets.TELEGRAM_DEPLOY_CHAT_ID }}
+      CI_BOT_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
 
     services:
       postgres:
@@ -70,11 +73,11 @@ jobs:
           pytest tests/ -v --cov=app --cov-report=term --cov-fail-under=85
 
       - name: Notify Telegram about failed backend tests
-        if: ${{ failure() && secrets.TELEGRAM_DEPLOY_CHAT_ID != '' && secrets.CI_BOT_TOKEN != '' }}
+        if: ${{ failure() && env.TELEGRAM_DEPLOY_CHAT_ID != '' && env.CI_BOT_TOKEN != '' }}
         uses: appleboy/telegram-action@master
         with:
-          to: ${{ secrets.TELEGRAM_DEPLOY_CHAT_ID }}
-          token: ${{ secrets.CI_BOT_TOKEN }}
+          to: ${{ env.TELEGRAM_DEPLOY_CHAT_ID }}
+          token: ${{ env.CI_BOT_TOKEN }}
           message: |
             ❌ Backend tests failed in ${{ github.workflow }} #${{ github.run_number }}
 
@@ -91,6 +94,9 @@ jobs:
     permissions:
       contents: read
       packages: write
+    env:
+      TELEGRAM_DEPLOY_CHAT_ID: ${{ secrets.TELEGRAM_DEPLOY_CHAT_ID }}
+      CI_BOT_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -126,11 +132,11 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Notify Telegram about failed Docker build
-        if: ${{ failure() && secrets.TELEGRAM_DEPLOY_CHAT_ID != '' && secrets.CI_BOT_TOKEN != '' }}
+        if: ${{ failure() && env.TELEGRAM_DEPLOY_CHAT_ID != '' && env.CI_BOT_TOKEN != '' }}
         uses: appleboy/telegram-action@master
         with:
-          to: ${{ secrets.TELEGRAM_DEPLOY_CHAT_ID }}
-          token: ${{ secrets.CI_BOT_TOKEN }}
+          to: ${{ env.TELEGRAM_DEPLOY_CHAT_ID }}
+          token: ${{ env.CI_BOT_TOKEN }}
           message: |
             ❌ Backend Docker build failed in ${{ github.workflow }} #${{ github.run_number }}
 
@@ -145,6 +151,9 @@ jobs:
     needs: build-and-push
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    env:
+      TELEGRAM_DEPLOY_CHAT_ID: ${{ secrets.TELEGRAM_DEPLOY_CHAT_ID }}
+      CI_BOT_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -182,11 +191,11 @@ jobs:
           EOF
 
       - name: Notify Telegram about failed backend deploy
-        if: ${{ failure() && secrets.TELEGRAM_DEPLOY_CHAT_ID != '' && secrets.CI_BOT_TOKEN != '' }}
+        if: ${{ failure() && env.TELEGRAM_DEPLOY_CHAT_ID != '' && env.CI_BOT_TOKEN != '' }}
         uses: appleboy/telegram-action@master
         with:
-          to: ${{ secrets.TELEGRAM_DEPLOY_CHAT_ID }}
-          token: ${{ secrets.CI_BOT_TOKEN }}
+          to: ${{ env.TELEGRAM_DEPLOY_CHAT_ID }}
+          token: ${{ env.CI_BOT_TOKEN }}
           message: |
             ❌ Backend deploy failed in ${{ github.workflow }} #${{ github.run_number }}
 
@@ -202,14 +211,18 @@ jobs:
       - tests
       - build-and-push
       - deploy
-    if: ${{ always() && needs.tests.result == 'success' && (needs['build-and-push'].result == 'success' || needs['build-and-push'].result == 'skipped') && (needs.deploy.result == 'success' || needs.deploy.result == 'skipped') && secrets.TELEGRAM_DEPLOY_CHAT_ID != '' && secrets.CI_BOT_TOKEN != '' }}
+    if: ${{ always() && needs.tests.result == 'success' && (needs['build-and-push'].result == 'success' || needs['build-and-push'].result == 'skipped') && (needs.deploy.result == 'success' || needs.deploy.result == 'skipped') }}
     runs-on: ubuntu-latest
+    env:
+      TELEGRAM_DEPLOY_CHAT_ID: ${{ secrets.TELEGRAM_DEPLOY_CHAT_ID }}
+      CI_BOT_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
     steps:
       - name: Send Telegram success notification
+        if: ${{ env.TELEGRAM_DEPLOY_CHAT_ID != '' && env.CI_BOT_TOKEN != '' }}
         uses: appleboy/telegram-action@master
         with:
-          to: ${{ secrets.TELEGRAM_DEPLOY_CHAT_ID }}
-          token: ${{ secrets.CI_BOT_TOKEN }}
+          to: ${{ env.TELEGRAM_DEPLOY_CHAT_ID }}
+          token: ${{ env.CI_BOT_TOKEN }}
           message: |
             ✅ Backend CI pipeline passed!
 
