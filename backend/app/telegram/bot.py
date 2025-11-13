@@ -194,13 +194,13 @@ class TelegramBot:
         from app.telegram.keyboards import create_mini_app_button
         from telegram import InlineKeyboardMarkup
 
-        # Форматируем приветственное сообщение (используем Markdown legacy mode)
+        # Format welcome message (using Markdown legacy mode)
         text = (
             f"*Привет, {user.first_name}!*\n\n"
             "Я бот Lang Agent. Напиши мне вопрос или открой Mini App для практики."
         )
 
-        # Добавляем кнопку открытия Mini App
+        # Add Mini App button
         keyboard = InlineKeyboardMarkup([[create_mini_app_button()]])
 
         await message.reply_text(
@@ -271,12 +271,12 @@ class TelegramBot:
                 # 4. Format and send response
                 from app.telegram.formatters import split_message
 
-                # Разбиваем ответ если слишком длинный
-                # NOTE: LLM генерирует Markdown форматирование (согласно backend-bot-responses.md)
-                # Используем parse_mode="Markdown" для корректного отображения
+                # Split response if too long
+                # NOTE: LLM generates Markdown formatting (according to backend-bot-responses.md)
+                # Use parse_mode="Markdown" for correct rendering
                 message_parts = split_message(response)
 
-                # Отправляем части сообщения с Markdown форматированием
+                # Send message parts with Markdown formatting
                 for part in message_parts:
                     await message.reply_text(part, parse_mode="Markdown")
 
@@ -295,7 +295,7 @@ class TelegramBot:
                 extra={"telegram_id": user.id, "exception": str(e)},
             )
 
-            # Используем plain text для сообщений об ошибках
+            # Use plain text for error messages
             error_text = (
                 "❌ Произошла ошибка при обработке вашего сообщения. "
                 "Попробуйте еще раз или напишите /start."

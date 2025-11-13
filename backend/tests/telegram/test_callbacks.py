@@ -1,4 +1,4 @@
-"""Тесты для модуля обработки callback-запросов."""
+"""Tests for callback query handling module."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from telegram import CallbackQuery, Message, User
 
 @pytest.fixture
 def mock_user() -> User:
-    """Создать mock пользователя Telegram."""
+    """Create mock Telegram user."""
     user = MagicMock(spec=User)
     user.id = 123456789
     user.first_name = "Test"
@@ -30,7 +30,7 @@ def mock_user() -> User:
 
 @pytest.fixture
 def mock_message() -> Message:
-    """Создать mock сообщения Telegram."""
+    """Create mock Telegram message."""
     message = MagicMock(spec=Message)
     message.text = "*casa* — дом\n\nПример: _Mi casa es tu casa_"
     message.caption = None
@@ -40,7 +40,7 @@ def mock_message() -> Message:
 
 @pytest.fixture
 def mock_callback_query(mock_user: User, mock_message: Message) -> CallbackQuery:
-    """Создать mock callback query."""
+    """Create mock callback query."""
     query = MagicMock(spec=CallbackQuery)
     query.from_user = mock_user
     query.message = mock_message
@@ -51,7 +51,7 @@ def mock_callback_query(mock_user: User, mock_message: Message) -> CallbackQuery
 
 @pytest.fixture
 def mock_update(mock_callback_query: CallbackQuery) -> MagicMock:
-    """Создать mock update с callback query."""
+    """Create mock update with callback query."""
     update = MagicMock()
     update.callback_query = mock_callback_query
     update.effective_user = mock_callback_query.from_user
@@ -60,7 +60,7 @@ def mock_update(mock_callback_query: CallbackQuery) -> MagicMock:
 
 @pytest.fixture
 def mock_context() -> MagicMock:
-    """Создать mock контекста бота."""
+    """Create mock bot context."""
     context = MagicMock()
     context.user_data = {}
     return context
@@ -68,7 +68,7 @@ def mock_context() -> MagicMock:
 
 @pytest.mark.asyncio
 class TestHandleCallbackQuery:
-    """Тесты для handle_callback_query."""
+    """Tests for handle_callback_query."""
 
     async def test_handle_add_card_callback(
         self,
@@ -76,14 +76,14 @@ class TestHandleCallbackQuery:
         mock_context: MagicMock,
         mock_callback_query: CallbackQuery,
     ) -> None:
-        """Тест обработки callback добавления карточки."""
+        """Test handling add card callback."""
         mock_callback_query.data = f"{CALLBACK_ADD_CARD}:casa:дом"
 
         await handle_callback_query(mock_update, mock_context)
 
-        # Проверяем что answer был вызван
+        # Check that answer was called
         mock_callback_query.answer.assert_called_once()
-        # Проверяем что сообщение было отредактировано
+        # Check that message was edited
         mock_callback_query.edit_message_text.assert_called_once()
 
     async def test_handle_add_card_from_message(
@@ -92,7 +92,7 @@ class TestHandleCallbackQuery:
         mock_context: MagicMock,
         mock_callback_query: CallbackQuery,
     ) -> None:
-        """Тест обработки callback с извлечением данных из сообщения."""
+        """Test handling callback with data extraction from message."""
         mock_callback_query.data = f"{CALLBACK_ADD_CARD}:from_message"
 
         await handle_callback_query(mock_update, mock_context)
@@ -106,7 +106,7 @@ class TestHandleCallbackQuery:
         mock_context: MagicMock,
         mock_callback_query: CallbackQuery,
     ) -> None:
-        """Тест обработки callback удаления карточки."""
+        """Test handling remove card callback."""
         card_id = "test-card-id"
         mock_callback_query.data = f"{CALLBACK_REMOVE_CARD}:{card_id}"
 
@@ -121,14 +121,14 @@ class TestHandleCallbackQuery:
         mock_context: MagicMock,
         mock_callback_query: CallbackQuery,
     ) -> None:
-        """Тест обработки callback пагинации."""
+        """Test handling pagination callback."""
         mock_callback_query.data = f"{CALLBACK_PAGE}:2"
 
         await handle_callback_query(mock_update, mock_context)
 
-        # Проверяем что answer был вызван (может быть вызван дважды - в начале и в обработчике)
+        # Check that answer was called (may be called twice - at start and in handler)
         assert mock_callback_query.answer.called
-        # Проверяем что номер страницы сохранен в context
+        # Check that page number is saved in context
         assert mock_context.user_data["current_page"] == 2
 
     async def test_handle_cancel_callback(
@@ -137,12 +137,12 @@ class TestHandleCallbackQuery:
         mock_context: MagicMock,
         mock_callback_query: CallbackQuery,
     ) -> None:
-        """Тест обработки callback отмены."""
+        """Test handling cancel callback."""
         mock_callback_query.data = CALLBACK_CANCEL
 
         await handle_callback_query(mock_update, mock_context)
 
-        # Проверяем что answer был вызван
+        # Check that answer was called
         assert mock_callback_query.answer.called
         mock_callback_query.edit_message_text.assert_called_once()
 
@@ -152,14 +152,14 @@ class TestHandleCallbackQuery:
         mock_context: MagicMock,
         mock_callback_query: CallbackQuery,
     ) -> None:
-        """Тест обработки неизвестного callback."""
+        """Test handling unknown callback."""
         mock_callback_query.data = "unknown:action"
 
         await handle_callback_query(mock_update, mock_context)
 
-        # Должен быть вызван answer (может быть вызван дважды)
+        # Answer should be called (may be called twice)
         assert mock_callback_query.answer.called
-        # Проверяем последний вызов
+        # Check last call
         call_args = mock_callback_query.answer.call_args
         assert call_args is not None
         assert "Неизвестное действие" in call_args.kwargs.get("text", "")
@@ -168,11 +168,11 @@ class TestHandleCallbackQuery:
         self,
         mock_context: MagicMock,
     ) -> None:
-        """Тест обработки update без callback query."""
+        """Test handling update without callback query."""
         update = MagicMock()
         update.callback_query = None
 
-        # Не должно быть исключений
+        # Should not raise exceptions
         await handle_callback_query(update, mock_context)
 
     async def test_handle_callback_query_without_data(
@@ -181,10 +181,10 @@ class TestHandleCallbackQuery:
         mock_context: MagicMock,
         mock_callback_query: CallbackQuery,
     ) -> None:
-        """Тест обработки callback query без data."""
+        """Test handling callback query without data."""
         mock_callback_query.data = None
 
-        # Не должно быть исключений
+        # Should not raise exceptions
         await handle_callback_query(mock_update, mock_context)
 
     async def test_handle_add_card_invalid_message_format(
@@ -194,14 +194,14 @@ class TestHandleCallbackQuery:
         mock_callback_query: CallbackQuery,
         mock_message: Message,
     ) -> None:
-        """Тест обработки callback с неверным форматом сообщения."""
+        """Test handling callback with invalid message format."""
         mock_callback_query.data = f"{CALLBACK_ADD_CARD}:from_message"
-        # Сообщение без нужного формата
+        # Message without required format
         mock_message.text = "Just some random text"
 
         await handle_callback_query(mock_update, mock_context)
 
-        # Должен быть вызван answer с ошибкой
+        # Should call answer with error
         assert mock_callback_query.answer.called
         call_args = mock_callback_query.answer.call_args
         assert call_args is not None
@@ -213,12 +213,12 @@ class TestHandleCallbackQuery:
         mock_context: MagicMock,
         mock_callback_query: CallbackQuery,
     ) -> None:
-        """Тест обработки callback удаления с неверным форматом."""
-        mock_callback_query.data = CALLBACK_REMOVE_CARD  # Без card_id
+        """Test handling remove callback with invalid format."""
+        mock_callback_query.data = CALLBACK_REMOVE_CARD  # Without card_id
 
         await handle_callback_query(mock_update, mock_context)
 
-        # Должен быть вызван answer с ошибкой
+        # Should call answer with error
         assert mock_callback_query.answer.called
         call_args = mock_callback_query.answer.call_args
         assert call_args is not None
@@ -230,12 +230,12 @@ class TestHandleCallbackQuery:
         mock_context: MagicMock,
         mock_callback_query: CallbackQuery,
     ) -> None:
-        """Тест обработки callback пагинации с невалидным номером страницы."""
+        """Test handling pagination callback with invalid page number."""
         mock_callback_query.data = f"{CALLBACK_PAGE}:not_a_number"
 
         await handle_callback_query(mock_update, mock_context)
 
-        # Должен быть вызван answer с ошибкой
+        # Should call answer with error
         assert mock_callback_query.answer.called
         call_args = mock_callback_query.answer.call_args
         assert call_args is not None

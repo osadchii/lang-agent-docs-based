@@ -264,7 +264,7 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     """Return a cached Settings instance so configuration is evaluated once."""
-    # BaseSettings подтягивает обязательные значения из env/.env во время инстанцирования.
+    # BaseSettings loads required values from env/.env during instantiation.
     return Settings()  # type: ignore[call-arg]
 
 

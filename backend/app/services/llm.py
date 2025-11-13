@@ -87,8 +87,8 @@ def get_basic_system_prompt(language_code: str | None = None) -> str:
     Returns:
         System prompt text
     """
-    # Минимальная версия промпта для начала
-    # В будущем будет загружаться из prompts/ и рендериться через Jinja2
+    # Minimal prompt version for initial implementation
+    # In the future will be loaded from prompts/ and rendered via Jinja2
     interface_lang = "Russian" if language_code in ("ru", None) else "English"
 
     return f"""You are a professional language teacher helping students learn new languages.

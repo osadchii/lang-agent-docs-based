@@ -1,1 +1,1 @@
-"""Тесты для Telegram bot модулей."""
+"""Tests for Telegram bot modules."""

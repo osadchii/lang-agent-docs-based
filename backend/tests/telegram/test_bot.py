@@ -173,9 +173,9 @@ async def test_handle_start_replies_with_greeting(monkeypatch: pytest.MonkeyPatc
 
     await bot._handle_start(update, context=None)
 
-    # Текст теперь форматируется с Markdown, поэтому содержит жирный текст
+    # Text is now formatted with Markdown, so it contains bold text
     assert "Привет, Антон" in dummy_message.text
-    assert "*Привет, Антон!*" in dummy_message.text  # Проверяем жирное форматирование
+    assert "*Привет, Антон!*" in dummy_message.text  # Check bold formatting
     assert dummy_message.parse_mode == "Markdown"
     assert dummy_message.reply_markup is not None
     mock_service.get_or_create_user.assert_awaited_once()

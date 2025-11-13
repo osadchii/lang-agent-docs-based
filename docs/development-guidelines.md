@@ -56,6 +56,25 @@ if not user_id:
     raise AuthenticationError("Invalid Telegram initData: missing user_id")
 ```
 
+**ВАЖНО: Язык комментариев и документации:**
+- **Все комментарии в коде** (comments и docstrings) ОБЯЗАТЕЛЬНО пишутся **на английском языке**
+- **Проектная документация** в `docs/` пишется на русском языке
+- **Пользовательские сообщения** (тексты в интерфейсе, сообщения бота) пишутся на языке пользователя (русский/английский)
+- **Строки в тестах** (test data) могут быть на любом языке в зависимости от тестируемого сценария
+
+```python
+# ✅ Правильно: комментарий на английском
+# Telegram can pass empty user_id on initData validation error
+# In this case we cannot safely identify the user
+if not user_id:
+    raise AuthenticationError("Invalid Telegram initData: missing user_id")
+
+# ❌ Неправильно: комментарий на русском
+# Проверяем что пользователь существует
+if not user_id:
+    raise ValueError()
+```
+
 ### Тестовое покрытие
 
 **ОБЯЗАТЕЛЬНЫЕ требования:**
