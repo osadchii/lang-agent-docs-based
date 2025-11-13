@@ -243,3 +243,88 @@ class TestFormatMessages:
         assert r"\(" in result
         assert r"\)" in result
         assert r"\!" in result
+
+
+class TestSplitMessageEdgeCases:
+    """Дополнительные тесты для граничных случаев split_message."""
+
+    def test_split_message_with_paragraphs_and_long_paragraph(self) -> None:
+        """Тест разбиения с параграфами где один параграф слишком длинный."""
+        # Создаем текст с нормальными параграфами и одним огромным
+        short_para = "Short paragraph.\n\n"
+        long_para = "A" * (MAX_MESSAGE_LENGTH + 100)
+        text = short_para + long_para
+
+        result = split_message(text)
+
+        # Должно быть минимум 2 части
+        assert len(result) >= 2
+        # Первая часть должна содержать короткий параграф
+        assert "Short paragraph" in result[0]
+        # Все части должны быть в пределах лимита
+        for part in result:
+            assert len(part) <= MAX_MESSAGE_LENGTH
+
+    def test_split_message_single_long_word(self) -> None:
+        """Тест разбиения сообщения с одним очень длинным словом."""
+        # Одно слово длиннее лимита
+        long_word = "B" * (MAX_MESSAGE_LENGTH + 500)
+        result = split_message(long_word)
+
+        # Должно быть разбито на части
+        assert len(result) >= 2
+        # Все части должны быть в пределах лимита
+        for part in result:
+            assert len(part) <= MAX_MESSAGE_LENGTH
+        # Объединенное должно дать исходное слово
+        assert "".join(result) == long_word
+
+    def test_split_by_sentences_with_long_sentence(self) -> None:
+        """Тест разбиения текста с очень длинным предложением."""
+        # Создаем несколько нормальных предложений и одно очень длинное
+        normal = "This is a short sentence. Another short one. "
+        long_sentence = "C" * (MAX_MESSAGE_LENGTH + 100) + ". "
+        text = normal + long_sentence + "Final sentence."
+
+        result = split_message(text)
+
+        # Должно быть минимум 2 части
+        assert len(result) >= 2
+        # Все части должны быть в пределах лимита
+        for part in result:
+            assert len(part) <= MAX_MESSAGE_LENGTH
+
+    def test_split_preserves_multiple_paragraphs(self) -> None:
+        """Тест что разбиение сохраняет структуру параграфов."""
+        para1 = "First paragraph with some text.\n\n"
+        para2 = "Second paragraph with more text.\n\n"
+        para3 = "Third paragraph here."
+        text = para1 + para2 + para3
+
+        result = split_message(text, max_length=100)
+
+        # Должно быть разбито
+        assert len(result) >= 1
+        # Объединенное должно совпадать с исходным
+        joined = "".join(result)
+        assert joined == text
+
+    def test_split_message_exactly_at_limit(self) -> None:
+        """Тест разбиения сообщения ровно по лимиту."""
+        # Создаем текст ровно MAX_MESSAGE_LENGTH
+        text = "D" * MAX_MESSAGE_LENGTH
+        result = split_message(text)
+
+        # Не должно разбиваться
+        assert len(result) == 1
+        assert result[0] == text
+
+    def test_split_message_one_char_over_limit(self) -> None:
+        """Тест разбиения сообщения на 1 символ больше лимита."""
+        text = "E" * (MAX_MESSAGE_LENGTH + 1)
+        result = split_message(text)
+
+        # Должно разбиться на 2 части
+        assert len(result) == 2
+        assert len(result[0]) == MAX_MESSAGE_LENGTH
+        assert len(result[1]) == 1

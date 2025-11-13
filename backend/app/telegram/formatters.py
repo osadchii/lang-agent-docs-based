@@ -162,6 +162,23 @@ def split_message(text: str, max_length: int = MAX_MESSAGE_LENGTH) -> list[str]:
     return parts
 
 
+def _process_long_sentence(sentence: str, max_length: int) -> tuple[list[str], str]:
+    """Обработать слишком длинное предложение."""
+    word_parts = _split_by_words(sentence, max_length)
+    return word_parts[:-1], word_parts[-1]
+
+
+def _finalize_sentence_parts(current_part: str, max_length: int) -> list[str]:
+    """Завершить обработку частей предложений."""
+    if not current_part:
+        return []
+
+    if len(current_part) > max_length:
+        return _split_by_words(current_part, max_length)
+
+    return [current_part.rstrip()]
+
+
 def _split_by_sentences(text: str, max_length: int) -> list[str]:
     """Разбить текст по предложениям."""
     if len(text) <= max_length:
@@ -184,15 +201,13 @@ def _split_by_sentences(text: str, max_length: int) -> list[str]:
         elif current_part:
             parts.append(current_part.rstrip())
             current_part = full_sentence
-            # Если предложение само по себе слишком длинное
+            # Если предложение слишком длинное
             if len(current_part) > max_length:
-                word_parts = _split_by_words(current_part, max_length)
-                parts.extend(word_parts[:-1])
-                current_part = word_parts[-1]
+                split_parts, current_part = _process_long_sentence(current_part, max_length)
+                parts.extend(split_parts)
         else:
-            word_parts = _split_by_words(full_sentence, max_length)
-            parts.extend(word_parts[:-1])
-            current_part = word_parts[-1]
+            split_parts, current_part = _process_long_sentence(full_sentence, max_length)
+            parts.extend(split_parts)
 
     # Добавляем последний sentence если он не был добавлен
     if len(sentences) % 2 != 0:
@@ -205,8 +220,8 @@ def _split_by_sentences(text: str, max_length: int) -> list[str]:
         else:
             current_part = last_sentence
 
-    if current_part:
-        parts.append(current_part.rstrip())
+    # Завершаем обработку
+    parts.extend(_finalize_sentence_parts(current_part, max_length))
 
     return parts
 
@@ -228,14 +243,16 @@ def _split_by_words(text: str, max_length: int) -> list[str]:
         elif current_part:
             parts.append(current_part)
             current_part = word
-            # Если слово само по себе длиннее лимита, режем его
-            if len(current_part) > max_length:
+            # Если слово само по себе длиннее лимита, режем его на части
+            while len(current_part) > max_length:
                 parts.append(current_part[:max_length])
                 current_part = current_part[max_length:]
         else:
-            # Слово длиннее лимита, режем его
-            parts.append(word[:max_length])
-            current_part = word[max_length:]
+            # Слово длиннее лимита, режем его на части
+            while len(word) > max_length:
+                parts.append(word[:max_length])
+                word = word[max_length:]
+            current_part = word
 
     if current_part:
         parts.append(current_part)

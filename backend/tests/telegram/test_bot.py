@@ -114,9 +114,15 @@ async def test_handle_start_replies_with_greeting(monkeypatch: pytest.MonkeyPatc
     class DummyMessage:
         def __init__(self) -> None:
             self.text: str | None = None
+            self.parse_mode: str | None = None
+            self.reply_markup: object | None = None
 
-        async def reply_text(self, text: str) -> None:
+        async def reply_text(
+            self, text: str, parse_mode: str | None = None, reply_markup: object | None = None
+        ) -> None:
             self.text = text
+            self.parse_mode = parse_mode
+            self.reply_markup = reply_markup
 
     # Mock database session and user service
     mock_session = AsyncMock()
@@ -167,7 +173,10 @@ async def test_handle_start_replies_with_greeting(monkeypatch: pytest.MonkeyPatc
 
     await bot._handle_start(update, context=None)
 
-    assert dummy_message.text.startswith("Привет, Антон")
+    # Текст теперь форматируется с MarkdownV2, поэтому начинается с *
+    assert "Привет, Антон" in dummy_message.text
+    assert dummy_message.parse_mode == "MarkdownV2"
+    assert dummy_message.reply_markup is not None
     mock_service.get_or_create_user.assert_awaited_once()
 
 
