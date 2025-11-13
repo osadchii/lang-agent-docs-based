@@ -3,6 +3,11 @@ services:
     image: "${BACKEND_IMAGE:-ghcr.io/osadchii/lang-agent-docs-based/backend}:${BACKEND_IMAGE_TAG:-latest}"
     env_file:
       - .env
+    environment:
+      VIRTUAL_HOST: "${BACKEND_DOMAIN:?BACKEND_DOMAIN is required for reverse proxy}"
+      VIRTUAL_PORT: "8000"
+      LETSENCRYPT_HOST: "${BACKEND_DOMAIN:?BACKEND_DOMAIN is required for reverse proxy}"
+      LETSENCRYPT_EMAIL: "${TRAEFIK_ACME_EMAIL:-ops@example.com}"
     container_name: lang-agent-backend
     ports:
       - "8000:8000"

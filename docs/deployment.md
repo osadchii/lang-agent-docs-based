@@ -252,12 +252,12 @@ CI/CD pipeline автоматически копирует актуальный 
 | `JWT_ALGORITHM` | нет | Алгоритм подписи токенов | HS256 |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | нет | TTL access токена (мин) | 30 |
 | `TELEGRAM_BOT_TOKEN` | **да** | Токен BotFather | `123456:ABC...` |
-| `TELEGRAM_WEBHOOK_URL` | нет | Абсолютный URL вебхука | `https://api.example.com/api/webhook` |
 | `OPENAI_API_KEY` | **да** | Ключ OpenAI | `sk-...` |
 | `ANTHROPIC_API_KEY` | нет | Ключ Claude (если используем) | `sk-ant-...` |
 | `LLM_MODEL` | нет | Модель по умолчанию | gpt-4.1-mini |
 | `LLM_TEMPERATURE` | нет | Творчество LLM (`0..1`) | 0.7 |
 | `PRODUCTION_APP_ORIGIN` | нет | Боевой origin Mini App | https://mini.lang-agent.app |
+| `BACKEND_DOMAIN` | нет | Публичный backend-домен без схемы (используется nginx-proxy и webhook URL) | backend.external.osadchii.me |
 | `BACKEND_CORS_ORIGINS` | нет | Локальный whitelist (только `http://localhost:<port>`, работает при `APP_ENV=local/test`) | http://localhost:4173 |
 | `MAX_REQUEST_BYTES` | нет | Лимит тела запроса (байты, default 1 MiB) | 1048576 |
 | `STRIPE_SECRET_KEY` | нет | Ключ Stripe (подписки) | `sk_live_...` |
@@ -270,6 +270,8 @@ CI/CD pipeline автоматически копирует актуальный 
 | `BACKEND_IMAGE`, `BACKEND_IMAGE_TAG` | Тег backend‑образа в GHCR |
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Настройки контейнера db |
 | `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD`, `GRAFANA_DOMAIN`, `TRAEFIK_ACME_EMAIL` | Настройка мониторинга и Let’s Encrypt |
+
+> `nginx-proxy` внутри `docker-compose.yml` автоматически проксирует `https://<BACKEND_DOMAIN>` на backend (порт 8000) и `https://<GRAFANA_DOMAIN>` на Grafana, параллельно запрашивая сертификаты Let's Encrypt. Перед деплоем убедитесь, что оба домена указывают на IP сервера.
 
 **Создание .env файла на сервере:**
 ```bash

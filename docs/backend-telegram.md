@@ -565,6 +565,8 @@ if __name__ == "__main__":
         bot.run_polling()
 ```
 
+> ⚠️ Backend автоматически вызывает `setWebhook`, если указан `BACKEND_DOMAIN` (URL собирается как `https://<BACKEND_DOMAIN>`). Оставляйте домен закомментированным, пока DNS не прикручен к публичному адресу: приложение проверяет, что hostname резолвится, и иначе пропускает настройку (бот продолжит работу через polling).
+
 ---
 
 ### 1.3. Команды бота
@@ -1709,7 +1711,7 @@ async def send_streak_reminder(user):
 # .env
 BOT_TOKEN=123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11
 MINI_APP_URL=https://your-miniapp.com
-WEBHOOK_URL=https://your-api.com
+BACKEND_DOMAIN=backend.external.osadchii.me
 APP_ENV=production
 ```
 

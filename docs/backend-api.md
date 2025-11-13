@@ -164,7 +164,7 @@ Webhook для Telegram Bot API. Endpoint принимает JSON-обновле
 - `403 FORBIDDEN` (`error.code = "FORBIDDEN"`) — если path token не совпадает с `TELEGRAM_BOT_TOKEN`
 - `4xx/5xx` по контракту ошибок (см. ниже) при некорректном JSON или внутренних сбоях
 
-> Примечание: В production окружениях webhook URL берётся из `TELEGRAM_WEBHOOK_URL`, для локальной разработки бот запускается командой `python -m app.telegram.polling` (см. `docs/backend-telegram.md`).
+> Примечание: В production окружениях webhook URL формируется автоматически как `https://<BACKEND_DOMAIN>/telegram-webhook/<bot_token>`. Backend проверяет, что домен резолвится, и в противном случае пропускает настройку; для локальной разработки бот запускается командой `python -m app.telegram.polling` (см. `docs/backend-telegram.md`).
 
 ### Health Check
 

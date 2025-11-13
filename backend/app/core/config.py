@@ -48,7 +48,11 @@ class Settings(BaseSettings):
     redis_url: str = Field(alias="REDIS_URL")
 
     telegram_bot_token: SecretStr = Field(alias="TELEGRAM_BOT_TOKEN")
-    telegram_webhook_url: AnyHttpUrl | None = Field(alias="TELEGRAM_WEBHOOK_URL", default=None)
+    backend_domain: str | None = Field(
+        default=None,
+        alias="BACKEND_DOMAIN",
+        description="Public backend domain without scheme (used for reverse proxy / TLS).",
+    )
 
     openai_api_key: SecretStr = Field(alias="OPENAI_API_KEY")
     anthropic_api_key: SecretStr | None = Field(default=None, alias="ANTHROPIC_API_KEY")
@@ -123,6 +127,20 @@ class Settings(BaseSettings):
             field = (info.field_name or "value").upper()
             raise ValueError(f"{field} must not be empty.")
         return secret
+
+    @field_validator("backend_domain")
+    @classmethod
+    def _validate_backend_domain(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        candidate = value.strip().lower()
+        if not candidate:
+            return None
+        if candidate.startswith("http://") or candidate.startswith("https://"):
+            raise ValueError("BACKEND_DOMAIN must be provided without scheme.")
+        if "/" in candidate:
+            raise ValueError("BACKEND_DOMAIN must not include path segments.")
+        return candidate
 
     @model_validator(mode="after")
     def _validate_required_tokens(self) -> "Settings":
@@ -233,6 +251,13 @@ class Settings(BaseSettings):
                 "deployed domains."
             )
         return normalized
+
+    @property
+    def telegram_webhook_base_url(self) -> str | None:
+        """Return the webhook base URL derived from BACKEND_DOMAIN."""
+        if self.backend_domain:
+            return f"https://{self.backend_domain}".rstrip("/")
+        return None
 
 
 @lru_cache

@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import socket
 from typing import Any, Sequence, TypeAlias
+from urllib.parse import urlsplit
 
 from telegram import Update as TelegramUpdate
 from telegram.ext import Application, ApplicationBuilder, CommandHandler, ContextTypes
@@ -80,7 +82,7 @@ class TelegramBot:
         Local and test environments rely on polling via app.telegram.polling.
         """
         if not webhook_base_url:
-            self._logger.info("Skipping webhook configuration: TELEGRAM_WEBHOOK_URL is not set")
+            self._logger.info("Skipping webhook configuration: BACKEND_DOMAIN is not set")
             return
 
         if self._environment not in WebhookEnvironments:
@@ -93,6 +95,26 @@ class TelegramBot:
         await self.ensure_started()
 
         normalized_base = webhook_base_url.rstrip("/")
+        parsed_base = urlsplit(normalized_base)
+        host = parsed_base.hostname
+        if not host:
+            self._logger.error(
+                "Skipping webhook configuration: BACKEND_DOMAIN is invalid (missing hostname)",
+                extra={"environment": self._environment, "webhook_base": normalized_base},
+            )
+            return
+
+        if not self._is_hostname_resolvable(host):
+            self._logger.error(
+                "Skipping webhook configuration: webhook host is not resolvable",
+                extra={
+                    "environment": self._environment,
+                    "hostname": host,
+                    "webhook_base": normalized_base,
+                },
+            )
+            return
+
         webhook_url = f"{normalized_base}/telegram-webhook/{{token}}"
         await self._application.bot.set_webhook(
             url=webhook_url.format(token=self._token),
@@ -133,6 +155,14 @@ class TelegramBot:
             "Telegram handler error",
             extra={"exception": context.error, "update": update},
         )
+
+    @staticmethod
+    def _is_hostname_resolvable(host: str) -> bool:
+        try:
+            socket.getaddrinfo(host, None)
+        except socket.gaierror:
+            return False
+        return True
 
 
 # Re-export Update for test monkeypatching.

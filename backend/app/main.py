@@ -64,8 +64,7 @@ def create_app() -> FastAPI:
 
     @application.on_event("startup")
     async def _configure_telegram_webhook() -> None:
-        webhook_url = str(settings.telegram_webhook_url) if settings.telegram_webhook_url else None
-        await telegram_bot.sync_webhook(webhook_url)
+        await telegram_bot.sync_webhook(settings.telegram_webhook_base_url)
 
     @application.on_event("shutdown")
     async def _shutdown_telegram_bot() -> None:

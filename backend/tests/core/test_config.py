@@ -121,6 +121,19 @@ def test_settings_ignore_backend_cors_origins_outside_local_env() -> None:
     assert settings.cors_origins == ["https://webapp.telegram.org"]
 
 
+def test_settings_backend_domain_cannot_contain_scheme() -> None:
+    with pytest.raises(ValidationError):
+        build_settings(BACKEND_DOMAIN="https://backend.example.com")
+
+
+def test_settings_derive_webhook_url_from_backend_domain() -> None:
+    settings = build_settings(
+        BACKEND_DOMAIN="backend.example.com",
+    )
+
+    assert settings.telegram_webhook_base_url == "https://backend.example.com"
+
+
 def test_settings_rejects_invalid_max_request_bytes() -> None:
     with pytest.raises(ValidationError):
         build_settings(MAX_REQUEST_BYTES=0)

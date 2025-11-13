@@ -36,6 +36,7 @@ pytest --cov=app --cov-fail-under=85  # тесты и целевой порог 
 ## Security & Configuration Tips
 - Всегда синхронизируйтесь с `docs/deployment.md` перед изменением окружений. `.env` не коммитим; для локальной работы копируйте `.env.example`.
 - CORS ограничен `https://webapp.telegram.org` плюс `PRODUCTION_APP_ORIGIN`; `BACKEND_CORS_ORIGINS` учитывается только при `APP_ENV=local/test` и служит для whitelisting `http://localhost:<port>`.
+- Публичный backend-домен задаётся через `BACKEND_DOMAIN` (без схемы). Он используется nginx-proxy/Let's Encrypt и для построения webhook URL (`https://<BACKEND_DOMAIN>/telegram-webhook/<bot_token>`).
 - Логи и middleware должны обогащать `request_id`, но не содержать токенов или персональных данных.
 
 ## README & Docs Sync Policy (обязательно)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import socket
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
@@ -69,6 +70,12 @@ async def test_sync_webhook_configures_in_production(monkeypatch: pytest.MonkeyP
     bot, dummy_app = build_bot(monkeypatch, environment="production")
     webhook_url = "https://api.example.com"
 
+    monkeypatch.setattr(
+        telegram_bot_module.socket,
+        "getaddrinfo",
+        lambda *args, **kwargs: [(None, None, None, None, None)],
+    )
+
     await bot.sync_webhook(webhook_url)
 
     dummy_app.bot.set_webhook.assert_awaited_once()
@@ -82,6 +89,20 @@ async def test_sync_webhook_skips_for_non_production(monkeypatch: pytest.MonkeyP
     bot, dummy_app = build_bot(monkeypatch, environment="test")
 
     await bot.sync_webhook("https://ignored.example.com")
+
+    dummy_app.bot.set_webhook.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_sync_webhook_skips_when_host_not_resolvable(monkeypatch: pytest.MonkeyPatch) -> None:
+    bot, dummy_app = build_bot(monkeypatch, environment="production")
+
+    def fake_getaddrinfo(host: str, *_args: object, **_kwargs: object) -> None:
+        raise socket.gaierror(f"cannot resolve {host}")
+
+    monkeypatch.setattr(telegram_bot_module.socket, "getaddrinfo", fake_getaddrinfo)
+
+    await bot.sync_webhook("https://missing.example.com")
 
     dummy_app.bot.set_webhook.assert_not_awaited()
 

@@ -73,12 +73,13 @@ PY
    `
    Вы должны увидеть http_requests_total и pp_request_latency_seconds c
 equest_id (exemplar) — этого достаточно для подключения Prometheus.
-7. Telegram Bot:
-   - Для продакшена укажите `TELEGRAM_WEBHOOK_URL` — при старте backend автоматически вызовет `setWebhook` по инструкции из `docs/backend-telegram.md`.
+7. Telegram Bot и публичный backend:
+   - Пропишите `BACKEND_DOMAIN` (например, `backend.external.osadchii.me`) в `.env`: Docker Compose поднимет `nginx-proxy`, выпустит TLS-сертификат и начнёт проксировать `https://<BACKEND_DOMAIN>` на backend.
+   - Backend автоматически берёт `https://<BACKEND_DOMAIN>` и вызывает `setWebhook`, **как только домен резолвится** (см. `docs/backend-telegram.md`). Если DNS ещё не готов, оставьте домен закомментированным, чтобы бот продолжал работать через polling.
    - Для локальной отладки запускайте long polling в отдельном терминале: `cd backend && python -m app.telegram.polling` (использует токен и настройки из `.env`).
    - Обработчик `/start` уже доступен («Привет!»), остальная логика реализуется на шагах 16+.
 ### 🐳 Продовый docker-compose (backend + db + redis + observability)
-1. Скопируйте `.env.example` → `.env`, заполните `POSTGRES_*`, `BACKEND_IMAGE`, `BACKEND_IMAGE_TAG`, `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD`, `GRAFANA_DOMAIN` и `TRAEFIK_ACME_EMAIL` (email для Let's Encrypt). Для работы внутри Docker-сети обновите `DATABASE_URL` и `REDIS_URL` на `postgresql+asyncpg://<user>:<pass>@db:5432/<db>` и `redis://redis:6379/0`.
+1. Скопируйте `.env.example` → `.env`, заполните `POSTGRES_*`, `BACKEND_IMAGE`, `BACKEND_IMAGE_TAG`, `BACKEND_DOMAIN`, `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD`, `GRAFANA_DOMAIN` и `TRAEFIK_ACME_EMAIL` (email для Let's Encrypt). Для работы внутри Docker-сети обновите `DATABASE_URL` и `REDIS_URL` на `postgresql+asyncpg://<user>:<pass>@db:5432/<db>` и `redis://redis:6379/0`.
 2. Скопируйте на сервер сам `docker-compose.yml` вместе с каталогом `infra/` — Grafana и Loki читают конфиги именно оттуда.
 3. Откройте на сервере порты `80`/`443` (nginx-proxy+acme-companion выполняют HTTP-01 проверку и раздают HTTPS для Grafana).
 4. Получите и поднимите стек с образами из GHCR:
@@ -105,7 +106,7 @@ equest_id (exemplar) — этого достаточно для подключе
 - /metrics доступен локально: prometheus_fastapi_instrumentator снимает latency/кол-во запросов и сохраняет
 equest_id (exemplar) для корреляции с логами.
 - При первом старте Grafana 12 автоматически импортирует datasoure `Loki` и дашборд `Backend Observability` из `infra/grafana/provisioning/dashboards/backend-observability.json` (RPS, p95 latency, 4xx/5xx, top endpoints).
-- Nginx proxy автоматически выпускает Let's Encrypt сертификат для `GRAFANA_DOMAIN`, пробрасывает только Grafana наружу (`https://<GRAFANA_DOMAIN>`), закрывая backend/infra из внешней сети. Для повторных запусков сертификаты кэшируются в volume `nginx_certs` / `nginx_acme`.
+- Nginx proxy автоматически выпускает Let's Encrypt сертификаты для `GRAFANA_DOMAIN` и `BACKEND_DOMAIN`, пробрасывая `https://<BACKEND_DOMAIN>` на backend (порт 8000) и `https://<GRAFANA_DOMAIN>` на Grafana. Для повторных запусков сертификаты кэшируются в volume `nginx_certs` / `nginx_acme`.
 
 ### 🔐 GitHub Secrets для CI/CD
 Добавьте в Settings → Secrets and variables → Actions:
@@ -161,12 +162,12 @@ equest_id (exemplar) для корреляции с логами.
 | `JWT_ALGORITHM` | нет | Алгоритм подписи токенов | `HS256` |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | нет | TTL access токена | `30` |
 | `TELEGRAM_BOT_TOKEN` | **да** | Токен бота из BotFather | — |
-| `TELEGRAM_WEBHOOK_URL` | нет | Абсолютный URL вебхука | — |
 | `OPENAI_API_KEY` | **да** | Ключ OpenAI для LLM | — |
 | `ANTHROPIC_API_KEY` | нет | Ключ Claude (опционально) | — |
 | `LLM_MODEL` | нет | Модель по умолчанию | `gpt-4.1-mini` |
 | `LLM_TEMPERATURE` | нет | Творчество LLM (`0..1`) | `0.7` |
 | `PRODUCTION_APP_ORIGIN` | нет | Боевой origin Mini App | — |
+| `BACKEND_DOMAIN` | нет | Публичный backend-домен без схемы (nginx-proxy/TLS + webhook URL) | — |
 | `BACKEND_CORS_ORIGINS` | нет | Локальный whitelist (`http://localhost:<port>`, учитывается только при `APP_ENV=local/test`) | `http://localhost:4173` |
 | `MAX_REQUEST_BYTES` | нет | Лимит тела запроса (байты, default 1 MiB) | `1048576` |
 | `STRIPE_SECRET_KEY` | нет | Платежи (будет нужно для подписок) | — |
