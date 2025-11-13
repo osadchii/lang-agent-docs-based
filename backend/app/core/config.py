@@ -145,8 +145,19 @@ class Settings(BaseSettings):
 
         return self
 
+    _LOCAL_CORS_ENVIRONMENTS = frozenset({"local", "test"})
+
     @computed_field(return_type=list[str])
     def backend_cors_origins(self) -> list[str]:
+        """
+        Return validated localhost origins for local/test development.
+
+        Production/staging environments ignore BACKEND_CORS_ORIGINS entirely to
+        avoid misconfiguration on deployed servers.
+        """
+        if self.environment not in self._LOCAL_CORS_ENVIRONMENTS:
+            return []
+
         parsed = self.parse_cors_origins(self.raw_backend_cors_origins)
         return [self._validate_localhost_origin(origin) for origin in parsed]
 
@@ -217,8 +228,9 @@ class Settings(BaseSettings):
             raise ValueError("CORS origin entries must be non-empty strings.")
         if not normalized.startswith("http://localhost"):
             raise ValueError(
-                "BACKEND_CORS_ORIGINS only accepts http://localhost:* origins. "
-                "Configure PRODUCTION_APP_ORIGIN for deployed domains."
+                "BACKEND_CORS_ORIGINS only accepts http://localhost:* origins and is honored "
+                "only when APP_ENV is 'local' or 'test'. Configure PRODUCTION_APP_ORIGIN for "
+                "deployed domains."
             )
         return normalized
 

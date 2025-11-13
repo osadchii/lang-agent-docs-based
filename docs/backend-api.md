@@ -52,7 +52,7 @@ Mini App использует Telegram WebApp `initData` для аутентиф
 - Разрешённые origin:
   - `https://webapp.telegram.org` (Telegram Mini App)
   - `PRODUCTION_APP_ORIGIN` из конфигурации (боевой фронтенд)
-  - локальные клиенты `http://localhost:<port>` из `BACKEND_CORS_ORIGINS` (строго localhost)
+  - локальные клиенты `http://localhost:<port>` из `BACKEND_CORS_ORIGINS` (строго localhost, учитываются только при `APP_ENV=local/test`)
 - Пример заголовков:
   ```
   Access-Control-Allow-Origin: https://webapp.telegram.org

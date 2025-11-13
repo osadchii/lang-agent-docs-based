@@ -111,6 +111,16 @@ def test_settings_rejects_non_localhost_cors_origin() -> None:
         _ = settings.backend_cors_origins
 
 
+def test_settings_ignore_backend_cors_origins_outside_local_env() -> None:
+    settings = build_settings(
+        APP_ENV="production",
+        BACKEND_CORS_ORIGINS="https://example.com",
+    )
+
+    assert settings.backend_cors_origins == []
+    assert settings.cors_origins == ["https://webapp.telegram.org"]
+
+
 def test_settings_rejects_invalid_max_request_bytes() -> None:
     with pytest.raises(ValidationError):
         build_settings(MAX_REQUEST_BYTES=0)
