@@ -6,7 +6,7 @@
 - Базовая конфигурация `Settings` (строгая типизация, жёсткий CORS — Telegram WebApp + PROD origin + localhost whitelist из ENV, лимит тела запроса, security headers/HSTS)
 - Полный перечень переменных окружения с комментариями (`.env.example` + README + `docs/deployment.md`) и жёсткой валидацией при старте
 - Инженерные соглашения: `pyproject.toml`, `requirements.txt`, `.editorconfig`, `.gitignore`, `.env.example`
-- GitHub Actions workflow `.github/workflows/backend-deploy.yml` (тесты на каждом push/PR, build & GHCR push + автодеплой на сервер для `main`)
+- GitHub Actions workflow `.github/workflows/backend-deploy.yml` (тесты на каждом push/PR, build & GHCR push + автодеплой на сервер для `main` + Telegram-уведомления по итогам тестов/сборки/деплоя)
 - Согласование с документацией в `docs/` — текущий репозиторий стартует строго по плану `to-do.md`
 - Продовый `backend/Dockerfile` + корневой `docker-compose.yml` (backend/db/redis + Loki 3 + Promtail 3 + Grafana 12 + Nginx proxy, healthchecks, Alembic перед стартом)
 - Prometheus-инструментация /metrics через prometheus_fastapi_instrumentator (с request_id в гистограммах)
@@ -180,5 +180,6 @@ equest_id (exemplar) для корреляции с логами.
 | `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD` | Учётки Postgres внутри `docker-compose.yml` |
 | `BACKEND_IMAGE`, `BACKEND_IMAGE_TAG` | Какой образ backend тянуть на сервере |
 | `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD`, `GRAFANA_DOMAIN`, `TRAEFIK_ACME_EMAIL` | Настройки наблюдаемости и SSL |
+| `TELEGRAM_DEPLOY_CHAT_ID`, `CI_BOT_TOKEN` | GitHub Secrets для Telegram-уведомлений CI/CD (tests/build/deploy статусы) |
 
 > Если переменная обязательна и не заполнена, `app.core.config.Settings` выбросит читаемое исключение при старте. Это же поведение используется в тестах и CI, поэтому несогласованные конфиги ловим сразу.

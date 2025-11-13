@@ -406,7 +406,7 @@ jobs:
         uses: appleboy/telegram-action@master
         with:
           to: ${{ secrets.TELEGRAM_DEPLOY_CHAT_ID }}
-          token: ${{ secrets.CI_TELEGRAM_BOT_TOKEN }}
+          token: ${{ secrets.CI_BOT_TOKEN }}
           message: |
             ✅ Frontend deployed successfully!
 
@@ -419,7 +419,7 @@ jobs:
         uses: appleboy/telegram-action@master
         with:
           to: ${{ secrets.TELEGRAM_DEPLOY_CHAT_ID }}
-          token: ${{ secrets.CI_TELEGRAM_BOT_TOKEN }}
+          token: ${{ secrets.CI_BOT_TOKEN }}
           message: |
             ❌ Frontend deployment failed!
 
@@ -456,6 +456,10 @@ jobs:
    - Перед `docker compose pull` выполняется `echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin`
    - Затем запускаются `docker compose pull` и `docker compose up -d --remove-orphans`
    - `.env` на сервере не трогается; миграции запускаются entrypoint'ом контейнера
+6. **Telegram-уведомления**:
+   - Любой провал в `tests`, `build-and-push` или `deploy` сразу отправляет сообщение со стадией и ссылкой на run
+   - После успешного выполнения всех обязательных job (для PR — только `tests`, для `main` — весь пайплайн) приходит зелёное уведомление
+   - Секреты: `TELEGRAM_DEPLOY_CHAT_ID` (куда писать) и `CI_BOT_TOKEN` (BotFather токен с правами на отправку в чат)
 
 ### Frontend deploy steps
 
@@ -581,9 +585,9 @@ jobs:
 - `GHCR_USERNAME` — владелец контейнерного реестра (для текущего репо `osadchii`)
 - `GHCR_TOKEN` — GitHub Personal Access Token с правами `write:packages` (и `read:packages`)
 
-### Server deploy (опционально, для будущей автоматизации):
-- `SERVER_HOST`, `SERVER_USER`, `SSH_PRIVATE_KEY` — понадобятся, когда добавим автоматический SSH-деплой
-- `TELEGRAM_DEPLOY_CHAT_ID`, `CI_TELEGRAM_BOT_TOKEN` — для уведомлений о выкладке (пока не подключены)
+### Server deploy:
+- `SERVER_HOST`, `SERVER_USER`, `SSH_PRIVATE_KEY` — доступны уже сейчас, чтобы `deploy` job могла подключиться к серверу
+- `TELEGRAM_DEPLOY_CHAT_ID`, `CI_BOT_TOKEN` — Telegram-уведомления (обязательны: иначе `appleboy/telegram-action` просто не запустится)
 
 ### Frontend (обязательные):
 - `VITE_API_BASE_URL` - URL бэкенд API (например, `https://api.yourdomain.com`)
@@ -592,7 +596,12 @@ jobs:
 
 ## Notifications
 
-Пока используем стандартные уведомления GitHub Actions (email / UI). Telegram‑бот подключаем после добавления автоматического деплоя.
+Telegram-бот CI (`CI_BOT_TOKEN`) рассылает сообщения в чат `TELEGRAM_DEPLOY_CHAT_ID`:
+- ❌ если падают тесты, сборка образа или деплой (указывается стадия, ветка, sha и ссылка на run)
+- ✅ когда весь обязательный пайплайн (tests → build → deploy на `main`) завершается успешно
+- На PR/feature-ветках success шлётся после прохождения `tests`, build/deploy помечаются как `skipped`
+
+Стандартные email/UI нотификации GitHub остаются включёнными.
 
 ## Rollback mechanism
 

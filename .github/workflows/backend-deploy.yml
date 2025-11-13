@@ -69,6 +69,21 @@ jobs:
           cd backend
           pytest tests/ -v --cov=app --cov-report=term --cov-fail-under=85
 
+      - name: Notify Telegram about failed backend tests
+        if: ${{ failure() && secrets.TELEGRAM_DEPLOY_CHAT_ID != '' && secrets.CI_BOT_TOKEN != '' }}
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_DEPLOY_CHAT_ID }}
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          message: |
+            ❌ Backend tests failed in ${{ github.workflow }} #${{ github.run_number }}
+
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+
+            Details: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
   build-and-push:
     needs: tests
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -110,6 +125,21 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+      - name: Notify Telegram about failed Docker build
+        if: ${{ failure() && secrets.TELEGRAM_DEPLOY_CHAT_ID != '' && secrets.CI_BOT_TOKEN != '' }}
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_DEPLOY_CHAT_ID }}
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          message: |
+            ❌ Backend Docker build failed in ${{ github.workflow }} #${{ github.run_number }}
+
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+
+            Details: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
   deploy:
     name: Deploy Backend
     needs: build-and-push
@@ -150,3 +180,41 @@ jobs:
           docker compose pull
           docker compose up -d --remove-orphans
           EOF
+
+      - name: Notify Telegram about failed backend deploy
+        if: ${{ failure() && secrets.TELEGRAM_DEPLOY_CHAT_ID != '' && secrets.CI_BOT_TOKEN != '' }}
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_DEPLOY_CHAT_ID }}
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          message: |
+            ❌ Backend deploy failed in ${{ github.workflow }} #${{ github.run_number }}
+
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+
+            Details: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+  notify-success:
+    name: Notify Telegram about successful backend pipeline
+    needs:
+      - tests
+      - build-and-push
+      - deploy
+    if: ${{ always() && needs.tests.result == 'success' && (needs['build-and-push'].result == 'success' || needs['build-and-push'].result == 'skipped') && (needs.deploy.result == 'success' || needs.deploy.result == 'skipped') && secrets.TELEGRAM_DEPLOY_CHAT_ID != '' && secrets.CI_BOT_TOKEN != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Telegram success notification
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_DEPLOY_CHAT_ID }}
+          token: ${{ secrets.CI_BOT_TOKEN }}
+          message: |
+            ✅ Backend CI pipeline passed!
+
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+
+            Details: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
