@@ -246,7 +246,11 @@ class TelegramBot:
 
                 # 2. Get or create default language profile
                 conversation_repo = ConversationRepository(session)
-                llm_service = LLMService(api_key=settings.openai_api_key.get_secret_value())
+                llm_service = LLMService(
+                    api_key=settings.openai_api_key.get_secret_value(),
+                    model=settings.llm_model,
+                    temperature=settings.llm_temperature,
+                )
                 dialog_service = DialogService(llm_service, conversation_repo)
 
                 profile = await dialog_service.get_or_create_default_profile(db_user, session)

@@ -153,7 +153,7 @@ class DialogService:
 
         # 4. Call LLM
         try:
-            response = await self.llm.chat(
+            response, usage = await self.llm.chat(
                 messages=messages,
                 temperature=0.7,
                 max_tokens=500,
@@ -165,13 +165,18 @@ class DialogService:
                 profile_id=profile_id,
                 role=MessageRole.ASSISTANT,
                 content=response,
-                tokens=0,  # TODO: Calculate tokens
+                tokens=usage.completion_tokens,
             )
             await self.conversation_repo.session.commit()
 
             logger.info(
                 "Assistant response saved",
-                extra={"user_id": str(user.id), "response_length": len(response)},
+                extra={
+                    "user_id": str(user.id),
+                    "response_length": len(response),
+                    "tokens_used": usage.total_tokens,
+                    "estimated_cost": f"${usage.estimated_cost:.6f}",
+                },
             )
 
             return response

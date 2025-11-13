@@ -12,6 +12,7 @@ from app.models.conversation import MessageRole
 from app.models.language_profile import LanguageProfile
 from app.models.user import User
 from app.services.dialog import DialogService
+from app.services.llm import TokenUsage
 
 
 @pytest.mark.asyncio
@@ -19,7 +20,8 @@ async def test_process_message_saves_to_database() -> None:
     """Test that process_message saves both user and assistant messages."""
     # Mock dependencies
     mock_llm = AsyncMock()
-    mock_llm.chat = AsyncMock(return_value="LLM response")
+    mock_usage = TokenUsage(prompt_tokens=10, completion_tokens=20, total_tokens=30)
+    mock_llm.chat = AsyncMock(return_value=("LLM response", mock_usage))
 
     mock_repo = AsyncMock()
     mock_repo.session = AsyncMock()
@@ -90,7 +92,8 @@ async def test_process_message_saves_to_database() -> None:
 async def test_process_message_includes_history() -> None:
     """Test that process_message includes conversation history in LLM call."""
     mock_llm = AsyncMock()
-    mock_llm.chat = AsyncMock(return_value="Response with context")
+    mock_usage = TokenUsage(prompt_tokens=15, completion_tokens=25, total_tokens=40)
+    mock_llm.chat = AsyncMock(return_value=("Response with context", mock_usage))
 
     mock_repo = AsyncMock()
     mock_repo.session = AsyncMock()
