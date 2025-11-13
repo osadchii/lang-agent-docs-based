@@ -107,7 +107,7 @@ class TelegramBot:
     async def process_payload(self, payload: dict[str, Any]) -> None:
         """Deserialize a Telegram update and dispatch it into the application."""
         await self.ensure_started()
-        update = TelegramUpdate.de_json(payload, self._application.bot)
+        update = Update.de_json(payload, self._application.bot)
         await self._application.process_update(update)
 
     def _register_handlers(self) -> None:
@@ -135,4 +135,7 @@ class TelegramBot:
         )
 
 
-__all__ = ["TelegramBot"]
+# Re-export Update for test monkeypatching.
+Update = TelegramUpdate
+
+__all__ = ["TelegramBot", "Update"]
