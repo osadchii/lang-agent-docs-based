@@ -12,6 +12,11 @@ MAX_CAPTION_LENGTH = 1024
 # Markdown V2 special characters that need escaping
 MARKDOWN_V2_ESCAPE_CHARS = r"_*[]()~`>#+-=|{}.!"
 
+# Markdown (legacy) special characters that need escaping
+# Для безопасного отображения LLM-ответов мы НЕ экранируем форматирование
+# Только потенциально опасные символы для Markdown парсера
+MARKDOWN_ESCAPE_CHARS = r"`"  # Экранируем только backticks для inline code
+
 
 def escape_markdown_v2(text: str) -> str:
     """
@@ -28,6 +33,29 @@ def escape_markdown_v2(text: str) -> str:
         'Hello \\(world\\)\\!'
     """
     return re.sub(f"([{re.escape(MARKDOWN_V2_ESCAPE_CHARS)}])", r"\\\1", text)
+
+
+def escape_markdown(text: str) -> str:
+    """
+    Экранировать специальные символы для Telegram Markdown (legacy mode).
+
+    Используется для безопасного отображения текста от LLM с сохранением форматирования.
+    Экранируем только backticks, так как LLM генерирует Markdown и мы хотим
+    сохранить его форматирование (*жирный*, _курсив_).
+
+    Args:
+        text: Исходный текст (может содержать Markdown от LLM)
+
+    Returns:
+        Текст с экранированными только критичными символами
+
+    Example:
+        >>> escape_markdown("Code: `print('hello')`")
+        "Code: \\`print('hello')\\`"
+    """
+    # Экранируем только backticks которые не являются частью code блоков
+    # Простое экранирование всех одиночных backticks
+    return text.replace("`", r"\`")
 
 
 def format_bold(text: str) -> str:
@@ -332,6 +360,7 @@ def format_success_message(message: str) -> str:
 
 __all__ = [
     "escape_markdown_v2",
+    "escape_markdown",
     "format_bold",
     "format_italic",
     "format_code",

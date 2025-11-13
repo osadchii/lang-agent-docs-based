@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from app.telegram.formatters import (
     MAX_MESSAGE_LENGTH,
+    escape_markdown,
     escape_markdown_v2,
     format_bold,
     format_card_response,
@@ -16,6 +17,29 @@ from app.telegram.formatters import (
     format_success_message,
     split_message,
 )
+
+
+class TestEscapeMarkdown:
+    """Тесты для escape_markdown (legacy mode для LLM ответов)."""
+
+    def test_escape_backticks(self) -> None:
+        """Тест экранирования backticks."""
+        text = "Code: `print('hello')`"
+        result = escape_markdown(text)
+        assert result == r"Code: \`print('hello')\`"
+
+    def test_preserve_markdown_formatting(self) -> None:
+        """Тест что Markdown форматирование сохраняется."""
+        text = "*bold* and _italic_ text"
+        result = escape_markdown(text)
+        # * и _ НЕ экранируются - это часть Markdown форматирования от LLM
+        assert result == "*bold* and _italic_ text"
+
+    def test_no_escape_for_regular_text(self) -> None:
+        """Тест что обычный текст не изменяется."""
+        text = "Hello world 123"
+        result = escape_markdown(text)
+        assert result == text
 
 
 class TestEscapeMarkdownV2:

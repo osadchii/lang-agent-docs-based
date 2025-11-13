@@ -191,13 +191,12 @@ class TelegramBot:
                 },
             )
 
-        from app.telegram.formatters import escape_markdown_v2, format_bold
         from app.telegram.keyboards import create_mini_app_button
         from telegram import InlineKeyboardMarkup
 
-        # Форматируем приветственное сообщение
-        greeting = format_bold(f"Привет, {user.first_name}!")
-        text = f"{greeting}\n\n" + escape_markdown_v2(
+        # Форматируем приветственное сообщение (используем Markdown legacy mode)
+        text = (
+            f"*Привет, {user.first_name}!*\n\n"
             "Я бот Lang Agent. Напиши мне вопрос или открой Mini App для практики."
         )
 
@@ -206,7 +205,7 @@ class TelegramBot:
 
         await message.reply_text(
             text=text,
-            parse_mode="MarkdownV2",
+            parse_mode="Markdown",
             reply_markup=keyboard,
         )
 
@@ -270,15 +269,16 @@ class TelegramBot:
                 )
 
                 # 4. Format and send response
-                from app.telegram.formatters import escape_markdown_v2, split_message
+                from app.telegram.formatters import split_message
 
-                # Экранируем ответ для MarkdownV2 и разбиваем если слишком длинный
-                formatted_response = escape_markdown_v2(response)
-                message_parts = split_message(formatted_response)
+                # Разбиваем ответ если слишком длинный
+                # NOTE: LLM генерирует Markdown форматирование (согласно backend-bot-responses.md)
+                # Используем parse_mode="Markdown" для корректного отображения
+                message_parts = split_message(response)
 
-                # Отправляем части сообщения
+                # Отправляем части сообщения с Markdown форматированием
                 for part in message_parts:
-                    await message.reply_text(part, parse_mode="MarkdownV2")
+                    await message.reply_text(part, parse_mode="Markdown")
 
                 self._logger.info(
                     "Message processed successfully",
@@ -290,22 +290,18 @@ class TelegramBot:
                 )
 
         except Exception as e:
-            from app.telegram.formatters import format_error_message
-
             self._logger.error(
                 f"Error processing message: {e}",
                 extra={"telegram_id": user.id, "exception": str(e)},
             )
 
-            error_text = format_error_message(
-                "Произошла ошибка при обработке вашего сообщения. "
+            # Используем plain text для сообщений об ошибках
+            error_text = (
+                "❌ Произошла ошибка при обработке вашего сообщения. "
                 "Попробуйте еще раз или напишите /start."
             )
 
-            await message.reply_text(
-                text=error_text,
-                parse_mode="MarkdownV2",
-            )
+            await message.reply_text(text=error_text)
 
     async def _handle_error(self, update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
         self._logger.error(
