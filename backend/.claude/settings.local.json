@@ -5,7 +5,8 @@
       "Bash(ruff check:*)",
       "Bash(ruff format:*)",
       "Bash(mypy:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []
