@@ -12,6 +12,7 @@ from telegram import Update as TelegramUpdate
 from telegram.ext import (
     Application,
     ApplicationBuilder,
+    CallbackQueryHandler,
     CommandHandler,
     ContextTypes,
     MessageHandler,
@@ -145,6 +146,10 @@ class TelegramBot:
         self._application.add_handler(
             MessageHandler(filters.TEXT & ~filters.COMMAND, self._handle_message)
         )
+        # Callback query handler for inline buttons
+        from app.telegram.callbacks import handle_callback_query
+
+        self._application.add_handler(CallbackQueryHandler(handle_callback_query))
         self._application.add_error_handler(self._handle_error)
 
     async def _handle_start(
@@ -186,9 +191,23 @@ class TelegramBot:
                 },
             )
 
-        greeting = f"Привет, {user.first_name}!"
+        from app.telegram.formatters import escape_markdown_v2, format_bold
+        from app.telegram.keyboards import create_mini_app_button
+        from telegram import InlineKeyboardMarkup
+
+        # Форматируем приветственное сообщение
+        greeting = format_bold(f"Привет, {user.first_name}!")
+        text = f"{greeting}\n\n" + escape_markdown_v2(
+            "Я бот Lang Agent. Напиши мне вопрос или открой Mini App для практики."
+        )
+
+        # Добавляем кнопку открытия Mini App
+        keyboard = InlineKeyboardMarkup([[create_mini_app_button()]])
+
         await message.reply_text(
-            f"{greeting} Я бот Lang Agent. Напиши мне вопрос или открой Mini App для практики."
+            text=text,
+            parse_mode="MarkdownV2",
+            reply_markup=keyboard,
         )
 
     async def _handle_message(
@@ -250,25 +269,42 @@ class TelegramBot:
                     message=message.text,
                 )
 
-                # 4. Send response
-                await message.reply_text(response)
+                # 4. Format and send response
+                from app.telegram.formatters import escape_markdown_v2, split_message
+
+                # Экранируем ответ для MarkdownV2 и разбиваем если слишком длинный
+                formatted_response = escape_markdown_v2(response)
+                message_parts = split_message(formatted_response)
+
+                # Отправляем части сообщения
+                for part in message_parts:
+                    await message.reply_text(part, parse_mode="MarkdownV2")
 
                 self._logger.info(
                     "Message processed successfully",
                     extra={
                         "user_id": str(db_user.id),
                         "response_length": len(response),
+                        "parts_count": len(message_parts),
                     },
                 )
 
         except Exception as e:
+            from app.telegram.formatters import format_error_message
+
             self._logger.error(
                 f"Error processing message: {e}",
                 extra={"telegram_id": user.id, "exception": str(e)},
             )
-            await message.reply_text(
-                "Извините, произошла ошибка при обработке вашего сообщения. "
+
+            error_text = format_error_message(
+                "Произошла ошибка при обработке вашего сообщения. "
                 "Попробуйте еще раз или напишите /start."
+            )
+
+            await message.reply_text(
+                text=error_text,
+                parse_mode="MarkdownV2",
             )
 
     async def _handle_error(self, update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
