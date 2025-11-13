@@ -8,7 +8,13 @@
       "Bash(cat:*)",
       "Bash(python:*)",
       "Bash(alembic revision:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(npm create:*)",
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(timeout 10 npm run dev:*)",
+      "Bash(exit 0)"
     ],
     "deny": [],
     "ask": []
