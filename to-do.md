@@ -128,12 +128,12 @@
   - Acceptance: корректный парсинг JSON‑ответов, хиты кэша видны в логах, юнит‑тесты на парсер/кэш
 
 ## Этап G. Mini App (Frontend) — ранний скелет
-- [ ] **22) Бутстрап фронтенда**
+- [x] **22) Бутстрап фронтенда**
    - Vite + React + TS, SDK `@twa-dev/sdk`; страницы: Home (плейсхолдер), Error
    - Интеграция Telegram WebApp initData (получение на старте)
    - Acceptance: билд/дев‑сервер, отрисовывается стартовый экран
 
-- [ ] **23) Auth через initData**
+- [x] **23) Auth через initData**
    - Эндпоинт `/api/auth/validate` (см. `docs/backend-api.md`, `docs/backend-auth.md`) — валидация HMAC, выдача JWT
    - Frontend сохраняет JWT (memory) и использует в запросах (Axios interceptors)
    - Acceptance: успешная валидация initData, получение `user`, `token`

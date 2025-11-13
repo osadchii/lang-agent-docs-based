@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import api_router
+from app.api.routes import api_router, root_router
 from app.core.config import settings
 from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging
@@ -60,6 +60,7 @@ def create_app() -> FastAPI:
     )
     application.add_middleware(RequestIDMiddleware)
 
+    application.include_router(root_router)
     application.include_router(api_router)
 
     @application.on_event("startup")

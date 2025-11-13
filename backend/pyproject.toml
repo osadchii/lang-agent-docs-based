@@ -70,6 +70,8 @@ fixable = ["E", "F", "I", "W", "B", "ANN"]
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101"]
 "backend/tests/*" = ["S101"]
+"app/api/routes/*" = ["B008"]
+"app/core/auth.py" = ["B008"]
 
 [tool.mypy]
 python_version = "3.11"
