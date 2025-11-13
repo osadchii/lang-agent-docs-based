@@ -100,7 +100,7 @@
    - Логика онбординга: зафиксировать минимум (язык интерфейса из Telegram)
    - Acceptance: запись пользователя создаётся, повторный вход — обновление `last_activity`
 
-- [ ] **17) Диалог с LLM (минимум)**
+- [x] **17) Диалог с LLM (минимум)**
    - Сервис `LLMService` (OpenAI SDK) + `DialogService`
    - System prompt из `docs/backend-llm.md` (минимальная версия), безопасные таймауты
    - ВАЖНО: сохранять каждое сообщение (user/assistant) в `conversation_history` сразу (никакого in‑memory)

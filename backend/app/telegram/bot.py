@@ -9,7 +9,14 @@ from typing import Any, Sequence, TypeAlias
 from urllib.parse import urlsplit
 
 from telegram import Update as TelegramUpdate
-from telegram.ext import Application, ApplicationBuilder, CommandHandler, ContextTypes
+from telegram.ext import (
+    Application,
+    ApplicationBuilder,
+    CommandHandler,
+    ContextTypes,
+    MessageHandler,
+    filters,
+)
 
 BotApplication: TypeAlias = Application[Any, Any, Any, Any, Any, Any]
 
@@ -134,6 +141,10 @@ class TelegramBot:
 
     def _register_handlers(self) -> None:
         self._application.add_handler(CommandHandler("start", self._handle_start))
+        # Text message handler (excluding commands)
+        self._application.add_handler(
+            MessageHandler(filters.TEXT & ~filters.COMMAND, self._handle_message)
+        )
         self._application.add_error_handler(self._handle_error)
 
     async def _handle_start(
@@ -179,6 +190,86 @@ class TelegramBot:
         await message.reply_text(
             f"{greeting} Я бот Lang Agent. Напиши мне вопрос или открой Mini App для практики."
         )
+
+    async def _handle_message(
+        self, update: TelegramUpdate, context: ContextTypes.DEFAULT_TYPE
+    ) -> None:
+        """Handle text messages: process through LLM and respond."""
+        del context  # context is unused
+        message = update.effective_message
+        user = update.effective_user
+
+        if message is None or user is None or message.text is None:
+            return
+
+        # Import here to avoid circular dependencies
+        from app.core.config import settings
+        from app.core.db import AsyncSessionFactory
+        from app.repositories.conversation import ConversationRepository
+        from app.repositories.user import UserRepository
+        from app.services.dialog import DialogService
+        from app.services.llm import LLMService
+        from app.services.user import UserService
+
+        try:
+            async with AsyncSessionFactory() as session:
+                # 1. Get or create user
+                user_repo = UserRepository(session)
+                user_service = UserService(user_repo)
+
+                db_user = await user_service.get_or_create_user(
+                    telegram_id=user.id,
+                    first_name=user.first_name,
+                    last_name=user.last_name,
+                    username=user.username,
+                    language_code=user.language_code,
+                )
+                await session.commit()
+
+                # 2. Get or create default language profile
+                conversation_repo = ConversationRepository(session)
+                llm_service = LLMService(api_key=settings.openai_api_key.get_secret_value())
+                dialog_service = DialogService(llm_service, conversation_repo)
+
+                profile = await dialog_service.get_or_create_default_profile(db_user, session)
+                await session.commit()
+
+                self._logger.info(
+                    "Processing message",
+                    extra={
+                        "user_id": str(db_user.id),
+                        "profile_id": str(profile.id),
+                        "message_length": len(message.text),
+                    },
+                )
+
+                # 3. Process message through DialogService
+                response = await dialog_service.process_message(
+                    user=db_user,
+                    profile_id=profile.id,
+                    message=message.text,
+                )
+
+                # 4. Send response
+                await message.reply_text(response)
+
+                self._logger.info(
+                    "Message processed successfully",
+                    extra={
+                        "user_id": str(db_user.id),
+                        "response_length": len(response),
+                    },
+                )
+
+        except Exception as e:
+            self._logger.error(
+                f"Error processing message: {e}",
+                extra={"telegram_id": user.id, "exception": str(e)},
+            )
+            await message.reply_text(
+                "Извините, произошла ошибка при обработке вашего сообщения. "
+                "Попробуйте еще раз или напишите /start."
+            )
 
     async def _handle_error(self, update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
         self._logger.error(
