@@ -139,13 +139,43 @@ class TelegramBot:
     async def _handle_start(
         self, update: TelegramUpdate, context: ContextTypes.DEFAULT_TYPE
     ) -> None:
+        """Handle /start command: create or get user, update last_activity."""
         del context  # context is unused for the basic greeting
         message = update.effective_message
-        if message is None:
+        user = update.effective_user
+
+        if message is None or user is None:
             return
 
-        first_name = update.effective_user.first_name if update.effective_user else None
-        greeting = f"Привет, {first_name}!" if first_name else "Привет!"
+        # Import here to avoid circular dependencies
+        from app.core.db import AsyncSessionFactory
+        from app.repositories.user import UserRepository
+        from app.services.user import UserService
+
+        # Create user or update last_activity
+        async with AsyncSessionFactory() as session:
+            repository = UserRepository(session)
+            service = UserService(repository)
+
+            db_user = await service.get_or_create_user(
+                telegram_id=user.id,
+                first_name=user.first_name,
+                last_name=user.last_name,
+                username=user.username,
+                language_code=user.language_code,
+            )
+            await session.commit()
+
+            self._logger.info(
+                "User processed in /start",
+                extra={
+                    "telegram_id": user.id,
+                    "user_id": str(db_user.id),
+                    "is_new": db_user.created_at == db_user.updated_at,
+                },
+            )
+
+        greeting = f"Привет, {user.first_name}!"
         await message.reply_text(
             f"{greeting} Я бот Lang Agent. Напиши мне вопрос или открой Mini App для практики."
         )

@@ -118,15 +118,57 @@ async def test_handle_start_replies_with_greeting(monkeypatch: pytest.MonkeyPatc
         async def reply_text(self, text: str) -> None:
             self.text = text
 
+    # Mock database session and user service
+    mock_session = AsyncMock()
+    mock_user = SimpleNamespace(id="test-user-id", created_at=None, updated_at=None)
+    mock_service = AsyncMock()
+    mock_service.get_or_create_user.return_value = mock_user
+
+    # Mock AsyncSessionFactory context manager
+    class MockSessionFactory:
+        def __call__(self) -> "MockSessionFactory":
+            return self
+
+        async def __aenter__(self) -> AsyncMock:
+            return mock_session
+
+        async def __aexit__(self, *args: object) -> None:
+            pass
+
+    # Patch at the module level where it's imported
+    import app.core.db as db_module
+
+    monkeypatch.setattr(db_module, "AsyncSessionFactory", MockSessionFactory())
+
+    # Mock repository and service constructors
+    def mock_user_repository_init(session: object) -> SimpleNamespace:
+        return SimpleNamespace()
+
+    def mock_user_service_init(repo: object) -> AsyncMock:
+        return mock_service
+
+    import app.repositories.user as repo_module
+    import app.services.user as service_module
+
+    monkeypatch.setattr(repo_module, "UserRepository", mock_user_repository_init)
+    monkeypatch.setattr(service_module, "UserService", mock_user_service_init)
+
     dummy_message = DummyMessage()
     update = SimpleNamespace(
         effective_message=dummy_message,
-        effective_user=SimpleNamespace(first_name="Антон"),
+        effective_user=SimpleNamespace(
+            id=123456,
+            first_name="Антон",
+            last_name="Иванов",
+            username="antonivanov",
+            language_code="ru",
+        ),
     )
 
     await bot._handle_start(update, context=None)
 
     assert dummy_message.text.startswith("Привет, Антон")
+    mock_service.get_or_create_user.assert_awaited_once()
 
 
 @pytest.mark.asyncio
