@@ -14,7 +14,7 @@ import hmac
 import json
 import logging
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib.parse import parse_qsl
 from uuid import UUID
@@ -157,12 +157,12 @@ def create_access_token(user: User) -> tuple[str, datetime]:
     Returns:
         Tuple of (token_string, expires_at_datetime)
     """
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     expires_at = now + timedelta(minutes=settings.access_token_expire_minutes)
 
     # JWT payload
     payload = {
-        "user_id": str(user.id),
+        "user_id": str(user.id) if user.id else None,
         "telegram_id": user.telegram_id,
         "is_premium": user.is_premium,
         "iat": int(now.timestamp()),  # issued at

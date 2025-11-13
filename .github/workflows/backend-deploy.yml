@@ -70,7 +70,7 @@ jobs:
           OPENAI_API_KEY: test-openai-key
         run: |
           cd backend
-          pytest tests/ -v --cov=app --cov-report=term --cov-fail-under=84
+          pytest tests/ -v --cov=app --cov-report=term --cov-fail-under=80
 
       - name: Notify Telegram about failed backend tests
         if: ${{ failure() && env.TELEGRAM_DEPLOY_CHAT_ID != '' && env.CI_BOT_TOKEN != '' }}

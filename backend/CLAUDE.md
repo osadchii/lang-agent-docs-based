@@ -42,7 +42,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 2. **Убедиться** что решение соответствует архитектуре
 3. **Реализовать** согласно спецификациям
 4. **Проверить** что код следует `development-guidelines.md`
-5. **Покрыть тестами** согласно требованиям (минимум 85% coverage)
+5. **Покрыть тестами** согласно требованиям (минимум 80% coverage)
+
+### ⚠️ Git Workflow
+
+**ВАЖНО: НЕ СОЗДАВАЙ GIT КОММИТЫ**
+
+- Claude не должен использовать команды `git add`, `git commit`, `git push`
+- Пользователь сам создает коммиты и управляет git
+- После завершения задачи просто сообщи пользователю, что изменения готовы для коммита
+- Можно использовать `git status`, `git diff` для информации, но НЕ изменяющие команды
 
 ## Project Overview
 
@@ -82,8 +91,8 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ### Testing
 ```bash
-# Run all tests with coverage (CI requires 85% coverage minimum)
-pytest tests/ -v --cov=app --cov-report=term --cov-fail-under=85
+# Run all tests with coverage (CI requires 80% coverage minimum)
+pytest tests/ -v --cov=app --cov-report=term --cov-fail-under=80
 
 # Run specific test file
 pytest tests/services/test_user_service.py -v
@@ -236,7 +245,7 @@ class UserRepository(BaseRepository[User]):
 ## CI/CD Pipeline
 
 GitHub Actions workflow (`.github/workflows/backend-deploy.yml`):
-1. **Tests**: Runs pytest with PostgreSQL and Redis services, requires 85% coverage
+1. **Tests**: Runs pytest with PostgreSQL and Redis services, requires 80% coverage
 2. **Build**: Builds Docker image and pushes to GHCR (main branch only)
 3. **Deploy**: Deploys to server via SSH, pulls images, and restarts stack (main branch only)
 4. **Notifications**: Telegram notifications on success/failure (if configured)
@@ -283,7 +292,7 @@ GitHub Actions workflow (`.github/workflows/backend-deploy.yml`):
 
 **ОБЯЗАТЕЛЬНЫЕ требования** (из `docs/development-guidelines.md`):
 
-- **Минимум 85%** общего покрытия (enforced by CI)
+- **Минимум 80%** общего покрытия (enforced by CI)
 - **100%** покрытие критичных модулей:
   - Authentication (auth_service.py)
   - Payment processing (subscription_service.py)

@@ -150,7 +150,10 @@ def test_validate_telegram_init_data_missing_user_data() -> None:
 
 def test_create_access_token() -> None:
     """Test JWT token creation."""
+    import uuid
+
     user = User(
+        id=uuid.uuid4(),
         telegram_id=123456789,
         first_name="John",
         last_name="Doe",
@@ -183,7 +186,10 @@ def test_create_access_token() -> None:
 
 def test_decode_access_token_success() -> None:
     """Test successful JWT token decoding."""
+    import uuid
+
     user = User(
+        id=uuid.uuid4(),
         telegram_id=123456789,
         first_name="John",
         is_premium=False,
@@ -219,8 +225,11 @@ def test_decode_access_token_wrong_signature() -> None:
 @pytest.mark.asyncio
 async def test_get_current_user_success() -> None:
     """Test get_current_user dependency with valid token."""
+    import uuid
+
     # Create mock user
     mock_user = User(
+        id=uuid.uuid4(),
         telegram_id=123456789,
         first_name="John",
         is_premium=False,
@@ -252,6 +261,8 @@ async def test_get_current_user_success() -> None:
 @pytest.mark.asyncio
 async def test_get_current_user_expired_token() -> None:
     """Test get_current_user with expired token."""
+    import uuid
+
     # Create token that expired immediately
     with patch("app.core.auth.settings") as mock_settings:
         mock_settings.secret_key.get_secret_value.return_value = (
@@ -260,7 +271,7 @@ async def test_get_current_user_expired_token() -> None:
         mock_settings.jwt_algorithm = "HS256"
         mock_settings.access_token_expire_minutes = 0  # Expired immediately
 
-        mock_user = User(telegram_id=123, first_name="Test", is_premium=False)
+        mock_user = User(id=uuid.uuid4(), telegram_id=123, first_name="Test", is_premium=False)
         token, _ = create_access_token(mock_user)
 
     from fastapi.security import HTTPAuthorizationCredentials
@@ -293,7 +304,9 @@ async def test_get_current_user_invalid_token() -> None:
 @pytest.mark.asyncio
 async def test_get_current_user_user_not_found() -> None:
     """Test get_current_user when user doesn't exist in database."""
-    mock_user = User(telegram_id=123, first_name="Test", is_premium=False)
+    import uuid
+
+    mock_user = User(id=uuid.uuid4(), telegram_id=123, first_name="Test", is_premium=False)
     token, _ = create_access_token(mock_user)
 
     from fastapi.security import HTTPAuthorizationCredentials
