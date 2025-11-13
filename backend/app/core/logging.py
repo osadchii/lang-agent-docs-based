@@ -45,12 +45,17 @@ class JsonLogFormatter(logging.Formatter):
                 log_entry[field] = value
 
         if record.exc_info:
-            log_entry["exc_info"] = self.formatException(record.exc_info)
+            # Replace newlines with space to keep single-line JSON
+            exc_text = self.formatException(record.exc_info)
+            log_entry["exc_info"] = exc_text.replace("\n", " | ")
 
         if record.stack_info:
-            log_entry["stack"] = self.formatStack(record.stack_info)
+            # Replace newlines with space to keep single-line JSON
+            stack_text = self.formatStack(record.stack_info)
+            log_entry["stack"] = stack_text.replace("\n", " | ")
 
-        return json.dumps(log_entry, ensure_ascii=True)
+        # Ensure single-line JSON output (no indentation)
+        return json.dumps(log_entry, ensure_ascii=True, separators=(",", ":"))
 
 
 def configure_logging(level_name: str) -> None:
@@ -69,6 +74,11 @@ def configure_logging(level_name: str) -> None:
     root_logger.handlers.clear()
     root_logger.addHandler(handler)
     root_logger.setLevel(resolved_level)
+
+    # Suppress noisy SQLAlchemy loggers
+    logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy.pool").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy.dialects").setLevel(logging.WARNING)
 
     logging.captureWarnings(True)
     _LOGGING_CONFIGURED = True

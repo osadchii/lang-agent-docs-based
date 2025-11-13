@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     debug: bool = Field(default=False, alias="DEBUG")
     api_v1_prefix: str = Field(default="/api", alias="API_V1_PREFIX")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
+    sql_echo: bool = Field(default=False, alias="SQL_ECHO")
 
     database_url: str = Field(alias="DATABASE_URL")
     redis_url: str = Field(alias="REDIS_URL")
