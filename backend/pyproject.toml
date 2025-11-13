@@ -23,6 +23,7 @@ dependencies = [
   "pyjwt[crypto]==2.8.0",
   "pydantic==2.6.3",
   "pydantic-settings==2.2.1",
+  "python-telegram-bot[webhooks]==20.8",
   "python-multipart==0.0.9",
   "redis==5.0.1",
   "sqlalchemy==2.0.27",
@@ -88,6 +89,13 @@ module = [
   "prometheus_fastapi_instrumentator.*",
   "prometheus_client.openmetrics",
   "prometheus_client.openmetrics.exposition",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+  "telegram",
+  "telegram.*",
 ]
 ignore_missing_imports = true
 

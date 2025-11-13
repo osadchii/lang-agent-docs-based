@@ -145,6 +145,27 @@ GET /api/cards?deck_id=123&status=new&sort=-created_at
 
 ## Endpoints
 
+### POST /telegram-webhook/{bot_token}
+
+Webhook для Telegram Bot API. Endpoint принимает JSON-обновления напрямую от Telegram и делегирует их python-telegram-bot приложению.
+
+- **URL:** `/telegram-webhook/<bot_token>`
+- **Headers:** стандартные Telegram (`Content-Type: application/json`)
+- **Body:** нативный Update объект из Bot API (messages, callback_query, etc.)
+
+**Response 200 OK:**
+```json
+{
+  "ok": true
+}
+```
+
+**Ошибки:**
+- `403 FORBIDDEN` (`error.code = "FORBIDDEN"`) — если path token не совпадает с `TELEGRAM_BOT_TOKEN`
+- `4xx/5xx` по контракту ошибок (см. ниже) при некорректном JSON или внутренних сбоях
+
+> Примечание: В production окружениях webhook URL берётся из `TELEGRAM_WEBHOOK_URL`, для локальной разработки бот запускается командой `python -m app.telegram.polling` (см. `docs/backend-telegram.md`).
+
 ### Health Check
 
 #### GET /health

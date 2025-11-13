@@ -90,7 +90,7 @@
   - Acceptance: все ошибки API возвращаются в стандартизированном формате; тесты на маппинг исключений
 
 ## Этап E. Интеграция с Telegram Bot (базовый диалог)
-- [ ] **15) Бот и вебхук**
+- [x] **15) Бот и вебхук**
    - Библиотека `python-telegram-bot` 20+; эндпоинт `POST /telegram-webhook/{bot_token}` в FastAPI (см. `docs/architecture.md`, `docs/backend-telegram.md`)
    - Старт: setWebhook (prod) / polling (dev); обработчик `/start`
    - Acceptance: сообщение в бота достигает backend handler (логи, 200), бот отвечает "Привет!"

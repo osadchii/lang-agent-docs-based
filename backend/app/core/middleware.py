@@ -8,7 +8,7 @@ from uuid import uuid4
 
 from fastapi import Request, Response, status
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
-from starlette.types import ASGIApp, Message
+from starlette.types import ASGIApp
 
 from app.core.errors import ErrorCode, error_response
 from app.core.logging import bind_request_id, reset_request_id
@@ -130,34 +130,11 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
                 # Fall back to streaming check for malformed header.
                 pass
 
-        body = await self._read_body_with_limit(request)
-        if body is None:
+        body = await request.body()
+        if len(body) > self.max_request_bytes:
             return self._payload_too_large_response()
 
-        request = self._clone_request_with_body(request, body)
         return await call_next(request)
-
-    async def _read_body_with_limit(self, request: Request) -> bytes | None:
-        buffer = bytearray()
-        async for chunk in request.stream():
-            buffer.extend(chunk)
-            if len(buffer) > self.max_request_bytes:
-                return None
-        return bytes(buffer)
-
-    def _clone_request_with_body(self, request: Request, body: bytes) -> Request:
-        sent = False
-
-        async def receive() -> Message:
-            nonlocal sent
-            if sent:
-                return {"type": "http.request", "body": b"", "more_body": False}
-            sent = True
-            return {"type": "http.request", "body": body, "more_body": False}
-
-        cloned = Request(request.scope, receive)
-        cloned._body = body
-        return cloned
 
     @staticmethod
     def _payload_too_large_response() -> Response:

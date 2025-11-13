@@ -17,6 +17,7 @@ from app.core.middleware import (
     SecurityHeadersMiddleware,
 )
 from app.core.version import APP_VERSION
+from app.telegram import telegram_bot
 
 ALLOWED_METHODS = ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"]
 ALLOWED_HEADERS = ["Authorization", "Content-Type", "Accept", "X-Requested-With"]
@@ -60,6 +61,15 @@ def create_app() -> FastAPI:
     application.add_middleware(RequestIDMiddleware)
 
     application.include_router(api_router)
+
+    @application.on_event("startup")
+    async def _configure_telegram_webhook() -> None:
+        webhook_url = str(settings.telegram_webhook_url) if settings.telegram_webhook_url else None
+        await telegram_bot.sync_webhook(webhook_url)
+
+    @application.on_event("shutdown")
+    async def _shutdown_telegram_bot() -> None:
+        await telegram_bot.shutdown()
 
     return application
 

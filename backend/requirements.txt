@@ -9,6 +9,7 @@ passlib[bcrypt]==1.7.4
 pyjwt[crypto]==2.8.0
 pydantic==2.6.3
 pydantic-settings==2.2.1
+python-telegram-bot[webhooks]==20.8
 python-multipart==0.0.9
 redis==5.0.1
 sqlalchemy==2.0.27

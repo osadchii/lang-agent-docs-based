@@ -10,6 +10,7 @@
 - Согласование с документацией в `docs/` — текущий репозиторий стартует строго по плану `to-do.md`
 - Продовый `backend/Dockerfile` + корневой `docker-compose.yml` (backend/db/redis + Loki 3 + Promtail 3 + Grafana 12 + Nginx proxy, healthchecks, Alembic перед стартом)
 - Prometheus-инструментация /metrics через prometheus_fastapi_instrumentator (с request_id в гистограммах)
+- Telegram Bot API интеграция: `python-telegram-bot` 20.8, вебхук `POST /telegram-webhook/{bot_token}` + helper для polling (`python -m app.telegram.polling`), конфигурация по `docs/backend-telegram.md`
 - Глобальные обработчики ошибок FastAPI → единый JSON-контракт (`docs/backend-api.md`) + защита от слишком больших тел запросов
 - Провиженинг Grafana 12 (`infra/`) с готовым дашбордом (RPS, p95 latency, 4xx/5xx, top endpoints)
 - Nginx reverse proxy + ACME companion, который автоматически выпускает Let's Encrypt сертификат для Grafana (наружу торчит только HTTPS)
@@ -72,6 +73,10 @@ PY
    `
    Вы должны увидеть http_requests_total и pp_request_latency_seconds c
 equest_id (exemplar) — этого достаточно для подключения Prometheus.
+7. Telegram Bot:
+   - Для продакшена укажите `TELEGRAM_WEBHOOK_URL` — при старте backend автоматически вызовет `setWebhook` по инструкции из `docs/backend-telegram.md`.
+   - Для локальной отладки запускайте long polling в отдельном терминале: `cd backend && python -m app.telegram.polling` (использует токен и настройки из `.env`).
+   - Обработчик `/start` уже доступен («Привет!»), остальная логика реализуется на шагах 16+.
 ### 🐳 Продовый docker-compose (backend + db + redis + observability)
 1. Скопируйте `.env.example` → `.env`, заполните `POSTGRES_*`, `BACKEND_IMAGE`, `BACKEND_IMAGE_TAG`, `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD`, `GRAFANA_DOMAIN` и `TRAEFIK_ACME_EMAIL` (email для Let's Encrypt). Для работы внутри Docker-сети обновите `DATABASE_URL` и `REDIS_URL` на `postgresql+asyncpg://<user>:<pass>@db:5432/<db>` и `redis://redis:6379/0`.
 2. Скопируйте на сервер сам `docker-compose.yml` вместе с каталогом `infra/` — Grafana и Loki читают конфиги именно оттуда.
