@@ -156,29 +156,24 @@ async def chat_with_tutor(
 async def get_dialog_history(
     profile_id: Annotated[
         UUID | None,
-        Query(
-            default=None,
-            description="Optional profile identifier. Defaults to the active profile.",
-        ),
-    ],
+        Query(description="Optional profile identifier. Defaults to the active profile."),
+    ] = None,
     limit: Annotated[
         int,
         Query(
-            default=20,
             ge=1,
             le=MAX_PAGE_SIZE,
             description="Maximum number of messages to return.",
         ),
-    ],
+    ] = 20,
     offset: Annotated[
         int,
         Query(
-            default=0,
             ge=0,
             le=MAX_HISTORY_WINDOW,
             description="Number of most recent messages to skip.",
         ),
-    ],
+    ] = 0,
     user: User = Depends(get_current_user),  # noqa: B008
     dialog_service: DialogService = Depends(get_dialog_service),  # noqa: B008
 ) -> ChatHistoryResponse:
