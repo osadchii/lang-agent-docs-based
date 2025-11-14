@@ -60,7 +60,8 @@ class ConversationRepository(BaseRepository[ConversationMessage]):
     async def delete_for_user(self, user_id: uuid.UUID) -> int:
         stmt = delete(ConversationMessage).where(ConversationMessage.user_id == user_id)
         result = await self.session.execute(stmt)
-        return result.rowcount or 0
+        rowcount = getattr(result, "rowcount", 0)
+        return int(rowcount or 0)
 
 
 __all__ = ["ConversationRepository"]

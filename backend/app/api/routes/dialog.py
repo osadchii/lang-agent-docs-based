@@ -37,6 +37,19 @@ router = APIRouter(tags=["dialog"])
 
 MAX_PAGE_SIZE = 50
 MAX_HISTORY_WINDOW = 200
+PROFILE_ID_FIELD = Query(
+    description="Optional profile identifier. Defaults to the active profile.",
+)
+LIMIT_FIELD = Query(
+    ge=1,
+    le=MAX_PAGE_SIZE,
+    description="Maximum number of messages to return.",
+)
+OFFSET_FIELD = Query(
+    ge=0,
+    le=MAX_HISTORY_WINDOW,
+    description="Number of most recent messages to skip.",
+)
 
 
 async def get_dialog_service(
@@ -154,26 +167,9 @@ async def chat_with_tutor(
     summary="Fetch the latest dialog history for the current user",
 )
 async def get_dialog_history(
-    profile_id: Annotated[
-        UUID | None,
-        Query(description="Optional profile identifier. Defaults to the active profile."),
-    ] = None,
-    limit: Annotated[
-        int,
-        Query(
-            ge=1,
-            le=MAX_PAGE_SIZE,
-            description="Maximum number of messages to return.",
-        ),
-    ] = 20,
-    offset: Annotated[
-        int,
-        Query(
-            ge=0,
-            le=MAX_HISTORY_WINDOW,
-            description="Number of most recent messages to skip.",
-        ),
-    ] = 0,
+    profile_id: Annotated[UUID | None, PROFILE_ID_FIELD] = None,
+    limit: Annotated[int, LIMIT_FIELD] = 20,
+    offset: Annotated[int, OFFSET_FIELD] = 0,
     user: User = Depends(get_current_user),  # noqa: B008
     dialog_service: DialogService = Depends(get_dialog_service),  # noqa: B008
 ) -> ChatHistoryResponse:

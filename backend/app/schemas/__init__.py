@@ -14,8 +14,17 @@ from .llm_responses import (
     WordSuggestion,
     WordSuggestions,
 )
+from .profile import (
+    CEFRLevel,
+    LanguageProfileCreate,
+    LanguageProfileListResponse,
+    LanguageProfileProgress,
+    LanguageProfileResponse,
+    LanguageProfileUpdate,
+)
 
 __all__ = [
+    "CEFRLevel",
     "CardContent",
     "ChatHistoryResponse",
     "ChatMessage",
@@ -24,6 +33,11 @@ __all__ = [
     "ExerciseContent",
     "ExerciseResult",
     "IntentDetection",
+    "LanguageProfileCreate",
+    "LanguageProfileListResponse",
+    "LanguageProfileProgress",
+    "LanguageProfileResponse",
+    "LanguageProfileUpdate",
     "Mistake",
     "PaginationMeta",
     "TopicSuggestion",

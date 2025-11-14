@@ -18,9 +18,13 @@ from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Protocol, TypeVar, cast
 
 import redis.asyncio as aioredis
+from redis.asyncio.client import Redis as _Redis
 
 if TYPE_CHECKING:
+    RedisClient = Any  # mypy-only alias
     from typing_extensions import Self
+else:
+    RedisClient = _Redis
 
 logger = logging.getLogger("app.core.cache")
 
@@ -57,13 +61,14 @@ class CacheClient:
             redis_url: Redis connection URL (redis://host:port/db)
         """
         self.redis_url = redis_url
-        self._redis: aioredis.Redis[str] | None = None
+        self._redis: RedisClient | None = None
         logger.info("Cache client initialized", extra={"redis_url": redis_url})
 
     async def connect(self) -> None:
         """Establish connection to Redis."""
         if self._redis is None:
-            self._redis = await aioredis.from_url(
+            redis_from_url = cast(Callable[..., Awaitable[RedisClient]], aioredis.from_url)
+            self._redis = await redis_from_url(
                 self.redis_url, encoding="utf-8", decode_responses=True
             )
             logger.info("Connected to Redis")
@@ -76,7 +81,7 @@ class CacheClient:
             logger.info("Disconnected from Redis")
 
     @property
-    def redis(self) -> aioredis.Redis[str]:
+    def redis(self) -> RedisClient:
         """Get Redis client instance."""
         if self._redis is None:
             raise RuntimeError("Cache client not connected. Call connect() first.")
@@ -93,7 +98,7 @@ class CacheClient:
             Cached value or None if not found
         """
         try:
-            value = await self.redis.get(key)
+            value = cast(str | None, await self.redis.get(key))
             if value:
                 logger.debug("Cache hit", extra={"key": key})
             return value

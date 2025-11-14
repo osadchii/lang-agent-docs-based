@@ -185,6 +185,188 @@
     cursor: not-allowed;
 }
 
+.profiles-panel {
+    background: rgba(7, 9, 22, 0.9);
+    border-radius: 24px;
+    padding: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.profiles-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.profiles-subtitle {
+    margin: 4px 0 0;
+    color: #b6bad5;
+    font-size: 14px;
+}
+
+.ghost-button {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: transparent;
+    color: #ffffff;
+    border-radius: 999px;
+    padding: 8px 16px;
+    cursor: pointer;
+}
+
+.profile-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+.profile-card {
+    border-radius: 18px;
+    padding: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.02);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.profile-card.active {
+    border-color: #5ac8ff;
+    background: rgba(90, 200, 255, 0.08);
+}
+
+.profile-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.profile-language {
+    margin: 0;
+    font-weight: 600;
+}
+
+.profile-language span {
+    font-size: 12px;
+    color: #9ea2c2;
+}
+
+.profile-levels {
+    margin: 0;
+    font-size: 14px;
+    color: #c5c8db;
+}
+
+.profile-goals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin: 0;
+}
+
+.profile-goals span {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 2px 8px;
+    font-size: 12px;
+}
+
+.profile-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.profile-actions button {
+    border: none;
+    border-radius: 12px;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    cursor: pointer;
+}
+
+.profile-actions button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.profile-streak {
+    font-size: 14px;
+    color: #ffcf5a;
+}
+
+.profile-form {
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.profile-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.profile-form label {
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #a7abc8;
+}
+
+.profile-form select {
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: #ffffff;
+    padding: 8px;
+}
+
+.checkbox-group {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    padding: 12px;
+}
+
+.checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.checkbox-item input {
+    accent-color: #ff8c5a;
+}
+
+.active-profile-badge {
+    background: rgba(90, 200, 255, 0.12);
+    border: 1px solid rgba(90, 200, 255, 0.4);
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-size: 14px;
+}
+
 .alert {
     border-radius: 12px;
     padding: 12px 14px;
