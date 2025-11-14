@@ -16,6 +16,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    func,
     text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -73,7 +74,7 @@ class Card(SoftDeleteMixin, TimestampMixin, Base):
     next_review: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        server_default=text("timezone('utc', now())"),
+        server_default=func.now(),
     )
     reviews_count: Mapped[int] = mapped_column(
         Integer,
@@ -153,7 +154,7 @@ class CardReview(Base):
     reviewed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        server_default=text("timezone('utc', now())"),
+        server_default=func.now(),
     )
 
     card = relationship("Card", back_populates="reviews")
