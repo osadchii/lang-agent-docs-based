@@ -263,8 +263,10 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY_LANG_AGENT }}
           port: ${{ secrets.SSH_PORT }}
+          envs: APP_PATH=${{ env.APP_PATH }}
           script: |
             set -euo pipefail
+            APP_PATH="${APP_PATH:-/opt/lang-agent}"
             mkdir -p "${APP_PATH}/frontend"
             if [ -d "${APP_PATH}/frontend/dist" ]; then
               rm -rf "${APP_PATH}/frontend/dist.backup"
@@ -292,6 +294,7 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" <<EOF
           set -euo pipefail
+          APP_PATH="${APP_PATH:-/opt/lang-agent}"
           cd "$APP_PATH"
           echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
           docker compose pull
