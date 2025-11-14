@@ -360,9 +360,8 @@ export const HomePage = () => {
                                     <p className="profile-goals">
                                         {profile.goals.map((goal) => {
                                             const label =
-                                                GOAL_OPTIONS.find(
-                                                    (option) => option.value === goal,
-                                                )?.label ?? goal;
+                                                GOAL_OPTIONS.find((option) => option.value === goal)
+                                                    ?.label ?? goal;
                                             return <span key={goal}>{label}</span>;
                                         })}
                                     </p>
@@ -504,9 +503,7 @@ export const HomePage = () => {
                             </div>
                         </fieldset>
 
-                        {profileFormError && (
-                            <div className="alert error">{profileFormError}</div>
-                        )}
+                        {profileFormError && <div className="alert error">{profileFormError}</div>}
 
                         <button type="submit" disabled={isSavingProfile}>
                             {isSavingProfile ? 'Сохраняем...' : 'Создать профиль'}
@@ -575,9 +572,7 @@ export const HomePage = () => {
                     />
                     <button
                         type="submit"
-                        disabled={
-                            !isAuthReady || isSending || !messageText.trim() || !profileId
-                        }
+                        disabled={!isAuthReady || isSending || !messageText.trim() || !profileId}
                     >
                         {isSending ? 'Отправляем...' : 'Отправить'}
                     </button>

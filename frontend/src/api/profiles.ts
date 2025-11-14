@@ -22,10 +22,7 @@ export async function updateProfile(
     profileId: string,
     payload: LanguageProfileUpdatePayload,
 ): Promise<LanguageProfile> {
-    const { data } = await httpClient.patch<LanguageProfile>(
-        `/profiles/${profileId}`,
-        payload,
-    );
+    const { data } = await httpClient.patch<LanguageProfile>(`/profiles/${profileId}`, payload);
     return data;
 }
 
@@ -34,8 +31,6 @@ export async function deleteProfile(profileId: string): Promise<void> {
 }
 
 export async function activateProfile(profileId: string): Promise<LanguageProfile> {
-    const { data } = await httpClient.post<LanguageProfile>(
-        `/profiles/${profileId}/activate`,
-    );
+    const { data } = await httpClient.post<LanguageProfile>(`/profiles/${profileId}/activate`);
     return data;
 }
