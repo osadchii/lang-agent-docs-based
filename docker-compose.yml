@@ -26,6 +26,23 @@ services:
     networks:
       - app-network
 
+  frontend:
+    image: nginx:1.27-alpine
+    container_name: lang-agent-frontend
+    volumes:
+      - ./frontend/dist:/usr/share/nginx/html:ro
+      - ./infra/frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    environment:
+      VIRTUAL_HOST: "${FRONTEND_DOMAIN:?FRONTEND_DOMAIN is required for reverse proxy}"
+      VIRTUAL_PORT: "80"
+      LETSENCRYPT_HOST: "${FRONTEND_DOMAIN:?FRONTEND_DOMAIN is required for reverse proxy}"
+      LETSENCRYPT_EMAIL: "${TRAEFIK_ACME_EMAIL:-ops@example.com}"
+    depends_on:
+      - nginx
+    restart: unless-stopped
+    networks:
+      - app-network
+
   loki:
     image: grafana/loki:3.0.0
     command: -config.file=/etc/loki/config.yml

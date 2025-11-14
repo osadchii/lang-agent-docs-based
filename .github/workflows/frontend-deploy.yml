@@ -1,0 +1,111 @@
+name: Frontend Deploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+      - 'infra/frontend/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/frontend-deploy.yml'
+
+env:
+  APP_PATH: /opt/lang-agent
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    env:
+      TELEGRAM_DEPLOY_CHAT_ID: ${{ secrets.TELEGRAM_DEPLOY_CHAT_ID }}
+      CI_BOT_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build production bundle
+        working-directory: frontend
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+        run: npm run build
+
+      - name: Ensure remote directories and backup current build
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY_LANG_AGENT }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            set -euo pipefail
+            APP_PATH="${{ env.APP_PATH }}"
+            mkdir -p "${APP_PATH}/frontend"
+            if [ -d "${APP_PATH}/frontend/dist" ]; then
+              rm -rf "${APP_PATH}/frontend/dist.backup"
+              mv "${APP_PATH}/frontend/dist" "${APP_PATH}/frontend/dist.backup"
+            fi
+
+      - name: Upload build artifacts
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY_LANG_AGENT }}
+          port: ${{ secrets.SSH_PORT }}
+          source: "frontend/dist"
+          target: "${{ env.APP_PATH }}/frontend/"
+          strip_components: 1
+
+      - name: Activate frontend container
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY_LANG_AGENT }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            set -euo pipefail
+            APP_PATH="${{ env.APP_PATH }}"
+            cd "${APP_PATH}"
+            docker compose up -d frontend
+            rm -rf "${APP_PATH}/frontend/dist.backup"
+
+      - name: Notify Telegram about success
+        if: success() && env.TELEGRAM_DEPLOY_CHAT_ID != '' && env.CI_BOT_TOKEN != ''
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ env.TELEGRAM_DEPLOY_CHAT_ID }}
+          token: ${{ env.CI_BOT_TOKEN }}
+          message: |
+            ✅ Frontend deployed successfully!
+
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+
+      - name: Notify Telegram about failure
+        if: failure() && env.TELEGRAM_DEPLOY_CHAT_ID != '' && env.CI_BOT_TOKEN != ''
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ env.TELEGRAM_DEPLOY_CHAT_ID }}
+          token: ${{ env.CI_BOT_TOKEN }}
+          message: |
+            ❌ Frontend deployment failed!
+
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+
+            Details: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}

@@ -143,7 +143,7 @@
    - Список последних сообщений (из `/api/dialog/history`), пагинация простая
    - Acceptance: пользователь видит ответ ИИ прямо в Mini App; история приходит из БД
 
-- [ ] **25) CI фронтенда и деплой**
+- [x] **25) CI фронтенда и деплой**
    - Workflows: `frontend-test.yml`, `frontend-deploy.yml` (см. `docs/ci-cd.md`)
    - Prod hosting: выкладка `frontend/dist/` на сервер, Nginx конфиг (см. `docs/deployment.md`)
    - Acceptance: пуш в `main` деплоит фронтенд; страница грузится с сервера

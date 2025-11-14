@@ -1,131 +1,133 @@
 /* Error Page Styles */
 
 .error-page {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  background: linear-gradient(180deg, #0a0e27 0%, #1a1d35 100%);
-  color: #ffffff;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: linear-gradient(180deg, #0a0e27 0%, #1a1d35 100%);
+    color: #ffffff;
 }
 
 .error-content {
-  max-width: 500px;
-  text-align: center;
+    max-width: 500px;
+    text-align: center;
 }
 
 .error-icon {
-  font-size: 80px;
-  margin-bottom: 24px;
-  animation: pulse 2s ease-in-out infinite;
+    font-size: 80px;
+    margin-bottom: 24px;
+    animation: pulse 2s ease-in-out infinite;
 }
 
 @keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.8;
-    transform: scale(1.05);
-  }
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(1.05);
+    }
 }
 
 .error-status {
-  font-size: 72px;
-  font-weight: 700;
-  background: linear-gradient(135deg, #ff6b35 0%, #ff5e78 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  margin-bottom: 16px;
+    font-size: 72px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #ff6b35 0%, #ff5e78 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 16px;
 }
 
 .error-title {
-  font-size: 36px;
-  font-weight: 700;
-  margin: 0 0 16px 0;
-  color: #ffffff;
+    font-size: 36px;
+    font-weight: 700;
+    margin: 0 0 16px 0;
+    color: #ffffff;
 }
 
 .error-message {
-  font-size: 16px;
-  line-height: 1.6;
-  color: #b0b3c1;
-  margin: 0 0 32px 0;
+    font-size: 16px;
+    line-height: 1.6;
+    color: #b0b3c1;
+    margin: 0 0 32px 0;
 }
 
 .error-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
 }
 
 .btn-primary {
-  display: inline-block;
-  padding: 14px 32px;
-  background: linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%);
-  color: #ffffff;
-  text-decoration: none;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 600;
-  transition: transform 0.2s, box-shadow 0.2s;
+    display: inline-block;
+    padding: 14px 32px;
+    background: linear-gradient(135deg, #ff6b35 0%, #ff8c5a 100%);
+    color: #ffffff;
+    text-decoration: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    transition:
+        transform 0.2s,
+        box-shadow 0.2s;
 }
 
 .btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(255, 107, 53, 0.4);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(255, 107, 53, 0.4);
 }
 
 .btn-primary:active {
-  transform: translateY(0);
+    transform: translateY(0);
 }
 
 .error-details {
-  margin-top: 32px;
-  text-align: left;
-  background: rgba(37, 41, 65, 0.6);
-  border-radius: 12px;
-  padding: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+    margin-top: 32px;
+    text-align: left;
+    background: rgba(37, 41, 65, 0.6);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .error-details summary {
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  color: #ff8c5a;
-  margin-bottom: 12px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: #ff8c5a;
+    margin-bottom: 12px;
 }
 
 .error-stack {
-  font-size: 12px;
-  line-height: 1.5;
-  color: #b0b3c1;
-  margin: 0;
-  overflow-x: auto;
-  white-space: pre-wrap;
-  word-break: break-word;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #b0b3c1;
+    margin: 0;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 
 @media (max-width: 480px) {
-  .error-icon {
-    font-size: 60px;
-  }
+    .error-icon {
+        font-size: 60px;
+    }
 
-  .error-status {
-    font-size: 56px;
-  }
+    .error-status {
+        font-size: 56px;
+    }
 
-  .error-title {
-    font-size: 28px;
-  }
+    .error-title {
+        font-size: 28px;
+    }
 
-  .error-message {
-    font-size: 14px;
-  }
+    .error-message {
+        font-size: 14px;
+    }
 }

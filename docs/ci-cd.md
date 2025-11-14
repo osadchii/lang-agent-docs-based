@@ -273,13 +273,22 @@ on:
     paths:
       - 'frontend/**'
       - '.github/workflows/frontend-test.yml'
+  pull_request:
+    branches:
+      - '**'
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-test.yml'
 
 jobs:
-  test:
+  quality:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Node.js
@@ -290,34 +299,24 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
-        run: |
-          cd frontend
-          npm ci
+        run: npm ci
 
-      - name: Run linting
-        run: |
-          cd frontend
-          npm run lint
+      - name: Run ESLint
+        run: npm run lint
 
       - name: Check formatting
-        run: |
-          cd frontend
-          npm run format:check
+        run: npm run format:check
 
-      - name: TypeScript check
-        run: |
-          cd frontend
-          npm run type-check
+      - name: Type check
+        run: npm run type-check
 
-      - name: Run tests
-        run: |
-          cd frontend
-          npm run test:ci
+      - name: Run unit tests
+        run: npm run test:ci
 
-      - name: Build check
-        run: |
-          cd frontend
-          npm run build
+      - name: Build application
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL != '' && secrets.VITE_API_BASE_URL || 'https://api.example.com' }}
+        run: npm run build
 ```
 
 #### Файл: `.github/workflows/frontend-deploy.yml`
@@ -333,14 +332,22 @@ on:
       - main
     paths:
       - 'frontend/**'
+      - 'infra/frontend/**'
+      - 'docker-compose.yml'
       - '.github/workflows/frontend-deploy.yml'
+
+env:
+  APP_PATH: /opt/lang-agent
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      TELEGRAM_DEPLOY_CHAT_ID: ${{ secrets.TELEGRAM_DEPLOY_CHAT_ID }}
+      CI_BOT_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
 
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Node.js
@@ -351,62 +358,62 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
-        run: |
-          cd frontend
-          npm ci
+        working-directory: frontend
+        run: npm ci
 
-      - name: Build
+      - name: Build production bundle
+        working-directory: frontend
         env:
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
-          VITE_ENVIRONMENT: production
-        run: |
-          cd frontend
-          npm run build
+        run: npm run build
 
-      - name: Deploy to server
+      - name: Ensure remote directories and backup current build
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY_LANG_AGENT }}
+          port: ${{ secrets.SSH_PORT }}
           script: |
-            # Backup old build
-            if [ -d /var/app/frontend/dist ]; then
-              mv /var/app/frontend/dist /var/app/frontend/dist.backup
+            set -euo pipefail
+            APP_PATH="${{ env.APP_PATH }}"
+            mkdir -p "${APP_PATH}/frontend"
+            if [ -d "${APP_PATH}/frontend/dist" ]; then
+              rm -rf "${APP_PATH}/frontend/dist.backup"
+              mv "${APP_PATH}/frontend/dist" "${APP_PATH}/frontend/dist.backup"
             fi
 
-      - name: Upload build to server
+      - name: Upload build artifacts
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY_LANG_AGENT }}
+          port: ${{ secrets.SSH_PORT }}
           source: "frontend/dist"
-          target: "/var/app/frontend/"
+          target: "${{ env.APP_PATH }}/frontend/"
           strip_components: 1
 
-      - name: Reload Nginx
+      - name: Activate frontend container
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY_LANG_AGENT }}
+          port: ${{ secrets.SSH_PORT }}
           script: |
-            # Test Nginx config
-            sudo nginx -t
+            set -euo pipefail
+            APP_PATH="${{ env.APP_PATH }}"
+            cd "${APP_PATH}"
+            docker compose up -d frontend
+            rm -rf "${APP_PATH}/frontend/dist.backup"
 
-            # Reload Nginx
-            sudo systemctl reload nginx
-
-            # Remove backup
-            rm -rf /var/app/frontend/dist.backup
-
-      - name: Notify on success
-        if: success()
+      - name: Notify Telegram about success
+        if: success() && env.TELEGRAM_DEPLOY_CHAT_ID != '' && env.CI_BOT_TOKEN != ''
         uses: appleboy/telegram-action@master
         with:
-          to: ${{ secrets.TELEGRAM_DEPLOY_CHAT_ID }}
-          token: ${{ secrets.CI_BOT_TOKEN }}
+          to: ${{ env.TELEGRAM_DEPLOY_CHAT_ID }}
+          token: ${{ env.CI_BOT_TOKEN }}
           message: |
             ✅ Frontend deployed successfully!
 
@@ -414,12 +421,12 @@ jobs:
             Commit: ${{ github.sha }}
             Author: ${{ github.actor }}
 
-      - name: Notify on failure
-        if: failure()
+      - name: Notify Telegram about failure
+        if: failure() && env.TELEGRAM_DEPLOY_CHAT_ID != '' && env.CI_BOT_TOKEN != ''
         uses: appleboy/telegram-action@master
         with:
-          to: ${{ secrets.TELEGRAM_DEPLOY_CHAT_ID }}
-          token: ${{ secrets.CI_BOT_TOKEN }}
+          to: ${{ env.TELEGRAM_DEPLOY_CHAT_ID }}
+          token: ${{ env.CI_BOT_TOKEN }}
           message: |
             ❌ Frontend deployment failed!
 
@@ -427,7 +434,7 @@ jobs:
             Commit: ${{ github.sha }}
             Author: ${{ github.actor }}
 
-            Check: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Details: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 ```
 
 ## Автоматизация деплоя

@@ -16,6 +16,8 @@
 - Nginx reverse proxy + ACME companion, который автоматически выпускает Let's Encrypt сертификат для Grafana (наружу торчит только HTTPS)
 - Mini App проходит авторизацию через `/api/auth/validate` и экран «Задать вопрос» отправляет сообщения в `/api/sessions/chat` + читает историю из `/api/dialog/history` (см. `frontend/src/pages/Home`, `docs/backend-api.md`)
 
+- Frontend CI/CD: `.github/workflows/frontend-test.yml` (lint → format → type-check → vitest → build) и `.github/workflows/frontend-deploy.yml` (scp `frontend/dist` на сервер + `docker compose up -d frontend`, SSL через `FRONTEND_DOMAIN`).
+
 ## 📁 Структура репозитория
 ```text
 .
@@ -27,8 +29,9 @@
 ├── Makefile                 # Команды: local-up/local-down, lint, test
 ├── infra/                   # Конфиги наблюдаемости (Loki, Promtail, Grafana)
 ├── docs/                    # Источник правды по архитектуре, API и процессам
+├── frontend/                # Vite + React Mini App, Vitest/Prettier/scripts (`npm run dev`, `npm run test:ci`)
 ├── .github/
-│   └── workflows/           # CI pipeline (backend-deploy.yml)
+│   └── workflows/           # CI pipelines (backend-/frontend-*.yml)
 └── backend/
     ├── Dockerfile           # Продовый образ backend (uvicorn + alembic upgrade head)
     ├── docker-entrypoint.sh # Точка входа: прогон миграций и запуск сервера
@@ -99,11 +102,27 @@ PY
 equest_id (exemplar) — этого достаточно для подключения Prometheus.
 7. Telegram Bot и публичный backend:
    - Пропишите `BACKEND_DOMAIN` (например, `backend.external.osadchii.me`) в `.env`: Docker Compose поднимет `nginx-proxy`, выпустит TLS-сертификат и начнёт проксировать `https://<BACKEND_DOMAIN>` на backend.
+   - Настройте `FRONTEND_DOMAIN` (например, `mini.external.osadchii.me`): тот же `nginx-proxy` подключит сервис `frontend`, и Mini App будет открываться по `https://<FRONTEND_DOMAIN>` сразу после `docker compose up -d frontend`.
    - Backend автоматически берёт `https://<BACKEND_DOMAIN>` и вызывает `setWebhook`, **как только домен резолвится** (см. `docs/backend-telegram.md`). Если DNS ещё не готов, оставьте домен закомментированным, чтобы бот продолжал работать через polling.
    - Для локальной отладки запускайте long polling в отдельном терминале: `cd backend && python -m app.telegram.polling` (использует токен и настройки из `.env`).
    - Обработчик `/start` уже доступен («Привет!»), остальная логика реализуется на шагах 16+.
+### 🪄 Frontend (Mini App)
+1. ```bash
+   cd frontend
+   cp .env.example .env
+   npm install
+   ```
+2. Пропишите `VITE_API_BASE_URL` (обычно `https://<BACKEND_DOMAIN>/api`), `VITE_BOT_USERNAME`, `VITE_BOT_ID` и прочие флаги в `.env` или секретах CI перед сборкой.
+3. Основные команды разработки:
+   - `npm run dev -- --host` — Vite dev server для Mini App
+   - `npm run lint` / `npm run format:check` — ESLint + Prettier
+   - `npm run type-check` — строгий `tsc --noEmit`
+   - `npm run test:ci` — vitest + покрытие HTTP-клиента
+   - `npm run build` и `npm run preview -- --host` — проверка прод-сборки
+4. Каталог `frontend/dist/` не коммитим: его генерирует CI и использует docker-compose (`frontend` сервис + nginx-proxy).
+
 ### 🐳 Продовый docker-compose (backend + db + redis + observability)
-1. Скопируйте `.env.example` → `.env`, заполните `POSTGRES_*`, `BACKEND_IMAGE`, `BACKEND_IMAGE_TAG`, `BACKEND_DOMAIN`, `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD`, `GRAFANA_DOMAIN` и `TRAEFIK_ACME_EMAIL` (email для Let's Encrypt). Для работы внутри Docker-сети обновите `DATABASE_URL` и `REDIS_URL` на `postgresql+asyncpg://<user>:<pass>@db:5432/<db>` и `redis://redis:6379/0`.
+1. Скопируйте `.env.example` → `.env`, заполните `POSTGRES_*`, `BACKEND_IMAGE`, `BACKEND_IMAGE_TAG`, `BACKEND_DOMAIN`, `FRONTEND_DOMAIN`, `GRAFANA_ADMIN_USER`, `GRAFANA_ADMIN_PASSWORD`, `GRAFANA_DOMAIN` и `TRAEFIK_ACME_EMAIL` (email для Let's Encrypt). Для работы внутри Docker-сети обновите `DATABASE_URL` и `REDIS_URL` на `postgresql+asyncpg://<user>:<pass>@db:5432/<db>` и `redis://redis:6379/0`.
 2. Скопируйте на сервер сам `docker-compose.yml` вместе с каталогом `infra/` — Grafana и Loki читают конфиги именно оттуда.
 3. Откройте на сервере порты `80`/`443` (nginx-proxy+acme-companion выполняют HTTP-01 проверку и раздают HTTPS для Grafana).
 4. Получите и поднимите стек с образами из GHCR:
@@ -113,7 +132,8 @@ equest_id (exemplar) — этого достаточно для подключе
    docker compose up -d nginx nginx-acme
    ```
    > Если нужна локальная проверка до пуша в GHCR, пересоберите образ командами `docker compose build backend` и `docker compose up ...`.
-5. Проверьте здоровье и логи:
+5. Фронтенд: после того как CI загрузил `frontend/dist` на сервер, выполните `docker compose up -d frontend` (или `docker compose restart frontend`), и `https://<FRONTEND_DOMAIN>` начнёт отдавать мини-приложение.
+6. Проверьте здоровье и логи:
    ```bash
    docker compose ps
    docker compose logs -f backend
@@ -130,7 +150,7 @@ equest_id (exemplar) — этого достаточно для подключе
 - /metrics доступен локально: prometheus_fastapi_instrumentator снимает latency/кол-во запросов и сохраняет
 equest_id (exemplar) для корреляции с логами.
 - При первом старте Grafana 12 автоматически импортирует datasoure `Loki` и дашборд `Backend Observability` из `infra/grafana/provisioning/dashboards/backend-observability.json` (RPS, p95 latency, 4xx/5xx, top endpoints).
-- Nginx proxy автоматически выпускает Let's Encrypt сертификаты для `GRAFANA_DOMAIN` и `BACKEND_DOMAIN`, пробрасывая `https://<BACKEND_DOMAIN>` на backend (порт 8000) и `https://<GRAFANA_DOMAIN>` на Grafana. Для повторных запусков сертификаты кэшируются в volume `nginx_certs` / `nginx_acme`.
+- Nginx proxy автоматически выпускает Let's Encrypt сертификаты для `GRAFANA_DOMAIN`, `BACKEND_DOMAIN` и `FRONTEND_DOMAIN`, пробрасывая `https://<BACKEND_DOMAIN>` на backend (порт 8000), `https://<FRONTEND_DOMAIN>` на сервис `frontend` и `https://<GRAFANA_DOMAIN>` на Grafana. Для повторных запусков сертификаты кэшируются в volume `nginx_certs` / `nginx_acme`.
 
 ### 🔐 GitHub Secrets для CI/CD
 Добавьте в Settings → Secrets and variables → Actions:
@@ -140,6 +160,7 @@ equest_id (exemplar) для корреляции с логами.
 - `SSH_HOST` — адрес сервера.
 - `SSH_PORT` — SSH порт (обычно `22`).
 - `SSH_USER` — пользователь, от имени которого выполняются `scp` / `ssh` команды.
+- `VITE_API_BASE_URL` — базовый URL backend API для Vite (используется в `frontend-test.yml` и `frontend-deploy.yml`).
 
 ## 📚 Документация (обязательна к прочтению перед задачами)
 | Блок | Цель | Файл |
@@ -204,6 +225,7 @@ equest_id (exemplar) для корреляции с логами.
 | `LLM_TEMPERATURE` | нет | Творчество LLM (`0..1`) | `0.7` |
 | `PRODUCTION_APP_ORIGIN` | нет | Боевой origin Mini App | — |
 | `BACKEND_DOMAIN` | нет | Публичный backend-домен без схемы (nginx-proxy/TLS + webhook URL) | — |
+| `FRONTEND_DOMAIN` | нет | Публичный домен Mini App (nginx-proxy/Let's Encrypt и workflow `frontend-deploy.yml`) | — |
 | `BACKEND_CORS_ORIGINS` | нет | Локальный whitelist (`http://localhost:<port>`, учитывается только при `APP_ENV=local/test`) | `http://localhost:4173` |
 | `MAX_REQUEST_BYTES` | нет | Лимит тела запроса (байты, default 1 MiB) | `1048576` |
 | `STRIPE_SECRET_KEY` | нет | Платежи (будет нужно для подписок) | — |

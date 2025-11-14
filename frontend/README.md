@@ -67,6 +67,7 @@ frontend/
 ## Интеграция с Telegram
 
 Приложение использует Telegram WebApp API для:
+
 - Получения данных пользователя
 - Интеграции с темой Telegram
 - BackButton и MainButton
@@ -78,6 +79,7 @@ frontend/
 ### Закатная палитра
 
 Приложение использует закатную цветовую палитру:
+
 - Background: `#0A0E27`
 - Secondary: `#1A1D35`
 - Accent: `#FF6B35`, `#FF8C5A`, `#FF5E78`
@@ -93,6 +95,7 @@ frontend/
 ## Следующие шаги
 
 После базового бутстрапа будут добавлены:
+
 - API клиент и интеграция с backend
 - Аутентификация через Telegram initData
 - Компоненты UI (Button, Card, Modal и т.д.)
@@ -102,6 +105,7 @@ frontend/
 ## Документация
 
 Полная документация по frontend находится в `../docs/`:
+
 - `frontend-structure.md` - структура и технологии
 - `frontend-screens.md` - дизайн экранов
 - `frontend-navigation.md` - навигация и роутинг
@@ -110,6 +114,7 @@ frontend/
 ## Задачи из to-do.md
 
 **Задача 22: ✅ Бутстрап фронтенда**
+
 - ✅ Vite + React + TS
 - ✅ SDK @twa-dev/sdk
 - ✅ Страницы: Home (плейсхолдер), Error
