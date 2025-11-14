@@ -218,6 +218,11 @@ def generic_llm_cache_key(
     return f"llm:{operation}:{param_hash}"
 
 
+def exercise_session_cache_key(exercise_id: str) -> str:
+    """Cache key storing pending exercise data between requests."""
+    return f"exercise_session:{exercise_id}"
+
+
 def cache_llm_response(
     ttl: int | None,
     key_builder: Callable[..., str],
@@ -310,6 +315,7 @@ __all__ = [
     "card_cache_key",
     "lemma_cache_key",
     "translation_cache_key",
+    "exercise_session_cache_key",
     "topics_cache_key",
     "generic_llm_cache_key",
     "cache_llm_response",

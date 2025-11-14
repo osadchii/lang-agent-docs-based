@@ -48,12 +48,15 @@ class User(SoftDeleteMixin, TimestampMixin, Base):
         back_populates="user",
         cascade="all, delete-orphan",
     )
-    owned_decks = relationship(
-        "Deck",
-        back_populates="owner",
-    )
+    owned_decks = relationship("Deck", back_populates="owner")
+    owned_topics = relationship("Topic", back_populates="owner")
     card_reviews = relationship(
         "CardReview",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    exercise_attempts = relationship(
+        "ExerciseHistory",
         back_populates="user",
         cascade="all, delete-orphan",
     )

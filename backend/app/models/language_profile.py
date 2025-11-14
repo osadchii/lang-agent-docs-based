@@ -69,8 +69,10 @@ class LanguageProfile(SoftDeleteMixin, TimestampMixin, Base):
         back_populates="profile",
         cascade="all, delete-orphan",
     )
-    decks = relationship(
-        "Deck",
+    decks = relationship("Deck", back_populates="profile", cascade="all, delete-orphan")
+    topics = relationship("Topic", back_populates="profile", cascade="all, delete-orphan")
+    exercises = relationship(
+        "ExerciseHistory",
         back_populates="profile",
         cascade="all, delete-orphan",
     )

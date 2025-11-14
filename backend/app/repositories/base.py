@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from typing import Generic, TypeVar
+from collections.abc import Awaitable
+from typing import Generic, TypeVar, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,7 +17,10 @@ class BaseRepository(Generic[ModelT]):
         self.session = session
 
     async def add(self, instance: ModelT) -> ModelT:
-        self.session.add(instance)
+        """Add model to session handling async mocks in tests."""
+        add_result = cast(object, self.session.add(instance))
+        if isinstance(add_result, Awaitable):
+            await add_result
         await self.session.flush()
         return instance
 

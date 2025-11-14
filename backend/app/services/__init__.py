@@ -4,8 +4,10 @@ from app.services.card import CardService
 from app.services.conversation import ConversationService
 from app.services.deck import DeckService
 from app.services.dialog import DialogService
+from app.services.exercise import ExerciseService
 from app.services.language_profile import LanguageProfileService
 from app.services.llm import LLMService, get_basic_system_prompt
+from app.services.topic import TopicService
 from app.services.user import UserService
 
 __all__ = [
@@ -13,8 +15,10 @@ __all__ = [
     "ConversationService",
     "DeckService",
     "DialogService",
+    "ExerciseService",
     "LanguageProfileService",
     "LLMService",
+    "TopicService",
     "UserService",
     "get_basic_system_prompt",
 ]

@@ -3,8 +3,10 @@
 from app.repositories.card import CardRepository, CardReviewRepository
 from app.repositories.conversation import ConversationRepository
 from app.repositories.deck import DeckRepository
+from app.repositories.exercise import ExerciseHistoryRepository
 from app.repositories.language_profile import LanguageProfileRepository
 from app.repositories.token_usage import TokenUsageRepository
+from app.repositories.topic import TopicRepository
 from app.repositories.user import UserRepository
 
 __all__ = [
@@ -12,7 +14,9 @@ __all__ = [
     "CardReviewRepository",
     "ConversationRepository",
     "DeckRepository",
+    "ExerciseHistoryRepository",
     "LanguageProfileRepository",
     "TokenUsageRepository",
+    "TopicRepository",
     "UserRepository",
 ]

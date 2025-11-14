@@ -12,7 +12,8 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Type, TypeVar
+from collections.abc import Awaitable
+from typing import Any, Type, TypeVar, cast
 
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -520,7 +521,9 @@ Respond in JSON format:
                 model=self.model,
             )
 
-            db_session.add(token_record)
+            add_result = cast(object, db_session.add(token_record))
+            if isinstance(add_result, Awaitable):
+                await add_result
             await db_session.commit()
 
             logger.info(
