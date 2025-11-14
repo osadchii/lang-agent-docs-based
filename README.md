@@ -14,6 +14,7 @@
 - Глобальные обработчики ошибок FastAPI → единый JSON-контракт (`docs/backend-api.md`) + защита от слишком больших тел запросов
 - Провиженинг Grafana 12 (`infra/`) с готовым дашбордом (RPS, p95 latency, 4xx/5xx, top endpoints)
 - Nginx reverse proxy + ACME companion, который автоматически выпускает Let's Encrypt сертификат для Grafana (наружу торчит только HTTPS)
+- Mini App проходит авторизацию через `/api/auth/validate` и экран «Задать вопрос» отправляет сообщения в `/api/sessions/chat` + читает историю из `/api/dialog/history` (см. `frontend/src/pages/Home`, `docs/backend-api.md`)
 
 ## 📁 Структура репозитория
 ```text
@@ -36,7 +37,7 @@
     │   └── versions/        # История миграций
     ├── app/
     │   ├── api/             # FastAPI роуты + endpoints
-    │   │   └── routes/      # Auth, health, telegram webhook
+    │   │   └── routes/      # Auth, health, dialog/chat, telegram webhook
     │   ├── core/            # Config, логирование, middleware, DB, auth, cache
     │   ├── models/          # SQLAlchemy модели (User, LanguageProfile, Conversation, TokenUsage)
     │   ├── repositories/    # Data Access Layer (BaseRepository + конкретные репо)

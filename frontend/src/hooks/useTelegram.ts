@@ -3,7 +3,7 @@
  * Provides access to Telegram WebApp API and user data
  */
 
-import { useEffect, useState } from 'react';
+import { startTransition, useEffect, useState } from 'react';
 import type { TelegramWebApp, TelegramUser } from '../types/telegram';
 
 interface UseTelegramReturn {
@@ -34,8 +34,10 @@ export const useTelegram = (): UseTelegramReturn => {
       tg.setHeaderColor('#0A0E27');
       tg.setBackgroundColor('#0A0E27');
 
-      setWebApp(tg);
-      setIsReady(true);
+      startTransition(() => {
+        setWebApp(tg);
+        setIsReady(true);
+      });
 
       console.log('Telegram WebApp initialized:', {
         version: tg.version,
@@ -48,8 +50,10 @@ export const useTelegram = (): UseTelegramReturn => {
       // For development: create mock data
       if (import.meta.env.DEV) {
         const mockWebApp = createMockWebApp();
-        setWebApp(mockWebApp);
-        setIsReady(true);
+        startTransition(() => {
+          setWebApp(mockWebApp);
+          setIsReady(true);
+        });
       }
     }
   }, []);

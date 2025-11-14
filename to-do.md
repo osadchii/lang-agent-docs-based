@@ -138,7 +138,7 @@
    - Frontend сохраняет JWT (memory) и использует в запросах (Axios interceptors)
    - Acceptance: успешная валидация initData, получение `user`, `token`
 
-- [ ] **24) Минимальный экран «Задать вопрос»**
+- [x] **24) Минимальный экран «Задать вопрос»**
    - Простая форма: ввод текста → `POST /api/sessions/chat` (или `/api/dialog/ask`) на backend, который использует тот же `DialogService`
    - Список последних сообщений (из `/api/dialog/history`), пагинация простая
    - Acceptance: пользователь видит ответ ИИ прямо в Mini App; история приходит из БД

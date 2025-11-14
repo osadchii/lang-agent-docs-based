@@ -1,12 +1,8 @@
-"""
-Pydantic schemas for structured LLM responses.
-
-This module contains response models for parsing and validating JSON outputs
-from LLM API calls, ensuring type safety and data integrity.
-"""
+"""Public exports for Pydantic schemas."""
 
 from __future__ import annotations
 
+from .dialog import ChatHistoryResponse, ChatMessage, ChatRequest, ChatResponse, PaginationMeta
 from .llm_responses import (
     CardContent,
     ExerciseContent,
@@ -21,10 +17,15 @@ from .llm_responses import (
 
 __all__ = [
     "CardContent",
+    "ChatHistoryResponse",
+    "ChatMessage",
+    "ChatRequest",
+    "ChatResponse",
     "ExerciseContent",
     "ExerciseResult",
     "IntentDetection",
     "Mistake",
+    "PaginationMeta",
     "TopicSuggestion",
     "TopicSuggestions",
     "WordSuggestion",

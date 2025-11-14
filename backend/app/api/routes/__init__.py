@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from app.api.routes import auth, health, telegram
+from app.api.routes import auth, dialog, health, telegram
 
 # Health and Telegram webhook routers (no prefix)
 root_router = APIRouter()
@@ -12,5 +12,6 @@ root_router.include_router(telegram.router)
 # API routers with /api prefix
 api_router = APIRouter(prefix="/api")
 api_router.include_router(auth.router)
+api_router.include_router(dialog.router)
 
 __all__ = ["api_router", "root_router"]
