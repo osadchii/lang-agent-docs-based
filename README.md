@@ -16,7 +16,7 @@
 - Nginx reverse proxy + ACME companion, который автоматически выпускает Let's Encrypt сертификат для Grafana (наружу торчит только HTTPS)
 - Mini App проходит авторизацию через `/api/auth/validate` и экран «Задать вопрос» отправляет сообщения в `/api/sessions/chat` + читает историю из `/api/dialog/history` (см. `frontend/src/pages/Home`, `docs/backend-api.md`)
 
-- Frontend CI/CD: `.github/workflows/frontend-test.yml` (lint → format → type-check → vitest → build) и `.github/workflows/frontend-deploy.yml` (scp `frontend/dist` на сервер + `docker compose up -d frontend`, SSL через `FRONTEND_DOMAIN`).
+- Frontend CI/CD встроен в `.github/workflows/backend-deploy.yml`: job `frontend-quality` (lint → format → type-check → vitest), `frontend-build` собирает артефакт, а deploy job копирует `frontend/dist` на сервер и выполняет `docker compose up -d frontend` с TLS через `FRONTEND_DOMAIN`.
 
 ## 📁 Структура репозитория
 ```text
@@ -160,7 +160,7 @@ equest_id (exemplar) для корреляции с логами.
 - `SSH_HOST` — адрес сервера.
 - `SSH_PORT` — SSH порт (обычно `22`).
 - `SSH_USER` — пользователь, от имени которого выполняются `scp` / `ssh` команды.
-- `VITE_API_BASE_URL` — базовый URL backend API для Vite (используется в `frontend-test.yml` и `frontend-deploy.yml`).
+- `VITE_API_BASE_URL` — базовый URL backend API для Vite (используется job'ами `frontend-quality`/`frontend-build` внутри `backend-deploy.yml`).
 
 ## 📚 Документация (обязательна к прочтению перед задачами)
 | Блок | Цель | Файл |
@@ -225,7 +225,7 @@ equest_id (exemplar) для корреляции с логами.
 | `LLM_TEMPERATURE` | нет | Творчество LLM (`0..1`) | `0.7` |
 | `PRODUCTION_APP_ORIGIN` | нет | Боевой origin Mini App | — |
 | `BACKEND_DOMAIN` | нет | Публичный backend-домен без схемы (nginx-proxy/TLS + webhook URL) | — |
-| `FRONTEND_DOMAIN` | нет | Публичный домен Mini App (nginx-proxy/Let's Encrypt и workflow `frontend-deploy.yml`) | — |
+| `FRONTEND_DOMAIN` | нет | Публичный домен Mini App (nginx-proxy/Let's Encrypt + deploy job в `backend-deploy.yml`) | — |
 | `BACKEND_CORS_ORIGINS` | нет | Локальный whitelist (`http://localhost:<port>`, учитывается только при `APP_ENV=local/test`) | `http://localhost:4173` |
 | `MAX_REQUEST_BYTES` | нет | Лимит тела запроса (байты, default 1 MiB) | `1048576` |
 | `STRIPE_SECRET_KEY` | нет | Платежи (будет нужно для подписок) | — |

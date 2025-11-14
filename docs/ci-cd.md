@@ -257,185 +257,20 @@ jobs:
 
 Push-эвенты авторизуются в GHCR и публикуют теги `latest`, `sha` и `branch`. Job `build-and-push` стартует **только после зелёных `tests`**, а `deploy` запускается только после успешной сборки. Pull requests выполняют только тесты (без публикации и деплоя). Автодеплой гарантирует, что сервер в `/opt/lang-agent` всегда получает свежий `docker-compose.yml`, выполняет `docker compose pull` и `docker compose up -d --remove-orphans` сразу после выхода нового образа.
 
-### Workflow для frontend
+### Frontend job'ы внутри `backend-deploy.yml`
 
-#### Файл: `.github/workflows/frontend-test.yml`
+Отдельного workflow больше нет — в `.github/workflows/backend-deploy.yml` добавлены два job'а, которые отвечают за сборку Mini App.
 
-Запускается при **каждом push** в любой бранч:
+1. `frontend-quality` — выполняется при каждом push/PR, если затронуты `frontend/**` или сам workflow. Запускает `npm ci`, затем `npm run lint`, `npm run format:check`, `npm run type-check`, `npm run test:ci`.
+2. `frontend-build` — зависит от `frontend-quality`, запускается только при `push` в `main`. Job собирает production bundle (`npm run build` с `VITE_API_BASE_URL` из GitHub Secrets) и публикует артефакт `frontend-dist`.
 
-```yaml
-name: Frontend Tests
+Деплой (job `deploy`) теперь:
+- скачивает артефакт `frontend-dist`,
+- подготавливает `/opt/lang-agent/frontend`, делает backup `dist`,
+- загружает новую сборку через `appleboy/scp-action`,
+- выполняет `docker compose up -d --remove-orphans`, что одновременно перезапускает backend и `frontend` сервисы, после чего удаляет backup.
 
-on:
-  push:
-    branches:
-      - '**'
-    paths:
-      - 'frontend/**'
-      - '.github/workflows/frontend-test.yml'
-  pull_request:
-    branches:
-      - '**'
-    paths:
-      - 'frontend/**'
-      - '.github/workflows/frontend-test.yml'
-
-jobs:
-  quality:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run ESLint
-        run: npm run lint
-
-      - name: Check formatting
-        run: npm run format:check
-
-      - name: Type check
-        run: npm run type-check
-
-      - name: Run unit tests
-        run: npm run test:ci
-
-      - name: Build application
-        env:
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL != '' && secrets.VITE_API_BASE_URL || 'https://api.example.com' }}
-        run: npm run build
-```
-
-#### Файл: `.github/workflows/frontend-deploy.yml`
-
-Запускается при **push в main** или **merge PR в main**:
-
-```yaml
-name: Frontend Deploy
-
-on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'frontend/**'
-      - 'infra/frontend/**'
-      - 'docker-compose.yml'
-      - '.github/workflows/frontend-deploy.yml'
-
-env:
-  APP_PATH: /opt/lang-agent
-
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    env:
-      TELEGRAM_DEPLOY_CHAT_ID: ${{ secrets.TELEGRAM_DEPLOY_CHAT_ID }}
-      CI_BOT_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install dependencies
-        working-directory: frontend
-        run: npm ci
-
-      - name: Build production bundle
-        working-directory: frontend
-        env:
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
-        run: npm run build
-
-      - name: Ensure remote directories and backup current build
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY_LANG_AGENT }}
-          port: ${{ secrets.SSH_PORT }}
-          script: |
-            set -euo pipefail
-            APP_PATH="${{ env.APP_PATH }}"
-            mkdir -p "${APP_PATH}/frontend"
-            if [ -d "${APP_PATH}/frontend/dist" ]; then
-              rm -rf "${APP_PATH}/frontend/dist.backup"
-              mv "${APP_PATH}/frontend/dist" "${APP_PATH}/frontend/dist.backup"
-            fi
-
-      - name: Upload build artifacts
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY_LANG_AGENT }}
-          port: ${{ secrets.SSH_PORT }}
-          source: "frontend/dist"
-          target: "${{ env.APP_PATH }}/frontend/"
-          strip_components: 1
-
-      - name: Activate frontend container
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY_LANG_AGENT }}
-          port: ${{ secrets.SSH_PORT }}
-          script: |
-            set -euo pipefail
-            APP_PATH="${{ env.APP_PATH }}"
-            cd "${APP_PATH}"
-            docker compose up -d frontend
-            rm -rf "${APP_PATH}/frontend/dist.backup"
-
-      - name: Notify Telegram about success
-        if: success() && env.TELEGRAM_DEPLOY_CHAT_ID != '' && env.CI_BOT_TOKEN != ''
-        uses: appleboy/telegram-action@master
-        with:
-          to: ${{ env.TELEGRAM_DEPLOY_CHAT_ID }}
-          token: ${{ env.CI_BOT_TOKEN }}
-          message: |
-            ✅ Frontend deployed successfully!
-
-            Branch: ${{ github.ref_name }}
-            Commit: ${{ github.sha }}
-            Author: ${{ github.actor }}
-
-      - name: Notify Telegram about failure
-        if: failure() && env.TELEGRAM_DEPLOY_CHAT_ID != '' && env.CI_BOT_TOKEN != ''
-        uses: appleboy/telegram-action@master
-        with:
-          to: ${{ env.TELEGRAM_DEPLOY_CHAT_ID }}
-          token: ${{ env.CI_BOT_TOKEN }}
-          message: |
-            ❌ Frontend deployment failed!
-
-            Branch: ${{ github.ref_name }}
-            Commit: ${{ github.sha }}
-            Author: ${{ github.actor }}
-
-            Details: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-```
+Таким образом backend и Mini App раскатываются одной транзакцией; если backend job падает, фронтенд тоже не будет выкатываться (и наоборот — без артефакта `frontend-build` job `deploy` не стартует).
 
 ## Автоматизация деплоя
 
@@ -470,23 +305,18 @@ jobs:
 
 ### Frontend deploy steps
 
-1. **Build приложения**:
-   - `npm ci` для установки зависимостей
-   - `npm run build` для сборки production бандла
-   - Переменные окружения из GitHub Secrets
+1. **Frontend Quality job**:
+   - `frontend-quality` выполняет `npm ci`, `npm run lint`, `npm run format:check`, `npm run type-check`, `npm run test:ci`.
+   - Запускается на каждом push/PR, блокируя бэкенд-пайплайн при ошибках во фронте.
 
-2. **Backup старой версии**:
-   - Сохранение текущей версии перед деплоем
-   - Позволяет быстро откатиться при проблемах
+2. **Frontend Build job**:
+   - `frontend-build` (push в `main`) собирает `npm run build` с `VITE_API_BASE_URL` и загружает артефакт `frontend-dist`.
+   - Артефакт скачивает job `deploy`.
 
-3. **Upload на сервер**:
-   - SCP копирование `frontend/dist/` на сервер
-   - Размещение в `/var/app/frontend/dist/` (с `strip_components: 1` убирается префикс `frontend/`)
-
-4. **Reload Nginx**:
-   - Проверка конфигурации: `nginx -t`
-   - Reload без простоя: `systemctl reload nginx`
-   - Удаление backup после успешного деплоя
+3. **Deploy job**:
+   - Подготавливает `/opt/lang-agent/frontend`, делает backup `dist`.
+   - Копирует распакованный артефакт через `appleboy/scp-action`.
+   - Выполняет `docker compose up -d --remove-orphans`, что перезапускает сервис `frontend`, затем удаляет backup.
 
 ### Database migrations
 

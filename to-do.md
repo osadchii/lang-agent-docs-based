@@ -144,7 +144,7 @@
    - Acceptance: пользователь видит ответ ИИ прямо в Mini App; история приходит из БД
 
 - [x] **25) CI фронтенда и деплой**
-   - Workflows: `frontend-test.yml`, `frontend-deploy.yml` (см. `docs/ci-cd.md`)
+  - Workflows: `frontend-quality` + `frontend-build` jobs в `.github/workflows/backend-deploy.yml` (см. `docs/ci-cd.md`)
    - Prod hosting: выкладка `frontend/dist/` на сервер, Nginx конфиг (см. `docs/deployment.md`)
    - Acceptance: пуш в `main` деплоит фронтенд; страница грузится с сервера
 
@@ -279,7 +279,7 @@
 
 - [ ] **54) E2E‑тесты Mini App**
   - Playwright/Cypress: smoke + критические пути (онбординг, карточки, упражнения)
-  - Интеграция в CI (workflow `frontend-test.yml`), артефакты скриншотов
+  - Интеграция в CI (job `frontend-quality` в `backend-deploy.yml`), артефакты скриншотов
   - Acceptance: тесты стабильны и зелёные в CI
 
 - [ ] **55) Локализация и доступность**

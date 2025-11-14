@@ -365,7 +365,7 @@ npm run build
 **0. Docker + nginx-proxy (конфигурация по умолчанию):**
 - `docker-compose.yml` поднимает сервис `frontend` на базе `nginx:1.27-alpine`, который монтирует `./frontend/dist` и использует `infra/frontend/nginx.conf` для SPA-fallback.
 - `nginx-proxy` + `nginx-acme` автоматически выпускают TLS-сертификаты для домена `FRONTEND_DOMAIN`, поэтому мини-приложение доступно по `https://<FRONTEND_DOMAIN>` сразу после `docker compose up -d frontend`.
-- Workflow `frontend-deploy.yml` собирает `frontend/dist`, копирует его в `/opt/lang-agent/frontend/` и запускает `docker compose up -d frontend`, так что ручной reload Nginx не требуется.
+- Job `deploy` внутри `.github/workflows/backend-deploy.yml` скачивает артефакт `frontend-dist`, копирует его в `/opt/lang-agent/frontend/` и выполняет `docker compose up -d frontend`, так что ручной reload Nginx не требуется.
 
 **1. Nginx на том же сервере:**
 ```nginx
