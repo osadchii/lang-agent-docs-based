@@ -145,7 +145,7 @@
 
 - [x] **25) CI фронтенда и деплой**
   - Workflows: `frontend-quality` + `frontend-build` jobs в `.github/workflows/backend-deploy.yml` (см. `docs/ci-cd.md`)
-   - Prod hosting: выкладка `frontend/dist/` на сервер, Nginx конфиг (см. `docs/deployment.md`)
+   - Prod hosting: Docker-образ (rontend/Dockerfile) публикуется в GHCR, Docker Compose тянет FRONTEND_IMAGE (см. docs/deployment.md)
    - Acceptance: пуш в `main` деплоит фронтенд; страница грузится с сервера
 
 ## Этап H. Расширение базовой функциональности (после MVP)
