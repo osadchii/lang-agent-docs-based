@@ -60,12 +60,11 @@ async def list_cards(
     deck_id: Annotated[UUID, Query(description="Deck identifier")],
     status: Annotated[
         CardStatus | None,
-        Query(default=None, description="Filter by spaced-repetition status."),
+        Query(description="Filter by spaced-repetition status."),
     ] = None,
     search: Annotated[
         str | None,
         Query(
-            default=None,
             min_length=1,
             max_length=200,
             description="Case-insensitive substring filter for word/translation/lemma.",
@@ -74,7 +73,6 @@ async def list_cards(
     limit: Annotated[
         int,
         Query(
-            default=20,
             ge=1,
             le=100,
             description="Maximum cards to fetch.",
@@ -83,7 +81,6 @@ async def list_cards(
     offset: Annotated[
         int,
         Query(
-            default=0,
             ge=0,
             description="Number of cards to skip.",
         ),

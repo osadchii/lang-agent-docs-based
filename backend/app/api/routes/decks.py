@@ -63,14 +63,12 @@ async def list_decks(
     profile_id: Annotated[
         UUID | None,
         Query(
-            default=None,
             description="Filter decks for a specific language profile.",
         ),
     ] = None,
     include_group: Annotated[
         bool,
         Query(
-            default=True,
             description="Include decks shared with the user via groups.",
         ),
     ] = True,
