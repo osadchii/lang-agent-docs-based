@@ -39,14 +39,24 @@ const INTERFACE_LANGUAGES = [
     { value: 'en', label: 'English' },
 ];
 
+type ApiError = {
+    response?: {
+        data?: {
+            error?: {
+                message?: string;
+            };
+        };
+    };
+};
+
 const extractErrorMessage = (error: unknown): string => {
     if (
         typeof error === 'object' &&
         error !== null &&
         'response' in error &&
-        typeof (error as Record<string, any>).response?.data?.error?.message === 'string'
+        typeof (error as ApiError).response?.data?.error?.message === 'string'
     ) {
-        return (error as Record<string, any>).response.data.error.message as string;
+        return (error as ApiError).response?.data?.error?.message as string;
     }
     return 'Не удалось выполнить действие. Попробуйте позже.';
 };
