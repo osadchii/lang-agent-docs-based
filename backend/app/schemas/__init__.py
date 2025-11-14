@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .card import CardListResponse, CardResponse
+from .deck import DeckListResponse, DeckSummary
 from .dialog import ChatHistoryResponse, ChatMessage, ChatRequest, ChatResponse, PaginationMeta
 from .llm_responses import (
     CardContent,
@@ -26,10 +28,14 @@ from .profile import (
 __all__ = [
     "CEFRLevel",
     "CardContent",
+    "CardListResponse",
+    "CardResponse",
     "ChatHistoryResponse",
     "ChatMessage",
     "ChatRequest",
     "ChatResponse",
+    "DeckListResponse",
+    "DeckSummary",
     "ExerciseContent",
     "ExerciseResult",
     "IntentDetection",

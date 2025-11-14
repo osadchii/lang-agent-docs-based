@@ -69,6 +69,11 @@ class LanguageProfile(SoftDeleteMixin, TimestampMixin, Base):
         back_populates="profile",
         cascade="all, delete-orphan",
     )
+    decks = relationship(
+        "Deck",
+        back_populates="profile",
+        cascade="all, delete-orphan",
+    )
 
     __table_args__ = (
         CheckConstraint(

@@ -24,6 +24,7 @@
 
 - Telegram Bot API интеграция: `python-telegram-bot` 20.8, вебхук `POST /telegram-webhook/{bot_token}` + helper для polling (`python -m app.telegram.polling`), конфигурация по `docs/backend-telegram.md`
 - REST API для языковых профилей /api/profiles (CRUD + activate) и UI Mini App для выбора/создания профиля (CEFR уровни, цели, язык интерфейса)
+- Минимальная подсистема карточек (SRS): модели/миграции `decks`, `cards`, `card_reviews`, репозитории/сервисы и REST-ручки `/api/decks`, `/api/cards` (списки + карточка) для Mini App практики
 
 - Глобальные обработчики ошибок FastAPI → единый JSON-контракт (`docs/backend-api.md`) + защита от слишком больших тел запросов
 

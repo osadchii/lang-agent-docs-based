@@ -19,8 +19,6 @@ from typing import TYPE_CHECKING, Any, Callable, Protocol, TypeVar, cast
 
 import redis.asyncio as aioredis
 
-RedisClient = Any
-
 if TYPE_CHECKING:
     from typing_extensions import Self
 
@@ -48,6 +46,22 @@ class PydanticModel(Protocol):
         ...
 
 
+class RedisConnection(Protocol):
+    """Subset of redis.asyncio client operations used by the cache."""
+
+    async def close(self) -> None: ...
+
+    async def get(self, key: str) -> str | None: ...
+
+    async def set(self, key: str, value: str) -> bool: ...
+
+    async def setex(self, key: str, ttl: int, value: str) -> bool: ...
+
+    async def delete(self, key: str) -> int: ...
+
+    async def exists(self, key: str) -> int: ...
+
+
 class CacheClient:
     """Async Redis cache client for LLM responses."""
 
@@ -59,13 +73,13 @@ class CacheClient:
             redis_url: Redis connection URL (redis://host:port/db)
         """
         self.redis_url = redis_url
-        self._redis: RedisClient | None = None
+        self._redis: RedisConnection | None = None
         logger.info("Cache client initialized", extra={"redis_url": redis_url})
 
     async def connect(self) -> None:
         """Establish connection to Redis."""
         if self._redis is None:
-            redis_from_url = cast(Callable[..., Awaitable[RedisClient]], aioredis.from_url)
+            redis_from_url = cast(Callable[..., Awaitable[RedisConnection]], aioredis.from_url)
             self._redis = await redis_from_url(
                 self.redis_url, encoding="utf-8", decode_responses=True
             )
@@ -79,7 +93,7 @@ class CacheClient:
             logger.info("Disconnected from Redis")
 
     @property
-    def redis(self) -> RedisClient:
+    def redis(self) -> RedisConnection:
         """Get Redis client instance."""
         if self._redis is None:
             raise RuntimeError("Cache client not connected. Call connect() first.")
@@ -96,7 +110,7 @@ class CacheClient:
             Cached value or None if not found
         """
         try:
-            value = cast(str | None, await self.redis.get(key))
+            value = await self.redis.get(key)
             if value:
                 logger.debug("Cache hit", extra={"key": key})
             return value
