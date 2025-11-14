@@ -18,13 +18,11 @@ from functools import wraps
 from typing import TYPE_CHECKING, Any, Callable, Protocol, TypeVar, cast
 
 import redis.asyncio as aioredis
-from redis.asyncio.client import Redis as _Redis
+
+RedisClient = Any
 
 if TYPE_CHECKING:
-    RedisClient = Any  # mypy-only alias
     from typing_extensions import Self
-else:
-    RedisClient = _Redis
 
 logger = logging.getLogger("app.core.cache")
 

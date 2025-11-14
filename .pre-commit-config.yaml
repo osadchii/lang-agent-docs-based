@@ -73,3 +73,16 @@ repos:
           - pytest-cov==4.1.0
           - ruff==0.2.1
           - types-redis==4.6.0.20240218
+
+  - repo: local
+    hooks:
+      - id: frontend-prettier
+        name: prettier (frontend)
+        entry: bash -lc "cd frontend && npm run format:check"
+        language: system
+        pass_filenames: false
+      - id: frontend-eslint
+        name: eslint (frontend)
+        entry: bash -lc "cd frontend && npm run lint"
+        language: system
+        pass_filenames: false
