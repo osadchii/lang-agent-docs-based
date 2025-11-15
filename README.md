@@ -192,6 +192,7 @@ PY
    pre-commit install
 
    ```
+> Инструменты фронтенда (ESLint/Prettier) требуют Node.js 20+. Используйте `nvm use` (в каталоге `frontend/` лежит `.nvmrc`) или установите Node 20 глобально, прежде чем запускать `npm run lint` и `pre-commit run`.
 
 6. Проверьте, что /metrics уже отдаёт данные:
 

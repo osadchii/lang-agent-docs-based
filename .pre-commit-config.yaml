@@ -78,11 +78,11 @@ repos:
     hooks:
       - id: frontend-prettier
         name: prettier (frontend)
-        entry: bash -lc "cd frontend && npm run format:check"
+        entry: ./scripts/pre-commit/run_frontend_task.sh format:check
         language: system
         pass_filenames: false
       - id: frontend-eslint
         name: eslint (frontend)
-        entry: bash -lc "cd frontend && npm run lint"
+        entry: ./scripts/pre-commit/run_frontend_task.sh lint
         language: system
         pass_filenames: false
