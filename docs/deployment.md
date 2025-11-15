@@ -10283,3 +10283,10 @@ gunzip < /var/backups/postgres/backup_YYYYMMDD.sql.gz | \
 
 
 ```
+### NotificationWorker: streak reminders
+
+- NotificationWorker запускается внутри backend-процесса и активируется только при `NOTIFICATION_WORKER_ENABLED=true`. Локально оставляем флаг выключенным, чтобы не держать соединение с продовой БД.
+- `NOTIFICATION_WORKER_INTERVAL_SECONDS` (по умолчанию 1800) задаёт периодичность запусков. Каждый цикл воркер берёт новую AsyncSession, создаёт `NotificationService` и вызывает `process_streak_reminders()`.
+- Окно локального времени пользователя регулируется `STREAK_REMINDER_WINDOW_START/END` (значения 0–23). Только в этом окне проверяем активность и создаём записи в `notifications`/`streak_reminders`.
+- `STREAK_REMINDER_RETENTION_DAYS` определяет, сколько дней хранится аудит streak_reminders (default 7) — старые строки удаляются в начале цикла.
+- Проверить работу можно через `/api/notifications` (или `POST /api/notifications/read-all`) либо напрямую в Postgres. В проде достаточно включить флаг и перезапустить backend — воркер стартует в `on_event("startup")`.

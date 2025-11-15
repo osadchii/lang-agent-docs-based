@@ -76,6 +76,11 @@ class LanguageProfile(SoftDeleteMixin, TimestampMixin, Base):
         back_populates="profile",
         cascade="all, delete-orphan",
     )
+    streak_reminders = relationship(
+        "StreakReminder",
+        back_populates="profile",
+        cascade="all, delete-orphan",
+    )
 
     __table_args__ = (
         CheckConstraint(

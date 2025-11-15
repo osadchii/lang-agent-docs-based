@@ -3,8 +3,6 @@ from __future__ import annotations
 import uuid
 from pathlib import Path
 
-import pytest
-
 from app.models.language_profile import LanguageProfile
 from app.services.prompts import (
     PromptRenderer,

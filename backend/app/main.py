@@ -17,6 +17,7 @@ from app.core.middleware import (
     SecurityHeadersMiddleware,
 )
 from app.core.version import APP_VERSION
+from app.services.notification_worker import notification_worker
 from app.telegram import telegram_bot
 
 ALLOWED_METHODS = ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"]
@@ -66,10 +67,14 @@ def create_app() -> FastAPI:
     @application.on_event("startup")
     async def _configure_telegram_webhook() -> None:
         await telegram_bot.sync_webhook(settings.telegram_webhook_base_url)
+        if settings.notifications_worker_enabled:
+            notification_worker.start()
 
     @application.on_event("shutdown")
     async def _shutdown_telegram_bot() -> None:
         await telegram_bot.shutdown()
+        if settings.notifications_worker_enabled:
+            await notification_worker.shutdown()
 
     return application
 

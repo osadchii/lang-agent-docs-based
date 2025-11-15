@@ -27,6 +27,7 @@
 - Минимальная подсистема карточек (SRS): модели/миграции `decks`, `cards`, `card_reviews`, репозитории/сервисы и REST-ручки `/api/decks`, `/api/cards` (списки + карточка) для Mini App практики
 - Темы и упражнения: модели/миграции `topics` и `exercise_history`, сервисы + REST-ручки `/api/topics`, `/api/topics/suggest`, `/api/exercises/*` и Redis-сессии для хранения незавершённых упражнений от LLM
 - История и статистика: агрегаты `/api/stats`, `/api/stats/streak`, `/api/stats/calendar` (карточки + упражнения + календарь активности)
+- Уведомления и streak-напоминания: таблицы `notifications` и `streak_reminders`, REST `/api/notifications*` и фоновые проверки в нужном часовом окне пользователя
 
 - Глобальные обработчики ошибок FastAPI → единый JSON-контракт (`docs/backend-api.md`) + защита от слишком больших тел запросов
 
@@ -207,7 +208,9 @@ PY
 
 equest_id (exemplar) — этого достаточно для подключения Prometheus.
 
-7. Telegram Bot и публичный backend:
+7. Хотите протестировать streak-напоминания локально? Выставьте `NOTIFICATION_WORKER_ENABLED=true` и, при необходимости, сузьте окно `STREAK_REMINDER_WINDOW_START/END`. После перезапуска backend появится фоновый воркер: он каждую итерацию будет записывать события в `notifications`/`streak_reminders`, а проверить результат можно через `/api/notifications`.
+
+8. Telegram Bot и публичный backend:
 
    - Пропишите `BACKEND_DOMAIN` (например, `backend.external.osadchii.me`) в `.env`: Docker Compose поднимет `nginx-proxy`, выпустит TLS-сертификат и начнёт проксировать `https://<BACKEND_DOMAIN>` на backend.
 
@@ -464,6 +467,10 @@ equest_id (exemplar) для корреляции с логами.
 | `BACKEND_CORS_ORIGINS` | нет | Локальный whitelist (`http://localhost:<port>`, учитывается только при `APP_ENV=local/test`) | `http://localhost:4173` |
 
 | `MAX_REQUEST_BYTES` | нет | Лимит тела запроса (байты, default 1 MiB) | `1048576` |
+| `NOTIFICATION_WORKER_ENABLED` | нет | Фоновый NotificationWorker для streak-напоминаний (`true` на staging/prod, локально выключен) | `false` |
+| `NOTIFICATION_WORKER_INTERVAL_SECONDS` | нет | Интервал цикла NotificationWorker в секундах | `1800` |
+| `STREAK_REMINDER_WINDOW_START/END` | нет | Часы (0–23) локального времени, когда воркер ищет пользователей без активности | `17 / 19` |
+| `STREAK_REMINDER_RETENTION_DAYS` | нет | Сколько дней храним записи в `streak_reminders` перед очисткой | `7` |
 
 | `STRIPE_SECRET_KEY` | нет | Платежи (будет нужно для подписок) | — |
 

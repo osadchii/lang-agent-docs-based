@@ -6,8 +6,10 @@ import uuid
 from datetime import datetime, timezone
 
 from sqlalchemy import Select, func, select, update
+from sqlalchemy.orm import selectinload
 
 from app.models.language_profile import LanguageProfile
+from app.models.user import User
 from app.repositories.base import BaseRepository
 
 
@@ -104,6 +106,22 @@ class LanguageProfileRepository(BaseRepository[LanguageProfile]):
         profile.deleted_at = datetime.now(tz=timezone.utc)
         profile.is_active = False
         await self.session.flush()
+
+    async def list_active_with_users(self) -> list[LanguageProfile]:
+        """Return all active profiles with their owners loaded (used by reminders)."""
+        stmt: Select[tuple[LanguageProfile]] = (
+            select(LanguageProfile)
+            .join(User, LanguageProfile.user_id == User.id)
+            .options(selectinload(LanguageProfile.user))
+            .where(
+                LanguageProfile.deleted.is_(False),
+                LanguageProfile.is_active.is_(True),
+                User.deleted.is_(False),
+            )
+            .order_by(LanguageProfile.created_at.asc())
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars())
 
 
 __all__ = ["LanguageProfileRepository"]

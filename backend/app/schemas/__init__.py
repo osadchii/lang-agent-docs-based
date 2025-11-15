@@ -26,6 +26,12 @@ from .llm_responses import (
     WordSuggestion,
     WordSuggestions,
 )
+from .notification import (
+    NotificationBulkReadResponse,
+    NotificationListResponse,
+    NotificationReadResponse,
+    NotificationResponse,
+)
 from .profile import (
     CEFRLevel,
     LanguageProfileCreate,
@@ -90,6 +96,10 @@ __all__ = [
     "LanguageProfileResponse",
     "LanguageProfileUpdate",
     "Mistake",
+    "NotificationBulkReadResponse",
+    "NotificationListResponse",
+    "NotificationReadResponse",
+    "NotificationResponse",
     "ActivityEntry",
     "ActivityLevel",
     "CalendarResponse",

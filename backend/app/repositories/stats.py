@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import dataclasses
+import math
 import uuid
 from collections import defaultdict
-import math
 from datetime import date, datetime
 
 from sqlalchemy import Select, func, select

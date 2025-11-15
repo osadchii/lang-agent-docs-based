@@ -82,6 +82,33 @@ class Settings(BaseSettings):
         alias="MAX_REQUEST_BYTES",
         description="Upper bound for request bodies in bytes (default 1 MiB).",
     )
+    notifications_worker_enabled: bool = Field(
+        default=False,
+        alias="NOTIFICATION_WORKER_ENABLED",
+        description="Enable the in-process notification scheduler.",
+    )
+    notifications_worker_interval_seconds: int = Field(
+        default=1800,
+        alias="NOTIFICATION_WORKER_INTERVAL_SECONDS",
+        description="Interval between streak reminder checks in seconds.",
+    )
+    streak_reminder_window_start: int = Field(
+        default=17,
+        alias="STREAK_REMINDER_WINDOW_START",
+        ge=0,
+        le=23,
+    )
+    streak_reminder_window_end: int = Field(
+        default=19,
+        alias="STREAK_REMINDER_WINDOW_END",
+        ge=0,
+        le=23,
+    )
+    streak_reminder_retention_days: int = Field(
+        default=7,
+        alias="STREAK_REMINDER_RETENTION_DAYS",
+        description="Days to keep entries in streak_reminders before cleanup.",
+    )
 
     stripe_secret_key: SecretStr | None = Field(default=None, alias="STRIPE_SECRET_KEY")
     stripe_webhook_secret: SecretStr | None = Field(default=None, alias="STRIPE_WEBHOOK_SECRET")
@@ -120,6 +147,28 @@ class Settings(BaseSettings):
         if value <= 0:
             raise ValueError("MAX_REQUEST_BYTES must be a positive integer.")
         return value
+
+    @field_validator("notifications_worker_interval_seconds")
+    @classmethod
+    def _validate_worker_interval(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("NOTIFICATION_WORKER_INTERVAL_SECONDS must be positive.")
+        return value
+
+    @field_validator("streak_reminder_retention_days")
+    @classmethod
+    def _validate_retention(cls, value: int) -> int:
+        if value < 0:
+            raise ValueError("STREAK_REMINDER_RETENTION_DAYS must be >= 0.")
+        return value
+
+    @model_validator(mode="after")
+    def _validate_streak_window(self) -> "Settings":
+        if self.streak_reminder_window_start == self.streak_reminder_window_end:
+            raise ValueError(
+                "STREAK_REMINDER_WINDOW_START must differ from STREAK_REMINDER_WINDOW_END."
+            )
+        return self
 
     @field_validator("secret_key", "telegram_bot_token", "openai_api_key", mode="after")
     @classmethod

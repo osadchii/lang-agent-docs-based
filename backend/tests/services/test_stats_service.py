@@ -17,8 +17,8 @@ from app.models.user import User
 from app.repositories.exercise import ExerciseHistoryRepository
 from app.repositories.language_profile import LanguageProfileRepository
 from app.repositories.stats import ExerciseSummary, StatsRepository
-from app.services.stats import StatsService
 from app.schemas.stats import ActivityLevel, StatsPeriod
+from app.services.stats import StatsService
 
 
 async def _setup_context(
@@ -254,7 +254,9 @@ async def test_get_streak_includes_latest_activity_timestamp(
     assert streak.today_completed is True
     assert streak.last_activity is not None
     assert streak.streak_safe_until is not None
-    assert streak.streak_safe_until.date() == stats_context.profile.last_activity_date + timedelta(days=1)
+    assert streak.streak_safe_until.date() == stats_context.profile.last_activity_date + timedelta(
+        days=1
+    )
 
 
 @pytest.mark.asyncio

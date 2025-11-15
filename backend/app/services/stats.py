@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import uuid
 import math
+import uuid
 from datetime import date, datetime, time, timedelta, timezone
 
 from app.core.errors import ErrorCode, NotFoundError
