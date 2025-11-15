@@ -2,7 +2,18 @@
 
 from fastapi import APIRouter
 
-from app.api.routes import auth, cards, decks, dialog, exercises, health, profiles, telegram, topics
+from app.api.routes import (
+    auth,
+    cards,
+    decks,
+    dialog,
+    exercises,
+    health,
+    profiles,
+    stats,
+    telegram,
+    topics,
+)
 
 # Health and Telegram webhook routers (no prefix)
 root_router = APIRouter()
@@ -18,5 +29,6 @@ api_router.include_router(dialog.router)
 api_router.include_router(profiles.router)
 api_router.include_router(topics.router)
 api_router.include_router(exercises.router)
+api_router.include_router(stats.router)
 
 __all__ = ["api_router", "root_router"]

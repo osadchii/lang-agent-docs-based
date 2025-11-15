@@ -26,6 +26,7 @@
 - REST API для языковых профилей /api/profiles (CRUD + activate) и UI Mini App для выбора/создания профиля (CEFR уровни, цели, язык интерфейса)
 - Минимальная подсистема карточек (SRS): модели/миграции `decks`, `cards`, `card_reviews`, репозитории/сервисы и REST-ручки `/api/decks`, `/api/cards` (списки + карточка) для Mini App практики
 - Темы и упражнения: модели/миграции `topics` и `exercise_history`, сервисы + REST-ручки `/api/topics`, `/api/topics/suggest`, `/api/exercises/*` и Redis-сессии для хранения незавершённых упражнений от LLM
+- История и статистика: агрегаты `/api/stats`, `/api/stats/streak`, `/api/stats/calendar` (карточки + упражнения + календарь активности)
 
 - Глобальные обработчики ошибок FastAPI → единый JSON-контракт (`docs/backend-api.md`) + защита от слишком больших тел запросов
 

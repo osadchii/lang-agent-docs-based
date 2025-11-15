@@ -101,6 +101,13 @@ module = [
 ]
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = [
+  "tiktoken",
+  "jinja2",
+]
+ignore_missing_imports = true
+
 [tool.coverage.run]
 source = ["app"]
 branch = true
