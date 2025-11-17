@@ -1,10 +1,25 @@
 from __future__ import annotations
 
+import os
+from typing import Final
+
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
 from app.models.base import Base
+
+_TEST_ENV_VARS: Final[dict[str, str]] = {
+    "APP_ENV": "test",
+    "DATABASE_URL": "sqlite+aiosqlite:///:memory:",
+    "REDIS_URL": "redis://localhost:6379/0",
+    "SECRET_KEY": "test-secret",
+    "TELEGRAM_BOT_TOKEN": "000000:test",
+    "OPENAI_API_KEY": "sk-test",
+}
+
+for key, value in _TEST_ENV_VARS.items():
+    os.environ.setdefault(key, value)
 
 
 @pytest_asyncio.fixture()

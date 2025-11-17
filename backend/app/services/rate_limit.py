@@ -6,7 +6,7 @@ import logging
 import time
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Iterable
+from typing import Iterable, cast
 
 from fastapi import Response, status
 
@@ -254,7 +254,8 @@ class RateLimitService:
 
     def _plan_limit(self, user: User, action: RateLimitedAction) -> int | None:
         limits = self.action_limits[action]
-        return limits.premium_limit if user.is_premium else limits.free_limit
+        is_premium = cast(bool, getattr(user, "is_premium", False))
+        return limits.premium_limit if is_premium else limits.free_limit
 
     @staticmethod
     def _normalize_limit(value: int | None) -> int | None:
