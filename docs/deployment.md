@@ -4175,6 +4175,15 @@ CI/CD pipeline автоматически копирует актуальный 
 
 
 | `MAX_REQUEST_BYTES` | нет | Лимит тела запроса (байты, default 1 MiB) | 1048576 |
+| `RATE_LIMIT_IP_PER_MINUTE` | нет | Количество запросов в минуту с одного IP (для защиты edge) | 100 |
+| `RATE_LIMIT_USER_PER_HOUR` | нет | Почасовой лимит для авторизованного пользователя | 1000 |
+| `RATE_LIMIT_FREE_LLM_PER_DAY` | нет | Дневной лимит сообщений LLM для бесплатного плана | 50 |
+| `RATE_LIMIT_PREMIUM_LLM_PER_DAY` | нет | Дневной лимит сообщений LLM для премиума | 500 |
+| `RATE_LIMIT_FREE_EXERCISES_PER_DAY` | нет | Дневной лимит генераций упражнений для бесплатного плана | 10 |
+| `RATE_LIMIT_PREMIUM_EXERCISES_PER_DAY` | нет | Дневной лимит упражнений для премиума (0 = без ограничений) | 0 |
+| `RATE_LIMIT_WORKER_ENABLED` | нет | Запускать ежедневный воркер сброса счетчиков (только на staging/prod) | false |
+| `RATE_LIMIT_RESET_HOUR_UTC` | нет | UTC-час для очистки суточных лимитов | 0 |
+| `RATE_LIMIT_RESET_MINUTE_UTC` | нет | UTC-минуты для очистки суточных лимитов | 5 |
 
 
 
@@ -10290,3 +10299,9 @@ gunzip < /var/backups/postgres/backup_YYYYMMDD.sql.gz | \
 - Окно локального времени пользователя регулируется `STREAK_REMINDER_WINDOW_START/END` (значения 0–23). Только в этом окне проверяем активность и создаём записи в `notifications`/`streak_reminders`.
 - `STREAK_REMINDER_RETENTION_DAYS` определяет, сколько дней хранится аудит streak_reminders (default 7) — старые строки удаляются в начале цикла.
 - Проверить работу можно через `/api/notifications` (или `POST /api/notifications/read-all`) либо напрямую в Postgres. В проде достаточно включить флаг и перезапустить backend — воркер стартует в `on_event("startup")`.
+
+### RateLimitResetWorker: суточные лимиты
+
+- Включается флагом `RATE_LIMIT_WORKER_ENABLED`. На локальных окружениях держим `false`, чтобы не создавать лишних фоновых task'ов.
+- `RATE_LIMIT_RESET_HOUR_UTC` и `RATE_LIMIT_RESET_MINUTE_UTC` задают время (UTC), когда воркер очищает Redis-ключи из `ratelimit:action:*`. Новые запросы снова начинают считать дневные лимиты (LLM сообщения, упражнения).
+- Воркер использует тот же Redis, что и `CacheClient`, поэтому дополнительных подключений не требуется. Логи появляются с префиксом `app.services.rate_limit_worker`.

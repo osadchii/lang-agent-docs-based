@@ -29,6 +29,12 @@ def mock_redis() -> AsyncMock:
     redis.delete = AsyncMock(return_value=1)
     redis.exists = AsyncMock(return_value=False)
     redis.close = AsyncMock()
+    redis.expire = AsyncMock(return_value=True)
+    redis.ttl = AsyncMock(return_value=60)
+    redis.incr = AsyncMock(return_value=1)
+    redis.sadd = AsyncMock(return_value=1)
+    redis.smembers = AsyncMock(return_value=set())
+    redis.srem = AsyncMock(return_value=0)
     return redis
 
 

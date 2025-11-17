@@ -9,7 +9,7 @@ from types import SimpleNamespace
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from openai import OpenAIError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,6 +30,7 @@ from app.schemas.dialog import (
     PaginationMeta,
 )
 from app.services import DialogService, LLMService
+from app.services.rate_limit import RateLimitedAction, rate_limit_service
 
 logger = logging.getLogger("app.api.dialog")
 
@@ -131,10 +132,16 @@ async def _build_assistant_message(
 )
 async def chat_with_tutor(
     request: ChatRequest,
+    response: Response,
     user: User = Depends(get_current_user),  # noqa: B008
     dialog_service: DialogService = Depends(get_dialog_service),  # noqa: B008
 ) -> ChatResponse:
     """Send a message to DialogService and return the assistant response."""
+    rate_limit_state = await rate_limit_service.enforce_action_limit(
+        user,
+        RateLimitedAction.LLM_MESSAGES,
+    )
+
     profile = await _resolve_profile(dialog_service, user, request.profile_id)
 
     try:
@@ -158,7 +165,10 @@ async def chat_with_tutor(
         profile_id=profile.id,
         fallback_text=reply,
     )
-    return ChatResponse(profile_id=profile.id, message=message)
+    result = ChatResponse(profile_id=profile.id, message=message)
+    if rate_limit_state:
+        rate_limit_state.apply(response)
+    return result
 
 
 @router.get(

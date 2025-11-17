@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime, timezone
+from typing import Any, cast
 
 from sqlalchemy import Select, delete, func, select, update
 
@@ -76,7 +77,8 @@ class NotificationRepository(BaseRepository[Notification]):
             .values(is_read=True, read_at=datetime.now(tz=timezone.utc))
         )
         result = await self.session.execute(stmt)
-        return int(result.rowcount or 0)
+        rowcount = cast(Any, result).rowcount
+        return int(rowcount or 0)
 
 
 class StreakReminderRepository(BaseRepository[StreakReminder]):
@@ -116,7 +118,8 @@ class StreakReminderRepository(BaseRepository[StreakReminder]):
     async def cleanup_before(self, cutoff: date) -> int:
         stmt = delete(StreakReminder).where(StreakReminder.sent_date < cutoff)
         result = await self.session.execute(stmt)
-        return int(result.rowcount or 0)
+        rowcount = cast(Any, result).rowcount
+        return int(rowcount or 0)
 
 
 __all__ = ["NotificationRepository", "StreakReminderRepository"]

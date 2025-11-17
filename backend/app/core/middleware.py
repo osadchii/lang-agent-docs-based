@@ -10,8 +10,10 @@ from fastapi import Request, Response, status
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.types import ASGIApp
 
+from app.core.auth import decode_access_token
 from app.core.errors import ErrorCode, error_response
 from app.core.logging import bind_request_id, reset_request_id
+from app.services.rate_limit import RateLimitResult, RateLimitService
 
 
 class RequestIDMiddleware(BaseHTTPMiddleware):
@@ -145,9 +147,77 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
         )
 
 
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    """Apply per-IP and per-user rate limits before hitting the routers."""
+
+    def __init__(self, app: ASGIApp, service: RateLimitService) -> None:
+        super().__init__(app)
+        self.service = service
+        self.enabled = service.enabled
+
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+        if request.scope["type"] != "http":
+            return await call_next(request)
+        if not self.enabled:
+            return await call_next(request)
+
+        ip_address = request.client.host if request.client else "unknown"
+        ip_result = await self.service.check_ip_limit(ip_address)
+        if not ip_result.allowed:
+            return self._rate_limited_response(
+                ip_result,
+                "Too many requests from this IP address. Please try again later.",
+            )
+
+        user_result = None
+        user_id = self._extract_user_id(request)
+        if user_id:
+            user_result = await self.service.check_user_limit(user_id)
+            if not user_result.allowed:
+                return self._rate_limited_response(
+                    user_result,
+                    "Hourly request limit reached. Slow down and try again later.",
+                )
+
+        response = await call_next(request)
+        active_result = user_result or ip_result
+        active_result.apply(response)
+        return response
+
+    @staticmethod
+    def _extract_user_id(request: Request) -> str | None:
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return None
+        token = auth_header.split(" ", 1)[1].strip()
+        if not token:
+            return None
+        try:
+            payload = decode_access_token(token)
+        except Exception:  # noqa: BLE001
+            return None
+        user_id = payload.get("user_id")
+        return str(user_id) if user_id else None
+
+    @staticmethod
+    def _rate_limited_response(result: RateLimitResult, message: str) -> Response:
+        response = error_response(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            code=ErrorCode.RATE_LIMIT_EXCEEDED,
+            message=message,
+            retry_after=result.retry_after,
+        )
+        for header, value in result.headers().items():
+            response.headers[header] = value
+        if result.retry_after:
+            response.headers["Retry-After"] = str(result.retry_after)
+        return response
+
+
 __all__ = [
     "AccessLogMiddleware",
     "RequestIDMiddleware",
     "RequestSizeLimitMiddleware",
     "SecurityHeadersMiddleware",
+    "RateLimitMiddleware",
 ]

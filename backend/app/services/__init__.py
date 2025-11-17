@@ -8,6 +8,7 @@ from app.services.exercise import ExerciseService
 from app.services.language_profile import LanguageProfileService
 from app.services.llm import LLMService, get_basic_system_prompt
 from app.services.notifications import NotificationService
+from app.services.rate_limit import RateLimitService
 from app.services.stats import StatsService
 from app.services.topic import TopicService
 from app.services.user import UserService
@@ -21,6 +22,7 @@ __all__ = [
     "LanguageProfileService",
     "LLMService",
     "NotificationService",
+    "RateLimitService",
     "StatsService",
     "TopicService",
     "UserService",

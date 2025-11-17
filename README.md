@@ -23,6 +23,7 @@
 - Prometheus-инструментация /metrics через prometheus_fastapi_instrumentator (с request_id в гистограммах)
 
 - Telegram Bot API интеграция: `python-telegram-bot` 20.8, вебхук `POST /telegram-webhook/{bot_token}` + helper для polling (`python -m app.telegram.polling`), конфигурация по `docs/backend-telegram.md`
+- Redis rate limiting на Redis: middleware с per-IP/per-user лимитами, `X-RateLimit-*` хедеры, квоты для LLM/упражнений и воркер суточного сброса (`docs/backend-api.md`)
 - REST API для языковых профилей /api/profiles (CRUD + activate) и UI Mini App для выбора/создания профиля (CEFR уровни, цели, язык интерфейса)
 - Минимальная подсистема карточек (SRS): модели/миграции `decks`, `cards`, `card_reviews`, репозитории/сервисы и REST-ручки `/api/decks`, `/api/cards` (списки + карточка) для Mini App практики
 - Темы и упражнения: модели/миграции `topics` и `exercise_history`, сервисы + REST-ручки `/api/topics`, `/api/topics/suggest`, `/api/exercises/*` и Redis-сессии для хранения незавершённых упражнений от LLM
@@ -467,6 +468,15 @@ equest_id (exemplar) для корреляции с логами.
 | `BACKEND_CORS_ORIGINS` | нет | Локальный whitelist (`http://localhost:<port>`, учитывается только при `APP_ENV=local/test`) | `http://localhost:4173` |
 
 | `MAX_REQUEST_BYTES` | нет | Лимит тела запроса (байты, default 1 MiB) | `1048576` |
+| `RATE_LIMIT_IP_PER_MINUTE` | нет | Количество запросов в минуту с одного IP (DDoS-защита) | `100` |
+| `RATE_LIMIT_USER_PER_HOUR` | нет | Почасовой лимит запросов на пользователя | `1000` |
+| `RATE_LIMIT_FREE_LLM_PER_DAY` | нет | Дневной лимит сообщений LLM для бесплатного плана | `50` |
+| `RATE_LIMIT_PREMIUM_LLM_PER_DAY` | нет | Дневной лимит сообщений LLM для премиума | `500` |
+| `RATE_LIMIT_FREE_EXERCISES_PER_DAY` | нет | Дневной лимит генераций упражнений для бесплатного плана | `10` |
+| `RATE_LIMIT_PREMIUM_EXERCISES_PER_DAY` | нет | Дневной лимит упражнений для премиума (`0` = без ограничений) | `0` |
+| `RATE_LIMIT_WORKER_ENABLED` | нет | Включить воркер сброса суточных счетчиков (staging/prod) | `false` |
+| `RATE_LIMIT_RESET_HOUR_UTC` | нет | UTC-час, когда очищаем суточные лимиты | `0` |
+| `RATE_LIMIT_RESET_MINUTE_UTC` | нет | UTC-минуты для очистки лимитов | `5` |
 | `NOTIFICATION_WORKER_ENABLED` | нет | Фоновый NotificationWorker для streak-напоминаний (`true` на staging/prod, локально выключен) | `false` |
 | `NOTIFICATION_WORKER_INTERVAL_SECONDS` | нет | Интервал цикла NotificationWorker в секундах | `1800` |
 | `STREAK_REMINDER_WINDOW_START/END` | нет | Часы (0–23) локального времени, когда воркер ищет пользователей без активности | `17 / 19` |

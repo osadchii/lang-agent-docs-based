@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Path, Query, status
+from fastapi import APIRouter, Depends, Path, Query, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import build_enhanced_llm_service, get_cache_client
@@ -28,6 +28,7 @@ from app.schemas.exercise import (
     GeneratedExerciseResponse,
 )
 from app.services.exercise import ExerciseService
+from app.services.rate_limit import RateLimitedAction, rate_limit_service
 
 router = APIRouter(tags=["exercises"])
 
@@ -68,10 +69,18 @@ def _serialize_history_entry(entry: ExerciseHistory) -> ExerciseHistoryEntry:
 )
 async def generate_exercise(
     payload: ExerciseGenerateRequest,
+    response: Response,
     user: User = Depends(get_current_user),  # noqa: B008
     service: ExerciseService = Depends(get_exercise_service),  # noqa: B008
 ) -> GeneratedExerciseResponse:
-    return await service.generate_exercise(user, payload)
+    rate_state = await rate_limit_service.enforce_action_limit(
+        user,
+        RateLimitedAction.EXERCISES,
+    )
+    result = await service.generate_exercise(user, payload)
+    if rate_state:
+        rate_state.apply(response)
+    return result
 
 
 @router.post(

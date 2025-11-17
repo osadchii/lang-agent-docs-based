@@ -82,6 +82,55 @@ class Settings(BaseSettings):
         alias="MAX_REQUEST_BYTES",
         description="Upper bound for request bodies in bytes (default 1 MiB).",
     )
+    rate_limit_ip_per_minute: int = Field(
+        default=100,
+        alias="RATE_LIMIT_IP_PER_MINUTE",
+        description="Allowed requests per minute per IP.",
+    )
+    rate_limit_user_per_hour: int = Field(
+        default=1000,
+        alias="RATE_LIMIT_USER_PER_HOUR",
+        description="Allowed requests per hour per authenticated user.",
+    )
+    rate_limit_free_llm_per_day: int = Field(
+        default=50,
+        alias="RATE_LIMIT_FREE_LLM_PER_DAY",
+        description="Daily LLM messages for free plan users.",
+    )
+    rate_limit_premium_llm_per_day: int = Field(
+        default=500,
+        alias="RATE_LIMIT_PREMIUM_LLM_PER_DAY",
+        description="Daily LLM messages for premium users.",
+    )
+    rate_limit_free_exercises_per_day: int = Field(
+        default=10,
+        alias="RATE_LIMIT_FREE_EXERCISES_PER_DAY",
+        description="Daily exercise generations for free plan users.",
+    )
+    rate_limit_premium_exercises_per_day: int | None = Field(
+        default=0,
+        alias="RATE_LIMIT_PREMIUM_EXERCISES_PER_DAY",
+        description="Daily exercise generations for premium users (0 disables the limit).",
+    )
+    rate_limit_worker_enabled: bool = Field(
+        default=False,
+        alias="RATE_LIMIT_WORKER_ENABLED",
+        description="Enable the daily rate limit reset worker.",
+    )
+    rate_limit_reset_hour_utc: int = Field(
+        default=0,
+        alias="RATE_LIMIT_RESET_HOUR_UTC",
+        description="UTC hour to reset daily rate limit counters.",
+        ge=0,
+        le=23,
+    )
+    rate_limit_reset_minute_utc: int = Field(
+        default=5,
+        alias="RATE_LIMIT_RESET_MINUTE_UTC",
+        description="UTC minute to reset daily rate limit counters.",
+        ge=0,
+        le=59,
+    )
     notifications_worker_enabled: bool = Field(
         default=False,
         alias="NOTIFICATION_WORKER_ENABLED",
