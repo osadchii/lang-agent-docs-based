@@ -53,20 +53,17 @@ AdminUserDep = Annotated[User, Depends(require_admin)]
 )
 async def list_users(
     *,
-    status: Annotated[AdminUserStatus, Query()] = AdminUserStatus.ALL,
-    activity: Annotated[AdminUserActivity, Query()] = AdminUserActivity.ACTIVE_30D,
-    language: Annotated[
-        str | None,
-        Query(
-            default=None,
-            min_length=2,
-            max_length=10,
-            description="Filter by ISO language.",
-        ),
-    ] = None,
-    sort: Annotated[AdminUserSort, Query()] = AdminUserSort.CREATED_AT,
-    limit: Annotated[int, Query(ge=1, le=200)] = 50,
-    offset: Annotated[int, Query(ge=0)] = 0,
+    status: AdminUserStatus = Query(default=AdminUserStatus.ALL),  # noqa: B008
+    activity: AdminUserActivity = Query(default=AdminUserActivity.ACTIVE_30D),  # noqa: B008
+    language: str | None = Query(  # noqa: B008
+        default=None,
+        min_length=2,
+        max_length=10,
+        description="Filter by ISO language.",
+    ),
+    sort: AdminUserSort = Query(default=AdminUserSort.CREATED_AT),  # noqa: B008
+    limit: int = Query(default=50, ge=1, le=200),  # noqa: B008
+    offset: int = Query(default=0, ge=0),  # noqa: B008
     admin: AdminUserDep,  # noqa: B008
     service: AdminServiceDep,  # noqa: B008
 ) -> AdminUserListResponse:
@@ -91,7 +88,7 @@ async def list_users(
 )
 async def get_metrics(
     *,
-    period: Annotated[AdminMetricsPeriod, Query()] = AdminMetricsPeriod.DAYS_30,
+    period: AdminMetricsPeriod = Query(default=AdminMetricsPeriod.DAYS_30),  # noqa: B008
     admin: AdminUserDep,  # noqa: B008
     service: AdminServiceDep,  # noqa: B008
 ) -> AdminMetricsResponse:
