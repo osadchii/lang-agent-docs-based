@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import socket
-from types import SimpleNamespace
+from contextlib import asynccontextmanager
+from types import MethodType, SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
 import pytest
 
 import app.telegram.bot as telegram_bot_module
+from app.services.speech_to_text import SpeechToTextResult
 from app.telegram.bot import TelegramBot
 
 
@@ -25,8 +27,20 @@ class DummyApplication:
         )
 
 
+class RecordingMessage:
+    def __init__(self, voice: SimpleNamespace | None = None) -> None:
+        self.voice = voice
+        self.replies: list[str] = []
+
+    async def reply_text(self, text: str, **_: object) -> None:
+        self.replies.append(text)
+
+
 def build_bot(
-    monkeypatch: pytest.MonkeyPatch, *, environment: str = "test"
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    environment: str = "test",
+    **bot_kwargs: object,
 ) -> tuple[TelegramBot, DummyApplication]:
     dummy_app = DummyApplication()
 
@@ -39,7 +53,7 @@ def build_bot(
             return dummy_app
 
     monkeypatch.setattr(telegram_bot_module, "ApplicationBuilder", lambda: DummyBuilder())
-    bot = TelegramBot(token="dummy-token", environment=environment)  # noqa: S106
+    bot = TelegramBot(token="dummy-token", environment=environment, **bot_kwargs)  # noqa: S106
     return bot, dummy_app
 
 
@@ -192,3 +206,96 @@ async def test_handle_error_logs(
     await bot._handle_error(update={"update_id": 1}, context=context)  # type: ignore[arg-type]
 
     assert any("Telegram handler error" in record.message for record in caplog.records)
+
+
+@pytest.mark.asyncio
+async def test_handle_voice_message_rejects_when_too_long(monkeypatch: pytest.MonkeyPatch) -> None:
+    speech_service = SimpleNamespace(transcribe=AsyncMock())
+    bot, _ = build_bot(monkeypatch, speech_to_text_service=speech_service)
+    bot._max_voice_duration_seconds = 5
+    voice = SimpleNamespace(duration=10, file_id="file", file_size=1024)
+    message = RecordingMessage(voice=voice)
+    update = SimpleNamespace(effective_message=message, effective_user=SimpleNamespace(id=1))
+
+    await bot._handle_voice_message(update, context=SimpleNamespace(bot=SimpleNamespace()))
+
+    assert message.replies[0].startswith("⚠️ Голосовое сообщение слишком длинное")
+    speech_service.transcribe.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_handle_voice_message_rejects_when_file_too_large(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    speech_service = SimpleNamespace(transcribe=AsyncMock())
+    bot, _ = build_bot(monkeypatch, speech_to_text_service=speech_service)
+    bot._max_voice_file_size_bytes = 10
+    voice = SimpleNamespace(duration=2, file_id="file", file_size=20)
+    message = RecordingMessage(voice=voice)
+    update = SimpleNamespace(effective_message=message, effective_user=SimpleNamespace(id=1))
+
+    await bot._handle_voice_message(update, context=SimpleNamespace(bot=SimpleNamespace()))
+
+    assert "слишком большое" in message.replies[0]
+    speech_service.transcribe.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_handle_voice_message_processes_transcript(monkeypatch: pytest.MonkeyPatch) -> None:
+    speech_service = SimpleNamespace(
+        transcribe=AsyncMock(
+            return_value=SpeechToTextResult(text=" Привет мир ", detected_language="es")
+        )
+    )
+    bot, _ = build_bot(monkeypatch, speech_to_text_service=speech_service)
+
+    voice = SimpleNamespace(duration=2, file_id="voice", file_size=2000)
+    message = RecordingMessage(voice=voice)
+    user = SimpleNamespace(
+        id=99,
+        first_name="Tester",
+        last_name=None,
+        username=None,
+        language_code="ru",
+    )
+    update = SimpleNamespace(effective_message=message, effective_user=user)
+
+    file_obj = SimpleNamespace(download_as_bytearray=AsyncMock(return_value=b"voice-bytes"))
+    bot_file = SimpleNamespace(get_file=AsyncMock(return_value=file_obj))
+    context = SimpleNamespace(bot=bot_file)
+
+    dialog_response = "Ответ"
+    process_mock = AsyncMock(return_value=dialog_response)
+    dialog_context = SimpleNamespace(
+        user=SimpleNamespace(id="user-id"),
+        profile=SimpleNamespace(id="profile-id", language="es"),
+        dialog_service=SimpleNamespace(process_message=process_mock),
+    )
+
+    @asynccontextmanager
+    async def fake_context() -> SimpleNamespace:
+        yield dialog_context
+
+    def fake_dialog_context(self: TelegramBot, *, telegram_user: object) -> object:
+        assert telegram_user is user
+        return fake_context()
+
+    bot._dialog_context = MethodType(fake_dialog_context, bot)
+    bot._send_dialog_response = AsyncMock()
+
+    await bot._handle_voice_message(update, context=context)
+
+    speech_service.transcribe.assert_awaited_once()
+    assert (
+        speech_service.transcribe.await_args.kwargs["language_hint"]
+        == dialog_context.profile.language
+    )
+    bot_file.get_file.assert_awaited_once_with("voice")
+    file_obj.download_as_bytearray.assert_awaited_once()
+    process_mock.assert_awaited_once_with(
+        user=dialog_context.user,
+        profile_id=dialog_context.profile.id,
+        message="Привет мир",
+    )
+    bot._send_dialog_response.assert_awaited_once_with(message, dialog_response)
+    assert message.replies == []

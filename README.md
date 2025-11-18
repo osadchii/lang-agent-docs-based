@@ -23,6 +23,9 @@
 - Prometheus-инструментация /metrics через prometheus_fastapi_instrumentator (с request_id в гистограммах)
 
 - Telegram Bot API интеграция: `python-telegram-bot` 20.8, вебхук `POST /telegram-webhook/{bot_token}` + helper для polling (`python -m app.telegram.polling`), конфигурация по `docs/backend-telegram.md`
+
+- Голосовые сообщения в Telegram: лимиты на длительность/размер (`VOICE_*`), скачивание voice → Whisper, транскрипты сохраняются в `conversation_history` и сразу уходят в DialogService (см. `docs/backend-telegram.md`, `docs/backend-flashcards.md`)
+
 - Redis rate limiting на Redis: middleware с per-IP/per-user лимитами, `X-RateLimit-*` хедеры, квоты для LLM/упражнений и воркер суточного сброса (`docs/backend-api.md`)
 - REST API для языковых профилей /api/profiles (CRUD + activate) и UI Mini App для выбора/создания профиля (CEFR уровни, цели, язык интерфейса)
 - Минимальная подсистема карточек (SRS): модели/миграции `decks`, `cards`, `card_reviews`, репозитории/сервисы и REST-ручки `/api/decks`, `/api/cards` (списки + карточка) для Mini App практики
@@ -459,6 +462,14 @@ equest_id (exemplar) для корреляции с логами.
 | `LLM_MODEL` | нет | Модель по умолчанию | `gpt-4.1-mini` |
 
 | `LLM_TEMPERATURE` | нет | Творчество LLM (`0..1`) | `0.7` |
+
+| `VOICE_TRANSCRIPTION_MODEL` | нет | Whisper для голосовых сообщений | `whisper-1` |
+
+| `VOICE_TRANSCRIPTION_TIMEOUT` | нет | Таймаут запроса STT (секунды) | `60` |
+
+| `VOICE_MAX_DURATION_SECONDS` | нет | Лимит длительности voice (секунды) | `120` |
+
+| `VOICE_MAX_FILE_SIZE_BYTES` | нет | Максимальный размер voice-файла (байты) | `3000000` |
 
 | `PRODUCTION_APP_ORIGIN` | нет | Боевой origin Mini App | — |
 

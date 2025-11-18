@@ -739,6 +739,8 @@ async def send_ocr_result_with_suggestions(
 
 **Технология:** OpenAI Whisper API
 
+> Реализация: `app/services/speech_to_text.py` + хендлер `TelegramBot._handle_voice_message`. Лимиты на длину/размер настраиваются через `VOICE_*` переменные окружения.
+
 **Поддерживаемые языки:** 50+ языков с автоопределением
 
 **Характеристики:**

@@ -137,3 +137,11 @@ def test_settings_derive_webhook_url_from_backend_domain() -> None:
 def test_settings_rejects_invalid_max_request_bytes() -> None:
     with pytest.raises(ValidationError):
         build_settings(MAX_REQUEST_BYTES=0)
+
+
+def test_settings_rejects_invalid_voice_limits() -> None:
+    with pytest.raises(ValidationError):
+        build_settings(VOICE_MAX_DURATION_SECONDS=0)
+
+    with pytest.raises(ValidationError):
+        build_settings(VOICE_MAX_FILE_SIZE_BYTES=0)

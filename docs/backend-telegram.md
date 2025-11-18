@@ -700,25 +700,39 @@ MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_message)
 
 #### Голосовые сообщения
 
-**Не реализовано в MVP**, но можно добавить позже:
+**Реализовано в `app/telegram/bot.TelegramBot._handle_voice_message`.**
+
+Флоу:
+
+1. Проверяем лимиты `VOICE_MAX_DURATION_SECONDS` и `VOICE_MAX_FILE_SIZE_BYTES`. При превышении отвечаем пользователю и не ходим в OpenAI.
+2. Скачиваем OGG через `context.bot.get_file(...)`, дополнительно сверяем фактический размер payload.
+3. Передаём байты в `SpeechToTextService` (`app/services/speech_to_text.py`), который вызывает Whisper (`VOICE_TRANSCRIPTION_MODEL`, `VOICE_TRANSCRIPTION_TIMEOUT`) и возвращает `SpeechToTextResult`.
+4. Если транскрипт пустой — отвечаем ошибкой. В остальных случаях текст передаётся в тот же `DialogService`, что и обычные сообщения, поэтому строка сразу сохраняется в `conversation_history`.
 
 ```python
 async def handle_voice_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Обработка голосовых сообщений (future feature)."""
     voice = update.message.voice
+    if voice.duration > settings.voice_max_duration_seconds:
+        await update.message.reply_text("⚠️ Голосовое сообщение слишком длинное.")
+        return
 
-    # 1. Скачать файл
     file = await context.bot.get_file(voice.file_id)
-    voice_bytes = await file.download_as_bytearray()
+    audio_bytes = await file.download_as_bytearray()
 
-    # 2. Speech-to-Text через API (OpenAI Whisper, Google Speech-to-Text)
-    transcript = await speech_to_text(voice_bytes)
+    transcript = await speech_to_text.transcribe(
+        audio_bytes,
+        language_hint=profile.language,
+    )
 
-    # 3. Обработать как текстовое сообщение
-    await process_user_message(user, profile, transcript, ...)
+    await dialog_service.process_message(
+        user=db_user,
+        profile_id=profile.id,
+        message=transcript.text,
+    )
 ```
 
-Регистрация:
+Регистрация остаётся прежней:
+
 ```python
 self.application.add_handler(MessageHandler(filters.VOICE, self.handle_voice_message))
 ```

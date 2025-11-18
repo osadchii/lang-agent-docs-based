@@ -59,6 +59,29 @@ class Settings(BaseSettings):
     anthropic_api_key: SecretStr | None = Field(default=None, alias="ANTHROPIC_API_KEY")
     llm_model: str = Field(default="gpt-4.1-mini", alias="LLM_MODEL")
     llm_temperature: float = Field(default=0.7, alias="LLM_TEMPERATURE")
+    voice_transcription_model: str = Field(
+        default="whisper-1",
+        alias="VOICE_TRANSCRIPTION_MODEL",
+        description="Whisper model used for Telegram voice transcription.",
+    )
+    voice_transcription_timeout: float = Field(
+        default=60.0,
+        alias="VOICE_TRANSCRIPTION_TIMEOUT",
+        gt=0,
+        description="Timeout for STT requests in seconds.",
+    )
+    voice_max_duration_seconds: int = Field(
+        default=120,
+        alias="VOICE_MAX_DURATION_SECONDS",
+        ge=1,
+        description="Maximum allowed Telegram voice duration in seconds.",
+    )
+    voice_max_file_size_bytes: int = Field(
+        default=3_000_000,
+        alias="VOICE_MAX_FILE_SIZE_BYTES",
+        ge=1,
+        description="Maximum allowed Telegram voice payload size in bytes.",
+    )
 
     secret_key: SecretStr = Field(alias="SECRET_KEY")
     jwt_algorithm: Literal["HS256", "HS384", "HS512"] = Field(
