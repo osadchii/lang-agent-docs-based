@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from app.api.routes import (
+    admin,
     auth,
     cards,
     decks,
@@ -24,6 +25,7 @@ root_router.include_router(telegram.router)
 
 # API routers with /api prefix
 api_router = APIRouter(prefix="/api")
+api_router.include_router(admin.router)
 api_router.include_router(auth.router)
 api_router.include_router(decks.router)
 api_router.include_router(cards.router)

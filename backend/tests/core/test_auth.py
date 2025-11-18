@@ -6,6 +6,7 @@ import hashlib
 import hmac
 import json
 import time
+import uuid
 from unittest.mock import AsyncMock, patch
 
 import jwt
@@ -17,9 +18,11 @@ from app.core.auth import (
     create_access_token,
     decode_access_token,
     get_current_user,
+    require_admin,
     validate_telegram_init_data,
 )
 from app.core.config import settings
+from app.core.errors import ErrorCode
 from app.models.user import User
 
 
@@ -150,8 +153,6 @@ def test_validate_telegram_init_data_missing_user_data() -> None:
 
 def test_create_access_token() -> None:
     """Test JWT token creation."""
-    import uuid
-
     user = User(
         id=uuid.uuid4(),
         telegram_id=123456789,
@@ -186,8 +187,6 @@ def test_create_access_token() -> None:
 
 def test_decode_access_token_success() -> None:
     """Test successful JWT token decoding."""
-    import uuid
-
     user = User(
         id=uuid.uuid4(),
         telegram_id=123456789,
@@ -225,8 +224,6 @@ def test_decode_access_token_wrong_signature() -> None:
 @pytest.mark.asyncio
 async def test_get_current_user_success() -> None:
     """Test get_current_user dependency with valid token."""
-    import uuid
-
     # Create mock user
     mock_user = User(
         id=uuid.uuid4(),
@@ -261,8 +258,6 @@ async def test_get_current_user_success() -> None:
 @pytest.mark.asyncio
 async def test_get_current_user_expired_token() -> None:
     """Test get_current_user with expired token."""
-    import uuid
-
     # Create token that expired immediately
     with patch("app.core.auth.settings") as mock_settings:
         mock_settings.secret_key.get_secret_value.return_value = (
@@ -304,8 +299,6 @@ async def test_get_current_user_invalid_token() -> None:
 @pytest.mark.asyncio
 async def test_get_current_user_user_not_found() -> None:
     """Test get_current_user when user doesn't exist in database."""
-    import uuid
-
     mock_user = User(id=uuid.uuid4(), telegram_id=123, first_name="Test", is_premium=False)
     token, _ = create_access_token(mock_user)
 
@@ -325,3 +318,20 @@ async def test_get_current_user_user_not_found() -> None:
 
         assert exc_info.value.status_code == 401
         assert "not found" in exc_info.value.detail.lower()
+
+
+@pytest.mark.asyncio
+async def test_require_admin_allows_admin_user() -> None:
+    user = User(id=uuid.uuid4(), telegram_id=1, first_name="Admin", is_admin=True)
+    result = await require_admin(user)
+    assert result is user
+
+
+@pytest.mark.asyncio
+async def test_require_admin_blocks_non_admin() -> None:
+    user = User(id=uuid.uuid4(), telegram_id=1, first_name="User", is_admin=False)
+    with pytest.raises(HTTPException) as exc:
+        await require_admin(user)
+
+    assert exc.value.status_code == 403
+    assert exc.value.detail["code"] == ErrorCode.FORBIDDEN

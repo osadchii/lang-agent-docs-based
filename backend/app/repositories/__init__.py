@@ -1,5 +1,6 @@
 """Data access layer abstractions and implementations."""
 
+from app.repositories.admin import AdminRepository
 from app.repositories.card import CardRepository, CardReviewRepository
 from app.repositories.conversation import ConversationRepository
 from app.repositories.deck import DeckRepository
@@ -18,6 +19,7 @@ from app.repositories.topic import TopicRepository
 from app.repositories.user import UserRepository
 
 __all__ = [
+    "AdminRepository",
     "CardRepository",
     "CardReviewRepository",
     "ConversationRepository",

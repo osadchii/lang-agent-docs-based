@@ -26,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.db import get_session
+from app.core.errors import ErrorCode
 from app.models.user import User
 from app.repositories.user import UserRepository
 
@@ -284,3 +285,19 @@ async def get_current_user(
             detail="Invalid token",
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
+
+
+async def require_admin(user: User = Depends(get_current_user)) -> User:  # noqa: B008
+    """
+    Ensure the authenticated user has administrator privileges.
+
+    Raises:
+        HTTPException 403: if the user is not marked as admin.
+    """
+
+    if not getattr(user, "is_admin", False):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"code": ErrorCode.FORBIDDEN, "message": "Admin privileges required."},
+        )
+    return user

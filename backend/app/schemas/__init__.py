@@ -2,6 +2,22 @@
 
 from __future__ import annotations
 
+from .admin import (
+    AdminMetricsActivity,
+    AdminMetricsContent,
+    AdminMetricsPeriod,
+    AdminMetricsResponse,
+    AdminMetricsRetention,
+    AdminMetricsRevenue,
+    AdminMetricsUsers,
+    AdminUserActivity,
+    AdminUserListResponse,
+    AdminUserResponse,
+    AdminUserSort,
+    AdminUserStatus,
+    ManualPremiumRequest,
+    ManualPremiumResponse,
+)
 from .card import CardListResponse, CardResponse
 from .deck import DeckListResponse, DeckSummary
 from .dialog import ChatHistoryResponse, ChatMessage, ChatRequest, ChatResponse, PaginationMeta
@@ -83,6 +99,18 @@ from .topic import (
 )
 
 __all__ = [
+    "AdminMetricsActivity",
+    "AdminMetricsContent",
+    "AdminMetricsPeriod",
+    "AdminMetricsResponse",
+    "AdminMetricsRetention",
+    "AdminMetricsRevenue",
+    "AdminMetricsUsers",
+    "AdminUserActivity",
+    "AdminUserListResponse",
+    "AdminUserResponse",
+    "AdminUserSort",
+    "AdminUserStatus",
     "CEFRLevel",
     "CardContent",
     "CardListResponse",
@@ -126,6 +154,8 @@ __all__ = [
     "LanguageProfileProgress",
     "LanguageProfileResponse",
     "LanguageProfileUpdate",
+    "ManualPremiumRequest",
+    "ManualPremiumResponse",
     "Mistake",
     "NotificationBulkReadResponse",
     "NotificationListResponse",

@@ -1,5 +1,6 @@
 """Business logic services orchestrating domain operations."""
 
+from app.services.admin import AdminService
 from app.services.card import CardService
 from app.services.conversation import ConversationService
 from app.services.deck import DeckService
@@ -15,6 +16,7 @@ from app.services.topic import TopicService
 from app.services.user import UserService
 
 __all__ = [
+    "AdminService",
     "CardService",
     "ConversationService",
     "DeckService",
