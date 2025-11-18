@@ -5,6 +5,7 @@ from app.services.conversation import ConversationService
 from app.services.deck import DeckService
 from app.services.dialog import DialogService
 from app.services.exercise import ExerciseService
+from app.services.group import GroupService
 from app.services.language_profile import LanguageProfileService
 from app.services.llm import LLMService, get_basic_system_prompt
 from app.services.notifications import NotificationService
@@ -17,6 +18,7 @@ __all__ = [
     "CardService",
     "ConversationService",
     "DeckService",
+    "GroupService",
     "DialogService",
     "ExerciseService",
     "LanguageProfileService",

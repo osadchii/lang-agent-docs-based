@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.errors import ApplicationError, ErrorCode, NotFoundError
 from app.models.topic import Topic, TopicType
 from app.models.user import User
+from app.repositories.group import GroupMaterialRepository
 from app.repositories.language_profile import LanguageProfileRepository
 from app.repositories.topic import TopicRepository
 from app.schemas.llm_responses import TopicSuggestions
@@ -27,10 +28,12 @@ class TopicService:
         self,
         topic_repo: TopicRepository,
         profile_repo: LanguageProfileRepository,
+        group_material_repo: GroupMaterialRepository | None = None,
         llm_service: EnhancedLLMService | None = None,
     ) -> None:
         self.topic_repo = topic_repo
         self.profile_repo = profile_repo
+        self.group_material_repo = group_material_repo
         self.llm_service = llm_service
 
     @property
@@ -47,12 +50,26 @@ class TopicService:
         include_group: bool = True,
     ) -> list[Topic]:
         """Return topics belonging to the provided user."""
-        return await self.topic_repo.list_for_user(
+        topics = await self.topic_repo.list_for_user(
             user.id,
             profile_id=profile_id,
             topic_type=topic_type,
             include_group=include_group,
         )
+        if not include_group or self.group_material_repo is None:
+            return topics
+
+        language_filter = None
+        if profile_id is not None:
+            profile = await self.profile_repo.get_by_id_for_user(profile_id, user.id)
+            if profile is not None:
+                language_filter = profile.language
+
+        grouped = await self.group_material_repo.list_shared_topics_for_user(
+            user.id,
+            language=language_filter,
+        )
+        return topics + grouped
 
     async def create_topic(self, user: User, payload: TopicCreateRequest) -> Topic:
         """Create a topic bound to the user's profile."""

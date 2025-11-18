@@ -50,6 +50,21 @@ class User(SoftDeleteMixin, TimestampMixin, Base):
     )
     owned_decks = relationship("Deck", back_populates="owner")
     owned_topics = relationship("Topic", back_populates="owner")
+    owned_groups = relationship("Group", back_populates="owner", cascade="all, delete-orphan")
+    group_memberships = relationship(
+        "GroupMember",
+        back_populates="user",
+    )
+    sent_group_invites = relationship(
+        "GroupInvite",
+        back_populates="inviter",
+        foreign_keys="GroupInvite.inviter_id",
+    )
+    received_group_invites = relationship(
+        "GroupInvite",
+        back_populates="invitee",
+        foreign_keys="GroupInvite.invitee_id",
+    )
     card_reviews = relationship(
         "CardReview",
         back_populates="user",

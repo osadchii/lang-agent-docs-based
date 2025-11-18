@@ -4,6 +4,15 @@ from app.models.card import Card, CardRating, CardReview, CardStatus
 from app.models.conversation import ConversationMessage, MessageRole
 from app.models.deck import Deck
 from app.models.exercise import ExerciseHistory, ExerciseResultType, ExerciseType
+from app.models.group import (
+    Group,
+    GroupInvite,
+    GroupInviteStatus,
+    GroupMaterial,
+    GroupMaterialType,
+    GroupMember,
+    GroupRole,
+)
 from app.models.language_profile import LanguageProfile
 from app.models.notification import Notification, NotificationType, StreakReminder
 from app.models.token_usage import TokenUsage
@@ -17,6 +26,13 @@ __all__ = [
     "CardStatus",
     "ConversationMessage",
     "Deck",
+    "Group",
+    "GroupInvite",
+    "GroupInviteStatus",
+    "GroupMaterial",
+    "GroupMaterialType",
+    "GroupMember",
+    "GroupRole",
     "ExerciseHistory",
     "ExerciseResultType",
     "ExerciseType",

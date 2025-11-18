@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from datetime import datetime, timezone
 
 from sqlalchemy import Select, select, update
@@ -65,6 +66,17 @@ class TopicRepository(BaseRepository[Topic]):
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def list_by_ids(self, topic_ids: Sequence[uuid.UUID]) -> list[Topic]:
+        if not topic_ids:
+            return []
+        stmt = (
+            select(Topic)
+            .options(selectinload(Topic.owner))
+            .where(Topic.id.in_(topic_ids), Topic.deleted.is_(False))
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().unique())
 
     async def deactivate_profile_topics(
         self,

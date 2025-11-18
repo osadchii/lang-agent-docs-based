@@ -13,6 +13,8 @@ from app.core.db import get_session
 from app.models.deck import Deck
 from app.models.user import User
 from app.repositories.deck import DeckRepository
+from app.repositories.group import GroupMaterialRepository
+from app.repositories.language_profile import LanguageProfileRepository
 from app.schemas.deck import DeckListResponse, DeckSummary
 from app.services.deck import DeckService
 
@@ -51,7 +53,9 @@ async def get_deck_service(
     session: Annotated[AsyncSession, Depends(get_session)],
 ) -> DeckService:
     repository = DeckRepository(session)
-    return DeckService(repository)
+    group_repo = GroupMaterialRepository(session)
+    profile_repo = LanguageProfileRepository(session)
+    return DeckService(repository).with_group_access(group_repo, profile_repo)
 
 
 @router.get(

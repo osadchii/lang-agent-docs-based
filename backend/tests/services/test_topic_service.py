@@ -7,9 +7,11 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ApplicationError, NotFoundError
+from app.models.group import Group, GroupMaterial, GroupMaterialType, GroupMember
 from app.models.language_profile import LanguageProfile
 from app.models.topic import Topic, TopicType
 from app.models.user import User
+from app.repositories.group import GroupMaterialRepository
 from app.repositories.language_profile import LanguageProfileRepository
 from app.repositories.topic import TopicRepository
 from app.schemas.llm_responses import TopicSuggestion, TopicSuggestions
@@ -220,3 +222,34 @@ async def test_suggest_topics_returns_data_and_tracks_usage(db_session: AsyncSes
 
     assert result.topics[0].name == "Travel"
     assert llm_stub.tracked == ["suggest_topics"]
+
+
+@pytest.mark.asyncio
+async def test_list_topics_includes_group_shared(db_session: AsyncSession) -> None:
+    owner = _build_user()
+    member = _build_user()
+    member.telegram_id += 1
+    member.username = "svc2"
+    owner_profile = _build_profile(owner)
+    member_profile = _build_profile(member)
+    topic = _create_topic(owner_profile, owner, name="Shared Topic")
+    group = Group(owner_id=owner.id, name="Topic Squad")
+    db_session.add_all([owner, member, owner_profile, member_profile, topic, group])
+    await db_session.flush()
+
+    membership = GroupMember(group_id=group.id, user_id=member.id)
+    material = GroupMaterial(
+        group_id=group.id,
+        material_id=topic.id,
+        material_type=GroupMaterialType.TOPIC,
+    )
+    db_session.add_all([membership, material])
+    await db_session.flush()
+
+    service = TopicService(
+        TopicRepository(db_session),
+        LanguageProfileRepository(db_session),
+        group_material_repo=GroupMaterialRepository(db_session),
+    )
+    topics = await service.list_topics(member, include_group=True)
+    assert any(item.id == topic.id for item in topics)

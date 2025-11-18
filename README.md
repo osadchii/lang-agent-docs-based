@@ -29,6 +29,7 @@
 - Темы и упражнения: модели/миграции `topics` и `exercise_history`, сервисы + REST-ручки `/api/topics`, `/api/topics/suggest`, `/api/exercises/*` и Redis-сессии для хранения незавершённых упражнений от LLM
 - История и статистика: агрегаты `/api/stats`, `/api/stats/streak`, `/api/stats/calendar` (карточки + упражнения + календарь активности)
 - Уведомления и streak-напоминания: таблицы `notifications` и `streak_reminders`, REST `/api/notifications*` и фоновые проверки в нужном часовом окне пользователя
+- Реализованы группы (`groups`, `group_members`, `group_invites`, `group_materials`) и REST `/api/groups/*` для CRUD, приглашений и шаринга колод/тем
 
 - Глобальные обработчики ошибок FastAPI → единый JSON-контракт (`docs/backend-api.md`) + защита от слишком больших тел запросов
 

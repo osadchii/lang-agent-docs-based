@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 
 from sqlalchemy import Select, select
 from sqlalchemy.orm import selectinload
@@ -56,6 +57,17 @@ class DeckRepository(BaseRepository[Deck]):
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def list_by_ids(self, deck_ids: Sequence[uuid.UUID]) -> list[Deck]:
+        if not deck_ids:
+            return []
+        stmt = (
+            select(Deck)
+            .options(selectinload(Deck.owner))
+            .where(Deck.id.in_(deck_ids), Deck.deleted.is_(False))
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().unique())
 
 
 __all__ = ["DeckRepository"]

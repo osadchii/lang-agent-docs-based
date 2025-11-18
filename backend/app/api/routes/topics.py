@@ -14,6 +14,7 @@ from app.core.cache import CacheClient
 from app.core.db import get_session
 from app.models.topic import Topic, TopicType
 from app.models.user import User
+from app.repositories.group import GroupMaterialRepository
 from app.repositories.language_profile import LanguageProfileRepository
 from app.repositories.topic import TopicRepository
 from app.schemas.topic import (
@@ -85,7 +86,13 @@ async def get_topic_service(
     llm_service = build_enhanced_llm_service(cache)
     topic_repo = TopicRepository(session)
     profile_repo = LanguageProfileRepository(session)
-    return TopicService(topic_repo, profile_repo, llm_service)
+    group_repo = GroupMaterialRepository(session)
+    return TopicService(
+        topic_repo,
+        profile_repo,
+        group_material_repo=group_repo,
+        llm_service=llm_service,
+    )
 
 
 @router.get(

@@ -8,9 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.errors import ErrorCode, NotFoundError
 from app.models.deck import Deck
+from app.models.group import Group, GroupMaterial, GroupMaterialType, GroupMember
 from app.models.language_profile import LanguageProfile
 from app.models.user import User
 from app.repositories.deck import DeckRepository
+from app.repositories.group import GroupMaterialRepository
+from app.repositories.language_profile import LanguageProfileRepository
 from app.services.deck import DeckService
 
 
@@ -96,3 +99,36 @@ async def test_get_user_deck_raises_not_found_for_missing(db_session: AsyncSessi
 
     with pytest.raises(NotFoundError):
         await service.get_user_deck(user, foreign_deck.id)
+
+
+@pytest.mark.asyncio
+async def test_list_decks_includes_group_shared(db_session: AsyncSession) -> None:
+    owner = await _user(db_session, telegram_id=333)
+    member = await _user(db_session, telegram_id=444)
+    owner_profile = await _profile(db_session, owner)
+    await _profile(db_session, member)
+
+    shared_deck = _deck(owner_profile, owner, "Shared")
+    group = Group(owner_id=owner.id, name="Team")
+    db_session.add_all([shared_deck, group])
+    await db_session.flush()
+
+    membership = GroupMember(group_id=group.id, user_id=member.id)
+    material = GroupMaterial(
+        group_id=group.id,
+        material_id=shared_deck.id,
+        material_type=GroupMaterialType.DECK,
+    )
+    db_session.add_all([membership, material])
+    await db_session.flush()
+
+    service = DeckService(DeckRepository(db_session)).with_group_access(
+        GroupMaterialRepository(db_session),
+        LanguageProfileRepository(db_session),
+    )
+
+    decks = await service.list_decks(member, include_group=True)
+    assert any(deck.id == shared_deck.id for deck in decks)
+
+    personal_only = await service.list_decks(member, include_group=False)
+    assert all(deck.id != shared_deck.id for deck in personal_only)

@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Select, select, update
+from sqlalchemy import Select, func, select, update
 
 from app.models.user import User
 from app.repositories.base import BaseRepository
@@ -43,6 +43,15 @@ class UserRepository(BaseRepository[User]):
 
     async def get_by_telegram_id(self, telegram_id: int) -> User | None:
         stmt = select(User).where(User.telegram_id == telegram_id, User.deleted.is_(False))
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_by_username(self, username: str) -> User | None:
+        stmt = select(User).where(
+            User.username.is_not(None),
+            func.lower(User.username) == username.lower(),
+            User.deleted.is_(False),
+        )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 

@@ -4,6 +4,12 @@ from app.repositories.card import CardRepository, CardReviewRepository
 from app.repositories.conversation import ConversationRepository
 from app.repositories.deck import DeckRepository
 from app.repositories.exercise import ExerciseHistoryRepository
+from app.repositories.group import (
+    GroupInviteRepository,
+    GroupMaterialRepository,
+    GroupMemberRepository,
+    GroupRepository,
+)
 from app.repositories.language_profile import LanguageProfileRepository
 from app.repositories.notification import NotificationRepository, StreakReminderRepository
 from app.repositories.stats import StatsRepository
@@ -16,6 +22,10 @@ __all__ = [
     "CardReviewRepository",
     "ConversationRepository",
     "DeckRepository",
+    "GroupInviteRepository",
+    "GroupMaterialRepository",
+    "GroupMemberRepository",
+    "GroupRepository",
     "ExerciseHistoryRepository",
     "NotificationRepository",
     "StatsRepository",
