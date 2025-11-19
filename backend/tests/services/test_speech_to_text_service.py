@@ -40,6 +40,23 @@ async def test_transcribe_returns_normalized_result() -> None:
 
 
 @pytest.mark.asyncio
+async def test_transcribe_normalizes_language_aliases() -> None:
+    create_mock = AsyncMock()
+    create_mock.return_value = SimpleNamespace(text="ok", language="el")
+    mock_client = cast(
+        AsyncOpenAI,
+        SimpleNamespace(audio=SimpleNamespace(transcriptions=SimpleNamespace(create=create_mock))),
+    )
+
+    service = SpeechToTextService(api_key="test-key", client=mock_client)
+
+    await service.transcribe(b"voice", language_hint="gr")
+
+    assert create_mock.await_args is not None
+    assert create_mock.await_args.kwargs["language"] == "el"
+
+
+@pytest.mark.asyncio
 async def test_transcribe_rejects_empty_payload() -> None:
     mock_client = cast(
         AsyncOpenAI,

@@ -22,6 +22,13 @@ from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_ex
 
 logger = logging.getLogger("app.services.speech_to_text")
 
+_LANGUAGE_CODE_ALIASES = {
+    "gr": "el",  # Greek (ISO 639-1: el)
+    "ua": "uk",  # Ukrainian
+    "cn": "zh",  # Simplify legacy country codes
+    "jp": "ja",  # Japanese
+}
+
 
 def _normalize_response_body(body: object | None) -> object | None:
     if body is None:
@@ -164,11 +171,13 @@ class SpeechToTextService:
         buffer = io.BytesIO(audio_bytes)
         buffer.name = "telegram-voice.ogg"
 
+        normalized_language = self._normalize_language_hint(language_hint)
+
         try:
             response = await self.client.audio.transcriptions.create(
                 model=self.model,
                 file=buffer,
-                language=language_hint if language_hint is not None else NOT_GIVEN,
+                language=normalized_language if normalized_language is not None else NOT_GIVEN,
                 response_format=response_format,
                 timeout=timeout or self.default_timeout,
             )
@@ -227,6 +236,12 @@ class SpeechToTextService:
         )
 
         return SpeechToTextResult(text=text, detected_language=detected_language)
+
+    def _normalize_language_hint(self, language_hint: str | None) -> str | None:
+        if language_hint is None:
+            return None
+        normalized = _LANGUAGE_CODE_ALIASES.get(language_hint.lower(), language_hint.lower())
+        return normalized
 
 
 __all__ = ["SpeechToTextService", "SpeechToTextResult"]
