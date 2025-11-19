@@ -29,7 +29,7 @@ from app.schemas.dialog import (
     ChatResponse,
     PaginationMeta,
 )
-from app.services import DialogService, LLMService
+from app.services import DialogService, LLMService, ModerationService
 from app.services.rate_limit import RateLimitedAction, rate_limit_service
 
 logger = logging.getLogger("app.api.dialog")
@@ -63,7 +63,11 @@ async def get_dialog_service(
         temperature=settings.llm_temperature,
     )
     conversation_repo = ConversationRepository(session)
-    return DialogService(llm_service, conversation_repo)
+    moderation_service = ModerationService(
+        api_key=settings.openai_api_key.get_secret_value(),
+        model=settings.openai_moderation_model,
+    )
+    return DialogService(llm_service, conversation_repo, moderation_service)
 
 
 async def _resolve_profile(

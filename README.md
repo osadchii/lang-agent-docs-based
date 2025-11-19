@@ -24,6 +24,7 @@
 
 - /metrics включает стандартные http-метрики (`prometheus_fastapi_instrumentator`) и кастомные счётчики LLM (`app_llm_*`) с разбивкой по операции/модели, поэтому бюджет по токенам/стоимости видно прямо в Grafana.
 - Учёт расхода LLM (таблица `token_usage` + Prometheus‑счётчики tokens/cost и Grafana-алерт на почасовой бюджет)
+- Контент-фильтр: OpenAI Moderation API + локальные эвристики (цифроспам, повторяющиеся символы, emoji-спам) с graceful degradation на ошибках и пользовательским уведомлением в духе `docs/backend-bot-responses.md`
 
 - Telegram Bot API интеграция: `python-telegram-bot` 20.8, вебхук `POST /telegram-webhook/{bot_token}` + helper для polling (`python -m app.telegram.polling`), конфигурация по `docs/backend-telegram.md`
 
@@ -467,6 +468,8 @@ equest_id (exemplar) для корреляции с логами.
 | `LLM_MODEL` | нет | Модель по умолчанию | `gpt-4.1-mini` |
 
 | `LLM_TEMPERATURE` | нет | Творчество LLM (`0..1`) | `0.7` |
+
+| `OPENAI_MODERATION_MODEL` | нет | Модель OpenAI Moderation API | `omni-moderation-latest` |
 
 | `VOICE_TRANSCRIPTION_MODEL` | нет | Whisper для голосовых сообщений | `whisper-1` |
 

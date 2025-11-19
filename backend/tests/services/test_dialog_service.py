@@ -8,11 +8,13 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from app.core.errors import ApplicationError
 from app.models.conversation import MessageRole
 from app.models.language_profile import LanguageProfile
 from app.models.user import User
 from app.services.dialog import DialogService
 from app.services.llm import TokenUsage
+from app.services.moderation import ModerationDecision
 
 
 @pytest.mark.asyncio
@@ -267,3 +269,39 @@ async def test_get_or_create_default_profile_returns_existing() -> None:
 
     # Verify no new profile was created
     mock_session.add.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_process_message_rejects_blocked_text() -> None:
+    mock_llm = AsyncMock()
+    mock_repo = AsyncMock()
+    moderation = MagicMock()
+    moderation.evaluate = AsyncMock(
+        return_value=ModerationDecision(
+            allowed=False,
+            reason="spam",
+            categories=("spam",),
+            source="local",
+        )
+    )
+
+    service = DialogService(mock_llm, mock_repo, moderation)
+
+    user = User(
+        id=uuid.uuid4(),
+        telegram_id=123456,
+        first_name="Test",
+        language_code="en",
+        created_at=datetime.now(tz=timezone.utc),
+        updated_at=datetime.now(tz=timezone.utc),
+    )
+
+    with pytest.raises(ApplicationError):
+        await service.process_message(
+            user=user,
+            profile_id=uuid.uuid4(),
+            message="1111111111",
+        )
+
+    mock_repo.add_message.assert_not_called()
+    mock_llm.chat.assert_not_called()

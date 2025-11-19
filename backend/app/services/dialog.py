@@ -7,14 +7,17 @@ import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from fastapi import status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.errors import ApplicationError, ErrorCode
 from app.models.conversation import ConversationMessage, MessageRole
 from app.models.language_profile import LanguageProfile
 from app.models.user import User
 from app.repositories.conversation import ConversationRepository
 from app.services.llm import LLMService
+from app.services.moderation import ModerationDecision, ModerationService
 from app.services.prompts import (
     PromptRenderer,
     count_tokens,
@@ -32,6 +35,7 @@ class DialogService:
         self,
         llm_service: LLMService,
         conversation_repository: ConversationRepository,
+        moderation_service: ModerationService | None = None,
         prompts_dir: str | Path | None = None,
     ) -> None:
         """
@@ -44,6 +48,7 @@ class DialogService:
         """
         self.llm = llm_service
         self.conversation_repo = conversation_repository
+        self.moderation = moderation_service
 
         # Initialize prompt renderer
         if prompts_dir is None:
@@ -178,6 +183,22 @@ class DialogService:
         Returns:
             LLM response text
         """
+        moderation_decision = await self._run_moderation(message, user_id=user.id)
+        if moderation_decision is not None:
+            raise ApplicationError(
+                code=ErrorCode.CONTENT_REJECTED,
+                message=(
+                    "Sorry, I can't respond to that request. "
+                    "Please keep the conversation focused on language learning."
+                ),
+                status_code=status.HTTP_400_BAD_REQUEST,
+                details={
+                    "reason": moderation_decision.reason,
+                    "categories": moderation_decision.categories,
+                    "source": moderation_decision.source,
+                },
+            )
+
         # Calculate tokens for user message
         user_message_tokens = count_tokens(message)
 
@@ -290,6 +311,30 @@ class DialogService:
             logger.error(f"Error processing message: {e}", extra={"user_id": str(user.id)})
             # Re-raise to be handled by caller
             raise
+
+    async def _run_moderation(
+        self,
+        message: str,
+        *,
+        user_id: uuid.UUID,
+    ) -> ModerationDecision | None:
+        if self.moderation is None:
+            return None
+
+        decision = await self.moderation.evaluate(message)
+        if decision.allowed:
+            return None
+
+        logger.warning(
+            "Message blocked by moderation",
+            extra={
+                "user_id": str(user_id),
+                "reason": decision.reason,
+                "categories": decision.categories,
+                "source": decision.source,
+            },
+        )
+        return decision
 
 
 __all__ = ["DialogService"]

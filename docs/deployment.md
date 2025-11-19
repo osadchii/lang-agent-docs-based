@@ -4064,6 +4064,8 @@ CI/CD pipeline автоматически копирует актуальный 
 
 | `OPENAI_API_KEY` | **да** | Ключ OpenAI | `sk-...` |
 
+| `OPENAI_MODERATION_MODEL` | нет | Модель OpenAI Moderation API | `omni-moderation-latest` |
+
 
 
 

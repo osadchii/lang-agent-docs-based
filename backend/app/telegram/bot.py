@@ -215,6 +215,7 @@ class TelegramBot:
         from app.repositories.user import UserRepository
         from app.services.dialog import DialogService
         from app.services.llm import LLMService
+        from app.services.moderation import ModerationService
         from app.services.user import UserService
 
         async with AsyncSessionFactory() as session:
@@ -236,7 +237,11 @@ class TelegramBot:
                 model=settings.llm_model,
                 temperature=settings.llm_temperature,
             )
-            dialog_service = DialogService(llm_service, conversation_repo)
+            moderation_service = ModerationService(
+                api_key=settings.openai_api_key.get_secret_value(),
+                model=settings.openai_moderation_model,
+            )
+            dialog_service = DialogService(llm_service, conversation_repo, moderation_service)
 
             profile = await dialog_service.get_or_create_default_profile(db_user, session)
             await session.commit()
@@ -342,6 +347,18 @@ class TelegramBot:
                     },
                 )
 
+        except ApplicationError as exc:
+            error_summary = f"code={exc.code}, message={exc.message}"
+            self._logger.warning(
+                "Text message rejected | %s",
+                error_summary,
+                extra={
+                    "telegram_id": getattr(user, "id", None),
+                    "error_code": exc.code,
+                    "details": exc.details,
+                },
+            )
+            await message.reply_text(exc.message)
         except Exception as exc:
             self._logger.error(
                 "Error processing text message",
@@ -423,6 +440,18 @@ class TelegramBot:
                     },
                 )
 
+        except ApplicationError as exc:
+            error_summary = f"code={exc.code}, message={exc.message}"
+            self._logger.warning(
+                "Voice message rejected | %s",
+                error_summary,
+                extra={
+                    "telegram_id": getattr(user, "id", None),
+                    "error_code": exc.code,
+                    "details": exc.details,
+                },
+            )
+            await message.reply_text(exc.message)
         except Exception as exc:
             self._logger.error(
                 "Error processing voice message",

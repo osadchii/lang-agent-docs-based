@@ -59,6 +59,11 @@ class Settings(BaseSettings):
     anthropic_api_key: SecretStr | None = Field(default=None, alias="ANTHROPIC_API_KEY")
     llm_model: str = Field(default="gpt-4.1-mini", alias="LLM_MODEL")
     llm_temperature: float = Field(default=0.7, alias="LLM_TEMPERATURE")
+    openai_moderation_model: str = Field(
+        default="omni-moderation-latest",
+        alias="OPENAI_MODERATION_MODEL",
+        description="OpenAI Moderation model identifier.",
+    )
     voice_transcription_model: str = Field(
         default="whisper-1",
         alias="VOICE_TRANSCRIPTION_MODEL",

@@ -10,6 +10,7 @@ from httpx import AsyncClient
 
 from app.api.routes.dialog import get_dialog_service
 from app.core.auth import get_current_user
+from app.core.errors import ApplicationError, ErrorCode
 from app.main import app
 from app.models.conversation import MessageRole
 
@@ -19,6 +20,7 @@ class StubDialogService:
 
     def __init__(self) -> None:
         self.profile = SimpleNamespace(id=uuid.uuid4())
+        self._next_error: Exception | None = None
         session_mock = SimpleNamespace()
         session_mock.execute = AsyncMock(
             return_value=SimpleNamespace(scalar_one_or_none=lambda: self.profile)
@@ -36,6 +38,10 @@ class StubDialogService:
 
     async def process_message(self, **kwargs: object) -> str:
         self.last_payload = kwargs
+        if self._next_error is not None:
+            error = self._next_error
+            self._next_error = None
+            raise error
         return "Привет! Чем могу помочь?"
 
     def set_history(self, messages: list[SimpleNamespace]) -> None:
@@ -45,6 +51,9 @@ class StubDialogService:
         self.conversation_repo.session.execute = AsyncMock(
             return_value=SimpleNamespace(scalar_one_or_none=lambda: profile)
         )
+
+    def set_next_error(self, error: Exception) -> None:
+        self._next_error = error
 
 
 def _message(*, role: MessageRole, content: str, minutes_ago: int = 0) -> SimpleNamespace:
@@ -155,3 +164,24 @@ async def test_chat_endpoint_rejects_unknown_profile(
     assert response.status_code == 404
     payload = response.json()
     assert payload["error"]["code"] == "PROFILE_NOT_FOUND"
+
+
+@pytest.mark.asyncio
+async def test_chat_endpoint_surfaces_application_error(
+    dialog_stub: StubDialogService,
+) -> None:
+    dialog_stub.set_next_error(
+        ApplicationError(
+            code=ErrorCode.CONTENT_REJECTED,
+            message="Blocked",
+            details={"reason": "spam"},
+        )
+    )
+
+    async with AsyncClient(app=app, base_url="http://testserver") as client:
+        response = await client.post("/api/sessions/chat", json={"message": "Hello"})
+
+    assert response.status_code == 400
+    payload = response.json()
+    assert payload["error"]["code"] == "CONTENT_REJECTED"
+    assert payload["error"]["message"] == "Blocked"
