@@ -11,6 +11,7 @@ from app.api.routes import (
     exercises,
     groups,
     health,
+    media,
     notifications,
     profiles,
     stats,
@@ -31,6 +32,7 @@ api_router.include_router(decks.router)
 api_router.include_router(cards.router)
 api_router.include_router(dialog.router)
 api_router.include_router(groups.router)
+api_router.include_router(media.router)
 api_router.include_router(notifications.router)
 api_router.include_router(profiles.router)
 api_router.include_router(topics.router)

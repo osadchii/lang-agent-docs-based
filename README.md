@@ -26,6 +26,8 @@
 
 - Голосовые сообщения в Telegram: лимиты на длительность/размер (`VOICE_*`), скачивание voice → Whisper, транскрипты сохраняются в `conversation_history` и сразу уходят в DialogService (см. `docs/backend-telegram.md`, `docs/backend-flashcards.md`)
 
+- OCR на GPT-4 Vision: REST `POST /api/media/ocr`, Telegram обрабатывает фото (до 10 МБ) и предлагает слова для карточек (см. `docs/use-cases.md#uc-5-работа-с-изображениями`)
+
 - Redis rate limiting на Redis: middleware с per-IP/per-user лимитами, `X-RateLimit-*` хедеры, квоты для LLM/упражнений и воркер суточного сброса (`docs/backend-api.md`)
 - REST API для языковых профилей /api/profiles (CRUD + activate) и UI Mini App для выбора/создания профиля (CEFR уровни, цели, язык интерфейса)
 - Минимальная подсистема карточек (SRS): модели/миграции `decks`, `cards`, `card_reviews`, репозитории/сервисы и REST-ручки `/api/decks`, `/api/cards` (списки + карточка) для Mini App практики
@@ -471,6 +473,18 @@ equest_id (exemplar) для корреляции с логами.
 
 | `VOICE_MAX_FILE_SIZE_BYTES` | нет | Максимальный размер voice-файла (байты) | `3000000` |
 
+| `OCR_VISION_MODEL` | нет | Модель GPT-4 Vision для OCR | `gpt-4o-mini` |
+
+| `OCR_VISION_TIMEOUT` | нет | Таймаут OCR-запроса (секунды) | `60` |
+
+| `OCR_MAX_IMAGES` | нет | Количество изображений в одном запросе | `3` |
+
+| `OCR_MAX_IMAGE_BYTES` | нет | Лимит размера одного изображения (байты) | `10485760` |
+
+| `OCR_MAX_IMAGE_DIMENSION` | нет | Максимальная длинная сторона изображения (px) | `2048` |
+
+| `OCR_MAX_OUTPUT_TOKENS` | нет | Лимит токенов на ответ GPT-4 Vision | `900` |
+
 | `PRODUCTION_APP_ORIGIN` | нет | Боевой origin Mini App | — |
 
 | `BACKEND_DOMAIN` | нет | Публичный backend-домен без схемы (nginx-proxy/TLS + webhook URL) | — |
@@ -479,7 +493,7 @@ equest_id (exemplar) для корреляции с логами.
 
 | `BACKEND_CORS_ORIGINS` | нет | Локальный whitelist (`http://localhost:<port>`, учитывается только при `APP_ENV=local/test`) | `http://localhost:4173` |
 
-| `MAX_REQUEST_BYTES` | нет | Лимит тела запроса (байты, default 1 MiB) | `1048576` |
+| `MAX_REQUEST_BYTES` | нет | Лимит тела запроса (байты, default 32 MiB) | `33554432` |
 | `RATE_LIMIT_IP_PER_MINUTE` | нет | Количество запросов в минуту с одного IP (DDoS-защита) | `100` |
 | `RATE_LIMIT_USER_PER_HOUR` | нет | Почасовой лимит запросов на пользователя | `1000` |
 | `RATE_LIMIT_FREE_LLM_PER_DAY` | нет | Дневной лимит сообщений LLM для бесплатного плана | `50` |

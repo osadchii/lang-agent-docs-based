@@ -529,6 +529,8 @@ async def create_cards_batch(
 - **Tesseract OCR** - быстрое распознавание (первичное)
 - **GPT-4 Vision** - улучшение точности (fallback)
 
+> Реализовано в `app/services/media.py` (OCRService), REST `POST /api/media/ocr` и Telegram-хендлере фото (`TelegramBot._handle_photo_message`).
+
 **Поддерживаемые языки:**
 - Все основные европейские (английский, испанский, немецкий, французский, итальянский)
 - Китайский, японский, корейский

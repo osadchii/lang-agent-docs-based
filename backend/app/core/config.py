@@ -82,6 +82,41 @@ class Settings(BaseSettings):
         ge=1,
         description="Maximum allowed Telegram voice payload size in bytes.",
     )
+    ocr_vision_model: str = Field(
+        default="gpt-4o-mini",
+        alias="OCR_VISION_MODEL",
+        description="Vision-capable model used for OCR extraction.",
+    )
+    ocr_vision_timeout: float = Field(
+        default=60.0,
+        alias="OCR_VISION_TIMEOUT",
+        gt=0,
+        description="Timeout for OCR vision requests in seconds.",
+    )
+    ocr_max_images: int = Field(
+        default=3,
+        alias="OCR_MAX_IMAGES",
+        ge=1,
+        description="Maximum number of images accepted per OCR request.",
+    )
+    ocr_max_image_bytes: int = Field(
+        default=10_485_760,
+        alias="OCR_MAX_IMAGE_BYTES",
+        ge=1,
+        description="Maximum allowed image size in bytes (default 10 MiB).",
+    )
+    ocr_max_image_dimension: int = Field(
+        default=2048,
+        alias="OCR_MAX_IMAGE_DIMENSION",
+        ge=256,
+        description="Longest side in pixels after resizing OCR images.",
+    )
+    ocr_max_output_tokens: int = Field(
+        default=900,
+        alias="OCR_MAX_OUTPUT_TOKENS",
+        ge=128,
+        description="Maximum tokens requested from vision model per image.",
+    )
 
     secret_key: SecretStr = Field(alias="SECRET_KEY")
     jwt_algorithm: Literal["HS256", "HS384", "HS512"] = Field(
@@ -101,9 +136,9 @@ class Settings(BaseSettings):
         description="Comma-separated list or JSON array of localhost origins (http://localhost:PORT).",
     )
     max_request_bytes: int = Field(
-        default=1_048_576,
+        default=33_554_432,
         alias="MAX_REQUEST_BYTES",
-        description="Upper bound for request bodies in bytes (default 1 MiB).",
+        description="Upper bound for request bodies in bytes (default 32 MiB).",
     )
     rate_limit_ip_per_minute: int = Field(
         default=100,

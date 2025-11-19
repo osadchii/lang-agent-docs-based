@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import socket
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from types import MethodType, SimpleNamespace
 from unittest.mock import AsyncMock, Mock
+from uuid import uuid4
 
 import pytest
 
@@ -28,12 +30,17 @@ class DummyApplication:
 
 
 class RecordingMessage:
-    def __init__(self, voice: SimpleNamespace | None = None) -> None:
+    def __init__(
+        self, voice: SimpleNamespace | None = None, photo: list[SimpleNamespace] | None = None
+    ) -> None:
         self.voice = voice
+        self.photo = photo
         self.replies: list[str] = []
+        self.reply_kwargs: list[dict[str, object]] = []
 
-    async def reply_text(self, text: str, **_: object) -> None:
+    async def reply_text(self, text: str, **kwargs: object) -> None:
         self.replies.append(text)
+        self.reply_kwargs.append(kwargs)
 
 
 def build_bot(
@@ -299,3 +306,113 @@ async def test_handle_voice_message_processes_transcript(monkeypatch: pytest.Mon
     )
     bot._send_dialog_response.assert_awaited_once_with(message, dialog_response)
     assert message.replies == []
+
+
+@pytest.mark.asyncio
+async def test_handle_photo_message_requires_service(monkeypatch: pytest.MonkeyPatch) -> None:
+    bot, _ = build_bot(monkeypatch, ocr_service=None)
+    message = RecordingMessage(photo=[SimpleNamespace(file_id="photo-id", file_size=1_000)])
+    update = SimpleNamespace(effective_message=message, effective_user=SimpleNamespace(id=42))
+
+    await bot._handle_photo_message(update, context=SimpleNamespace(bot=SimpleNamespace()))
+
+    assert message.replies
+    assert "Распознавание изображений" in message.replies[0]
+
+
+@pytest.mark.asyncio
+async def test_handle_photo_message_processes(monkeypatch: pytest.MonkeyPatch) -> None:
+    analysis = SimpleNamespace(
+        segments=[SimpleNamespace(detected_languages=["es"])],
+        combined_text="Hola",
+        has_target_language=True,
+    )
+    ocr_service = SimpleNamespace(
+        analyze=AsyncMock(return_value=analysis), max_image_bytes=1_000_000
+    )
+    cache_client = SimpleNamespace(connect=AsyncMock())
+    bot, _ = build_bot(
+        monkeypatch,
+        ocr_service=ocr_service,
+        cache_client=cache_client,
+        max_image_file_size_bytes=2_000_000,
+    )
+
+    bot._download_file_bytes = AsyncMock(return_value=b"image-bytes")
+
+    llm_stub = SimpleNamespace(
+        suggest_words_from_text=AsyncMock(
+            return_value=(
+                SimpleNamespace(
+                    suggestions=[SimpleNamespace(word="casa", reason="Базовое слово", priority=1)]
+                ),
+                SimpleNamespace(prompt_tokens=0, completion_tokens=0, total_tokens=0),
+            )
+        ),
+        track_token_usage=AsyncMock(),
+    )
+    bot._build_enhanced_llm_service = AsyncMock(return_value=llm_stub)
+    bot._send_ocr_response = AsyncMock()
+
+    class DummyCardRepository:
+        def __init__(self, session: object) -> None:
+            self.session = session
+
+        async def list_lemmas_for_profile(self, profile_id: object, limit: int = 200) -> list[str]:
+            self.last_profile = profile_id
+            self.last_limit = limit
+            return ["hola"]
+
+    monkeypatch.setattr(telegram_bot_module, "CardRepository", DummyCardRepository)
+
+    dialog_context = SimpleNamespace(
+        user=SimpleNamespace(id=uuid4()),
+        profile=SimpleNamespace(
+            id=uuid4(),
+            language="es",
+            language_name="Spanish",
+            current_level="A2",
+            goals=["travel"],
+        ),
+        dialog_service=SimpleNamespace(
+            conversation_repo=SimpleNamespace(session=object()),
+        ),
+    )
+
+    @asynccontextmanager
+    async def fake_context() -> AsyncIterator[SimpleNamespace]:
+        yield dialog_context
+
+    bot._dialog_context = MethodType(lambda self, *, telegram_user: fake_context(), bot)
+
+    message = RecordingMessage(photo=[SimpleNamespace(file_id="photo", file_size=1234)])
+    update = SimpleNamespace(effective_message=message, effective_user=SimpleNamespace(id=1))
+
+    await bot._handle_photo_message(update, context=SimpleNamespace(bot=SimpleNamespace()))
+
+    ocr_service.analyze.assert_awaited_once()
+    bot._send_ocr_response.assert_awaited_once()
+    assert message.replies == []
+
+
+@pytest.mark.asyncio
+async def test_send_ocr_response_renders_keyboard(monkeypatch: pytest.MonkeyPatch) -> None:
+    bot, _ = build_bot(monkeypatch)
+    message = RecordingMessage()
+    analysis = SimpleNamespace(
+        combined_text="Hola mundo",
+        has_target_language=False,
+        segments=[SimpleNamespace(detected_languages=["en"])],
+    )
+    suggestions = [SimpleNamespace(word="casa", reason="Базовое слово", priority=1)]
+
+    await bot._send_ocr_response(
+        message=message,
+        analysis=analysis,
+        suggestions=suggestions,
+        language_name="Spanish",
+    )
+
+    assert "Hola mundo" in message.replies[0]
+    assert "не найдено" in message.replies[0]
+    assert message.reply_kwargs[0]["reply_markup"] is not None

@@ -59,6 +59,7 @@ from .llm_responses import (
     WordSuggestion,
     WordSuggestions,
 )
+from .media import OCRAnalyzeResponse, OCRSegmentPayload
 from .notification import (
     NotificationBulkReadResponse,
     NotificationListResponse,
@@ -157,6 +158,8 @@ __all__ = [
     "ManualPremiumRequest",
     "ManualPremiumResponse",
     "Mistake",
+    "OCRAnalyzeResponse",
+    "OCRSegmentPayload",
     "NotificationBulkReadResponse",
     "NotificationListResponse",
     "NotificationReadResponse",

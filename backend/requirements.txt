@@ -12,6 +12,8 @@ pydantic==2.6.3
 pydantic-settings==2.2.1
 python-telegram-bot[webhooks]==20.8
 python-multipart==0.0.9
+pillow==10.4.0
+pillow_heif==0.17.0
 redis==5.0.1
 sqlalchemy==2.0.27
 tenacity==8.2.3
@@ -30,3 +32,4 @@ pytest-asyncio==0.23.5
 pytest-cov==4.1.0
 ruff==0.2.1
 types-redis==4.6.0.20240218
+types-Pillow==10.2.0.20240520

@@ -77,6 +77,23 @@ class CardRepository(BaseRepository[Card]):
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
+    async def list_lemmas_for_profile(self, profile_id: uuid.UUID, limit: int = 200) -> list[str]:
+        """Return recent lemmas for a profile to avoid duplicate suggestions."""
+        safe_limit = max(1, limit)
+        stmt = (
+            select(Card.lemma)
+            .join(Deck, Card.deck_id == Deck.id)
+            .where(
+                Deck.profile_id == profile_id,
+                Deck.deleted.is_(False),
+                Card.deleted.is_(False),
+            )
+            .order_by(Card.created_at.desc())
+            .limit(safe_limit)
+        )
+        result = await self.session.execute(stmt)
+        return [row[0] for row in result.all()]
+
 
 class CardReviewRepository(BaseRepository[CardReview]):
     """Basic helper for review history storage."""

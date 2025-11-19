@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import Awaitable
-from typing import Any, Type, TypeVar, cast
+from typing import Any, Sequence, Type, TypeVar, cast
 
 from pydantic import BaseModel, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,6 +35,7 @@ from app.schemas.llm_responses import (
     ExerciseResult,
     IntentDetection,
     TopicSuggestions,
+    WordSuggestions,
 )
 from app.services.llm import LLMService, TokenUsage as LLMTokenUsage
 
@@ -442,6 +443,71 @@ Respond in JSON format."""
             temperature=0.8,
             cache_key=cache_key,
             cache_ttl=TTL_1_HOUR,
+        )
+
+    async def suggest_words_from_text(
+        self,
+        *,
+        text: str,
+        language: str,
+        level: str,
+        goals: Sequence[str],
+        known_lemmas: Sequence[str],
+    ) -> tuple[WordSuggestions, LLMTokenUsage]:
+        """
+        Suggest vocabulary items to turn into flashcards based on OCR text.
+
+        Args:
+            text: Recognized text (preferably in learner's language)
+            language: Language code (ISO-639-1)
+            level: Current CEFR level
+            goals: Learning goals
+            known_lemmas: Lemmas already saved for the learner
+        """
+        snippet = text.strip()
+        if len(snippet) > 2000:
+            snippet = snippet[:2000].rstrip() + "…"
+
+        deduped_lemmas: list[str] = []
+        for lemma in known_lemmas:
+            if lemma and lemma not in deduped_lemmas:
+                deduped_lemmas.append(lemma)
+        known = ", ".join(deduped_lemmas[:50]) if deduped_lemmas else "none"
+        goals_text = ", ".join(goals) if goals else "general practice"
+
+        prompt = f"""A learner is studying {language.upper()} at CEFR level {level}.
+Their goals: {goals_text}
+
+Text sample (possibly truncated):
+\"\"\"{snippet}\"\"\"
+
+Suggest up to 10 useful words or short phrases to add as flashcards:
+- Prioritize vocabulary that appears in the text or is strongly implied.
+- Ignore words already known: {known}
+- Focus on practical usefulness for the learner's level and goals.
+- Provide diverse parts of speech (verb/noun/adjective/adverb/phrase/other).
+
+Return JSON:
+{{
+  "suggestions": [
+    {{
+      "word": "example",
+      "type": "noun",
+      "reason": "Why this is useful",
+      "priority": 1
+    }}
+  ]
+}}"""
+
+        messages = [
+            {"role": "system", "content": "You curate vocabulary for language learners."},
+            {"role": "user", "content": prompt},
+        ]
+
+        return await self.chat_structured(
+            messages=messages,
+            response_model=WordSuggestions,
+            temperature=0.4,
         )
 
     async def detect_intent(

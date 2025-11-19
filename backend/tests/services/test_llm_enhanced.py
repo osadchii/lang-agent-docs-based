@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from app.core.cache import CacheClient
-from app.schemas.llm_responses import CardContent, IntentDetection
+from app.schemas.llm_responses import CardContent, IntentDetection, WordSuggestion, WordSuggestions
 from app.services.llm import TokenUsage
 from app.services.llm_enhanced import EnhancedLLMService
 
@@ -267,6 +267,30 @@ async def test_generate_card_uses_30day_cache(
     mock_cache.set.assert_awaited_once()
     call_args = mock_cache.set.call_args
     assert call_args.kwargs["ttl"] == 2_592_000  # 30 days in seconds
+
+
+@pytest.mark.asyncio
+async def test_suggest_words_from_text_uses_chat_structured(
+    llm_service: EnhancedLLMService, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Ensure suggest_words_from_text delegates to chat_structured."""
+    suggestions = WordSuggestions(
+        suggestions=[WordSuggestion(word="casa", type="noun", reason="Basic word", priority=1)]
+    )
+    mock_chat = AsyncMock(return_value=(suggestions, TokenUsage(10, 5, 15)))
+    monkeypatch.setattr(llm_service, "chat_structured", mock_chat)
+
+    result, usage = await llm_service.suggest_words_from_text(
+        text="Hola, esta es mi casa.",
+        language="es",
+        level="A2",
+        goals=["travel"],
+        known_lemmas=["hola"],
+    )
+
+    mock_chat.assert_awaited_once()
+    assert result.suggestions[0].word == "casa"
+    assert usage.total_tokens == 15
 
 
 @pytest.mark.asyncio

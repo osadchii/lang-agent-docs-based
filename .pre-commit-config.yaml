@@ -73,6 +73,7 @@ repos:
           - pytest-cov==4.1.0
           - ruff==0.2.1
           - types-redis==4.6.0.20240218
+          - types-Pillow==10.2.0.20240520
 
   - repo: local
     hooks:

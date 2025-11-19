@@ -4174,7 +4174,13 @@ CI/CD pipeline автоматически копирует актуальный 
 
 
 
-| `MAX_REQUEST_BYTES` | нет | Лимит тела запроса (байты, default 1 MiB) | 1048576 |
+| `OCR_VISION_MODEL` | нет | Модель GPT‑4 Vision для OCR | gpt-4o-mini |
+| `OCR_VISION_TIMEOUT` | нет | Таймаут OCR-запроса (сек) | 60 |
+| `OCR_MAX_IMAGES` | нет | Максимум изображений в одном запросе | 3 |
+| `OCR_MAX_IMAGE_BYTES` | нет | Лимит размера одного изображения (байты) | 10485760 |
+| `OCR_MAX_IMAGE_DIMENSION` | нет | Ограничение длинной стороны изображения (px) | 2048 |
+| `OCR_MAX_OUTPUT_TOKENS` | нет | Лимит токенов на ответ GPT‑4 Vision | 900 |
+| `MAX_REQUEST_BYTES` | нет | Лимит тела запроса (байты, default 32 MiB) | 33554432 |
 | `RATE_LIMIT_IP_PER_MINUTE` | нет | Количество запросов в минуту с одного IP (для защиты edge) | 100 |
 | `RATE_LIMIT_USER_PER_HOUR` | нет | Почасовой лимит для авторизованного пользователя | 1000 |
 | `RATE_LIMIT_FREE_LLM_PER_DAY` | нет | Дневной лимит сообщений LLM для бесплатного плана | 50 |

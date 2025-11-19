@@ -62,8 +62,8 @@ async def _create_deck(session: AsyncSession, *, profile: LanguageProfile, owner
     return deck
 
 
-def _card(deck: Deck, *, word: str, status: CardStatus) -> Card:
-    now = datetime.now(tz=timezone.utc)
+def _card(deck: Deck, *, word: str, status: CardStatus, created_at: datetime | None = None) -> Card:
+    timestamp = created_at or datetime.now(tz=timezone.utc)
     return Card(
         id=uuid.uuid4(),
         deck_id=deck.id,
@@ -74,11 +74,11 @@ def _card(deck: Deck, *, word: str, status: CardStatus) -> Card:
         lemma=word,
         status=status,
         interval_days=0,
-        next_review=now + timedelta(days=1),
+        next_review=timestamp + timedelta(days=1),
         reviews_count=0,
         ease_factor=2.5,
-        created_at=now,
-        updated_at=now,
+        created_at=timestamp,
+        updated_at=timestamp,
     )
 
 
@@ -117,3 +117,24 @@ async def test_get_for_user_verifies_ownership(db_session: AsyncSession) -> None
 
     assert await repo.get_for_user(card.id, owner.id)
     assert await repo.get_for_user(card.id, outsider.id) is None
+
+
+@pytest.mark.asyncio
+async def test_list_lemmas_for_profile_returns_recent_first(db_session: AsyncSession) -> None:
+    repo = CardRepository(db_session)
+    owner = await _create_user(db_session, telegram_id=10)
+    profile = await _create_profile(db_session, owner)
+    deck = await _create_deck(db_session, profile=profile, owner=owner)
+
+    base_time = datetime.now(tz=timezone.utc)
+    words = [
+        _card(deck, word="uno", status=CardStatus.NEW, created_at=base_time - timedelta(days=2)),
+        _card(deck, word="dos", status=CardStatus.NEW, created_at=base_time - timedelta(days=1)),
+        _card(deck, word="tres", status=CardStatus.NEW, created_at=base_time),
+    ]
+    db_session.add_all(words)
+    await db_session.flush()
+
+    lemmas = await repo.list_lemmas_for_profile(profile.id, limit=2)
+
+    assert lemmas == ["tres", "dos"]

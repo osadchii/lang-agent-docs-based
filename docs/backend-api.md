@@ -62,8 +62,8 @@ Mini App использует Telegram WebApp `initData` для аутентиф
   ```
 
 ### Ограничение размера запросов
-- Любой HTTP-запрос с телом больше `MAX_REQUEST_BYTES` (по умолчанию 1 MiB) получает `413 Request Entity Too Large`.
-- Значение можно понизить/повысить через переменную окружения `MAX_REQUEST_BYTES`, держим запас против DoS.
+- Любой HTTP-запрос с телом больше `MAX_REQUEST_BYTES` (по умолчанию 32 MiB) получает `413 Request Entity Too Large`.
+- Значение можно понизить/повысить через переменную окружения `MAX_REQUEST_BYTES`. Порог увеличен ради загрузки до трёх изображений по 10 МБ для OCR, но рекомендуется не опускаться ниже профиля пользователя.
 - Ответ везде следует контракту ошибок:
   ```json
   {
@@ -107,6 +107,50 @@ X-RateLimit-Reset: 1234567890
   }
 }
 ```
+
+## Медиа / OCR
+
+### `POST /api/media/ocr`
+- **Назначение:** распознать текст на изображении и предложить слова для карточек (см. UC‑5 в `docs/use-cases.md`).
+- **Авторизация:** требуется.
+- **Тело:** `multipart/form-data`
+  - `images`: 1–3 файлов `image/jpeg|png|webp|heic`, каждый ≤ `OCR_MAX_IMAGE_BYTES` (по умолчанию 10 МБ).
+  - `profile_id` (опционально): UUID; если не указан, используется активный профиль пользователя.
+- **Ответ:**
+
+```json
+{
+  "profile_id": "2b5588c1-....",
+  "target_language": "es",
+  "target_language_name": "Spanish",
+  "combined_text": "Hola, este es un ejemplo…",
+  "has_target_language": true,
+  "detected_languages": ["es"],
+  "segments": [
+    {
+      "image_index": 0,
+      "detected_languages": ["es"],
+      "contains_target_language": true,
+      "confidence": "high",
+      "full_text": "Hola, este es un ejemplo",
+      "target_text": "Hola, este es un ejemplo"
+    }
+  ],
+  "suggestions": [
+    {
+      "word": "viajar",
+      "type": "verb",
+      "reason": "Полезный глагол для путешествий",
+      "priority": 1
+    }
+  ]
+}
+```
+
+- **Ошибки:**
+  - `400 INVALID_FIELD_VALUE` — приложено слишком много изображений или превышен размер.
+  - `404 PROFILE_NOT_FOUND` — профиль не найден/неактивен.
+  - `502 LLM_SERVICE_ERROR` — GPT‑4 Vision недоступен.
 
 ### Пагинация
 

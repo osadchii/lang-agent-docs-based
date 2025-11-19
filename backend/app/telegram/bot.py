@@ -10,9 +10,14 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, AsyncIterator, Sequence, TypeAlias
 from urllib.parse import urlsplit
 
+from app.core.cache import CacheClient
 from app.core.config import settings
+from app.repositories.card import CardRepository
+from app.schemas.llm_responses import WordSuggestion
+from app.services.llm_enhanced import EnhancedLLMService
+from app.services.media import ImageInput, OCRAnalysis, OCRService
 from app.services.speech_to_text import SpeechToTextService
-from telegram import Update as TelegramUpdate
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update as TelegramUpdate
 from telegram.ext import (
     Application,
     ApplicationBuilder,
@@ -28,6 +33,8 @@ if TYPE_CHECKING:
     from app.models.user import User
     from app.services.dialog import DialogService
     from telegram import Message as TelegramMessage, User as TelegramUser
+
+from app.telegram.keyboards import CALLBACK_ADD_CARD
 
 BotApplication: TypeAlias = Application[Any, Any, Any, Any, Any, Any]
 
@@ -59,6 +66,9 @@ class TelegramBot:
         speech_to_text_service: SpeechToTextService | None = None,
         max_voice_duration_seconds: int = 120,
         max_voice_file_size_bytes: int = 3_000_000,
+        ocr_service: OCRService | None = None,
+        cache_client: CacheClient | None = None,
+        max_image_file_size_bytes: int | None = None,
     ) -> None:
         self._token = token
         self._environment = environment
@@ -72,6 +82,13 @@ class TelegramBot:
         self._speech_to_text = speech_to_text_service
         self._max_voice_duration_seconds = max_voice_duration_seconds
         self._max_voice_file_size_bytes = max_voice_file_size_bytes
+        self._ocr_service = ocr_service
+        self._cache_client = cache_client
+        self._max_image_file_size_bytes = (
+            max_image_file_size_bytes
+            if max_image_file_size_bytes is not None
+            else (ocr_service.max_image_bytes if ocr_service is not None else None)
+        )
 
         self._register_handlers()
 
@@ -177,6 +194,8 @@ class TelegramBot:
         )
         # Voice messages -> Whisper STT -> dialog flow
         self._application.add_handler(MessageHandler(filters.VOICE, self._handle_voice_message))
+        # Photo messages -> OCR
+        self._application.add_handler(MessageHandler(filters.PHOTO, self._handle_photo_message))
         # Callback query handler for inline buttons
         from app.telegram.callbacks import handle_callback_query
 
@@ -408,6 +427,112 @@ class TelegramBot:
             )
             await message.reply_text(text=GENERIC_ERROR_MESSAGE)
 
+    async def _handle_photo_message(
+        self, update: TelegramUpdate, context: ContextTypes.DEFAULT_TYPE
+    ) -> None:
+        """Handle Telegram photo messages by extracting text via OCR."""
+        message = update.effective_message
+        user = update.effective_user
+        photos = getattr(message, "photo", None)
+        ocr_service = self._ocr_service
+
+        if message is None or user is None or not photos:
+            return
+        if ocr_service is None:
+            await message.reply_text(
+                "⚠️ Распознавание изображений временно недоступно. "
+                "Попробуйте позже или оставьте текстовое сообщение."
+            )
+            return
+
+        photo = photos[-1]
+        size_error = self._image_size_error(getattr(photo, "file_size", None))
+        if size_error:
+            await message.reply_text(size_error)
+            return
+
+        payload = await self._download_file_bytes(
+            context=context,
+            file_id=getattr(photo, "file_id", None),
+            message=message,
+            user_id=getattr(user, "id", None),
+            error_text="❌ Не удалось скачать изображение. Попробуйте ещё раз.",
+        )
+        if payload is None:
+            return
+
+        actual_size_error = self._image_size_error(len(payload))
+        if actual_size_error:
+            await message.reply_text(actual_size_error)
+            return
+
+        try:
+            async with self._dialog_context(telegram_user=user) as dialog_ctx:
+                profile = dialog_ctx.profile
+                if profile is None:
+                    await message.reply_text("⚠️ Сначала создайте языковой профиль.")
+                    return
+
+                language_code = getattr(profile, "language", "ru")
+                language_name = getattr(profile, "language_name", language_code)
+
+                analysis = await ocr_service.analyze(
+                    [
+                        ImageInput(
+                            name="telegram-photo",
+                            content_type="image/jpeg",
+                            data=payload,
+                        )
+                    ],
+                    target_language_code=language_code,
+                    target_language_name=language_name,
+                )
+
+                llm_service = await self._build_enhanced_llm_service()
+                suggestions: list[WordSuggestion] = []
+
+                if llm_service is not None and analysis.combined_text:
+                    session = dialog_ctx.dialog_service.conversation_repo.session
+                    card_repo = CardRepository(session)
+                    lemmas = await card_repo.list_lemmas_for_profile(profile.id)
+                    llm_result, usage = await llm_service.suggest_words_from_text(
+                        text=analysis.combined_text,
+                        language=language_code,
+                        level=getattr(profile, "current_level", "A1"),
+                        goals=list(getattr(profile, "goals", [])),
+                        known_lemmas=lemmas,
+                    )
+                    suggestions = list(llm_result.suggestions[:5])
+                    await llm_service.track_token_usage(
+                        db_session=session,
+                        user_id=str(dialog_ctx.user.id),
+                        profile_id=str(profile.id),
+                        usage=usage,
+                        operation="telegram_ocr_suggestions",
+                    )
+
+                await self._send_ocr_response(
+                    message=message,
+                    analysis=analysis,
+                    suggestions=suggestions,
+                    language_name=language_name,
+                )
+
+                self._logger.info(
+                    "Photo message processed",
+                    extra={
+                        "user_id": str(dialog_ctx.user.id),
+                        "profile_id": str(profile.id),
+                        "has_target_language": analysis.has_target_language,
+                    },
+                )
+        except Exception as exc:
+            self._logger.error(
+                "Error processing photo message",
+                extra={"telegram_id": getattr(user, "id", None), "exception": str(exc)},
+            )
+            await message.reply_text(text=GENERIC_ERROR_MESSAGE)
+
     async def _send_dialog_response(self, message: "TelegramMessage", response: str) -> None:
         """Split long answers and reply with Markdown formatting."""
         from app.telegram.formatters import split_message
@@ -415,6 +540,19 @@ class TelegramBot:
         message_parts = split_message(response)
         for part in message_parts:
             await message.reply_text(part, parse_mode="Markdown")
+
+    async def _build_enhanced_llm_service(self) -> EnhancedLLMService | None:
+        """Instantiate EnhancedLLMService for inline suggestions."""
+        if self._cache_client is None:
+            return None
+
+        await self._cache_client.connect()
+        return EnhancedLLMService(
+            api_key=settings.openai_api_key.get_secret_value(),
+            cache=self._cache_client,
+            model=settings.llm_model,
+            temperature=settings.llm_temperature,
+        )
 
     def _voice_duration_error(self, duration: int | None) -> str | None:
         if duration and duration > self._max_voice_duration_seconds:
@@ -436,6 +574,68 @@ class TelegramBot:
             )
         return None
 
+    def _image_size_error(self, size_bytes: int | None) -> str | None:
+        if (
+            size_bytes
+            and self._max_image_file_size_bytes
+            and size_bytes > self._max_image_file_size_bytes
+        ):
+            limit_mb = self._max_image_file_size_bytes // 1_000_000
+            return "⚠️ Изображение слишком большое. " f"Максимальный размер: {limit_mb or 1} МБ."
+        return None
+
+    async def _send_ocr_response(
+        self,
+        *,
+        message: "TelegramMessage",
+        analysis: OCRAnalysis,
+        suggestions: Sequence[WordSuggestion],
+        language_name: str,
+    ) -> None:
+        detected_languages = sorted(
+            {lang for segment in analysis.segments for lang in segment.detected_languages}
+        )
+
+        text_parts: list[str] = []
+        if analysis.combined_text:
+            text_parts.append(f"📄 Распознанный текст:\n\n{analysis.combined_text}")
+        else:
+            text_parts.append("📄 Не удалось выделить текст на выбранном языке.")
+
+        if not analysis.has_target_language:
+            if detected_languages:
+                joined = ", ".join(detected_languages)
+                text_parts.append(
+                    f"⚠️ Текста на {language_name} не найдено. " f"Обнаруженные языки: {joined}."
+                )
+            else:
+                text_parts.append(
+                    f"⚠️ Текста на {language_name} не найдено. Попробуйте более чёткое фото."
+                )
+
+        if suggestions:
+            text_parts.append("💡 Предлагаю добавить в карточки:")
+            for suggestion in suggestions:
+                text_parts.append(f"• {suggestion.word} — {suggestion.reason}")
+
+        reply_markup = None
+        if suggestions:
+            buttons = []
+            for suggestion in suggestions:
+                callback_data = f"{CALLBACK_ADD_CARD}:{suggestion.word}:"
+                if len(callback_data.encode("utf-8")) > 64:
+                    callback_data = f"{CALLBACK_ADD_CARD}:from_message"
+                buttons.append(
+                    [InlineKeyboardButton(f"➕ {suggestion.word}", callback_data=callback_data)]
+                )
+            reply_markup = InlineKeyboardMarkup(buttons)
+
+        await message.reply_text(
+            text="\n\n".join(text_parts).strip(),
+            reply_markup=reply_markup,
+            disable_web_page_preview=True,
+        )
+
     async def _download_voice_bytes(
         self,
         *,
@@ -444,11 +644,25 @@ class TelegramBot:
         message: "TelegramMessage",
         user_id: object | None,
     ) -> bytes | None:
-        if context is None or context.bot is None:
-            return None
-
         file_id = getattr(voice, "file_id", None)
-        if not file_id:
+        return await self._download_file_bytes(
+            context=context,
+            file_id=file_id,
+            message=message,
+            user_id=user_id,
+            error_text="❌ Не удалось скачать голосовое сообщение. Попробуйте еще раз.",
+        )
+
+    async def _download_file_bytes(
+        self,
+        *,
+        context: ContextTypes.DEFAULT_TYPE,
+        file_id: str | None,
+        message: "TelegramMessage",
+        user_id: object | None,
+        error_text: str,
+    ) -> bytes | None:
+        if context is None or context.bot is None or not file_id:
             return None
 
         try:
@@ -457,12 +671,10 @@ class TelegramBot:
             return bytes(payload)
         except Exception as exc:  # pragma: no cover - telegram internals
             self._logger.error(
-                "Failed to download voice message",
+                "Failed to download file",
                 extra={"telegram_id": user_id, "error": str(exc)},
             )
-            await message.reply_text(
-                "❌ Не удалось скачать голосовое сообщение. Попробуйте еще раз."
-            )
+            await message.reply_text(error_text)
         return None
 
     async def _transcribe_voice(
