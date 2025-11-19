@@ -43,6 +43,31 @@ logger = logging.getLogger("app.services.llm_enhanced")
 
 T = TypeVar("T", bound=BaseModel)
 
+INTERFACE_LANGUAGE_NAMES: dict[str, str] = {
+    "ru": "Russian",
+    "en": "English",
+    "es": "Spanish",
+    "de": "German",
+    "fr": "French",
+    "it": "Italian",
+    "pt": "Portuguese",
+    "tr": "Turkish",
+    "zh": "Chinese",
+    "uk": "Ukrainian",
+    "pl": "Polish",
+    "ja": "Japanese",
+    "ko": "Korean",
+    "ar": "Arabic",
+}
+
+
+def _describe_interface_language(code: str) -> str:
+    normalized = (code or "").lower()
+    name = INTERFACE_LANGUAGE_NAMES.get(normalized)
+    if name:
+        return f"{name} ({normalized.upper()})"
+    return normalized.upper() or "the user's interface language"
+
 
 class EnhancedLLMService(LLMService):
     """
@@ -450,6 +475,7 @@ Respond in JSON format."""
         *,
         text: str,
         language: str,
+        interface_language: str,
         level: str,
         goals: Sequence[str],
         known_lemmas: Sequence[str],
@@ -460,6 +486,7 @@ Respond in JSON format."""
         Args:
             text: Recognized text (preferably in learner's language)
             language: Language code (ISO-639-1)
+            interface_language: Interface language used for explanations
             level: Current CEFR level
             goals: Learning goals
             known_lemmas: Lemmas already saved for the learner
@@ -475,8 +502,12 @@ Respond in JSON format."""
         known = ", ".join(deduped_lemmas[:50]) if deduped_lemmas else "none"
         goals_text = ", ".join(goals) if goals else "general practice"
 
+        interface_descriptor = _describe_interface_language(interface_language)
+
         prompt = f"""A learner is studying {language.upper()} at CEFR level {level}.
 Their goals: {goals_text}
+Their interface language for explanations is {interface_descriptor}.
+Always write explanations in this language.
 
 Text sample (possibly truncated):
 \"\"\"{snippet}\"\"\"
@@ -486,6 +517,7 @@ Suggest up to 10 useful words or short phrases to add as flashcards:
 - Ignore words already known: {known}
 - Focus on practical usefulness for the learner's level and goals.
 - Provide diverse parts of speech (verb/noun/adjective/adverb/phrase/other).
+- Keep the "reason" field in {interface_descriptor}, explaining meanings in that language only.
 
 Return JSON:
 {{

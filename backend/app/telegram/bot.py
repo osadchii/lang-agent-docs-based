@@ -476,6 +476,7 @@ class TelegramBot:
 
                 language_code = getattr(profile, "language", "ru")
                 language_name = getattr(profile, "language_name", language_code)
+                interface_language = getattr(profile, "interface_language", "ru")
 
                 analysis = await ocr_service.analyze(
                     [
@@ -499,6 +500,7 @@ class TelegramBot:
                     llm_result, usage = await llm_service.suggest_words_from_text(
                         text=analysis.combined_text,
                         language=language_code,
+                        interface_language=interface_language,
                         level=getattr(profile, "current_level", "A1"),
                         goals=list(getattr(profile, "goals", [])),
                         known_lemmas=lemmas,

@@ -283,12 +283,16 @@ async def test_suggest_words_from_text_uses_chat_structured(
     result, usage = await llm_service.suggest_words_from_text(
         text="Hola, esta es mi casa.",
         language="es",
+        interface_language="ru",
         level="A2",
         goals=["travel"],
         known_lemmas=["hola"],
     )
 
     mock_chat.assert_awaited_once()
+    messages = mock_chat.await_args.kwargs["messages"]
+    assert "interface language" in messages[1]["content"]
+    assert "ru".upper() in messages[1]["content"]
     assert result.suggestions[0].word == "casa"
     assert usage.total_tokens == 15
 

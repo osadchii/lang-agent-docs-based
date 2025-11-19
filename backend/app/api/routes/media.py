@@ -127,6 +127,7 @@ async def analyze_images(
         suggestions, usage = await llm_service.suggest_words_from_text(
             text=analysis.combined_text,
             language=profile.language,
+            interface_language=profile.interface_language,
             level=profile.current_level,
             goals=list(profile.goals),
             known_lemmas=existing_lemmas,
