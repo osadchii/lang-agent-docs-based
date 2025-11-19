@@ -209,7 +209,7 @@
   - OpenAI Moderation API + простые правила; graceful degradation и подсказки пользователю (см. `docs/backend-bot-responses.md`)
   - Acceptance: токсичные/неуместные запросы отсекаются, пользователь получает корректные подсказки
 
-- [ ] **39) Резервные копии и восстановление**
+- [x] **39) Резервные копии и восстановление**
   - Скрипты backup БД и retention (см. `docs/deployment.md`, `docs/backend-database.md`), документированная процедура восстановления
   - Acceptance: тестовый backup/restore успешно проходит; cron настроен на сервере
 

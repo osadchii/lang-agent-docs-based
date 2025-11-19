@@ -1154,175 +1154,76 @@ CREATE INDEX CONCURRENTLY idx_new_index ON table_name(column_name);
 
 ## Backup и восстановление
 
-### Стратегия резервного копирования
+### Автоматические full backup'ы
 
-**1. Automated Daily Backups**
+Скрипт `scripts/backup.sh` выполняет полный `pg_dump` в формате custom, архивирует файл и складывает его в каталоги `daily/weekly/monthly` внутри `BACKUP_DIR` (по умолчанию `/var/backups/postgres`). При запуске он:
+- подхватывает параметры подключения (`POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`) из `.env`/`ENV_FILE`;
+- создаёт каталоги `daily`, `weekly`, `monthly` и записывает ежедневный backup в `daily`;
+- копирует архив в `weekly` по дню недели `BACKUP_WEEKLY_DAY` (по умолчанию воскресенье) и в `monthly` в день `BACKUP_MONTHLY_DAY` (1‑е число);
+- удаляет старые архивы в соответствии с `BACKUP_RETENTION_*`;
+- при `BACKUP_ENABLE_RCLONE=true` загружает архив в `BACKUP_REMOTE/BACKUP_REMOTE_PATH` через `rclone`.
 
-**Полный backup (ежедневно в 3:00 UTC):**
 ```bash
-#!/bin/bash
-# /scripts/backup.sh
-
-DATE=$(date +%Y-%m-%d_%H-%M-%S)
-BACKUP_DIR=/backups/postgresql
-DATABASE=langbot
-
-# Full backup
-pg_dump -U postgres -F c -b -v -f "$BACKUP_DIR/langbot_$DATE.backup" $DATABASE
-
-# Сжатие
-gzip "$BACKUP_DIR/langbot_$DATE.backup"
-
-# Удаление бэкапов старше 30 дней
-find $BACKUP_DIR -name "*.backup.gz" -mtime +30 -delete
-
-# Копирование архива во внешнее объектное хранилище (пример с rclone)
-rclone copy "$BACKUP_DIR/langbot_$DATE.backup.gz" object-storage:langbot/backups/
+# ручной прогон из каталога деплоя
+ENV_FILE=/opt/lang-agent/.env BACKUP_DIR=/var/backups/postgres ./scripts/backup.sh
 ```
 
-**Cron:**
+Переменные окружения для настройки:
+
+| Переменная | Значение по умолчанию | Описание |
+| --- | --- | --- |
+| `BACKUP_DIR` | `/var/backups/postgres` | Корневая папка с `daily/weekly/monthly`. |
+| `BACKUP_PREFIX` | `lang-agent` | Префикс имени файла (`<prefix>_YYYYMMDD_HHMMSSZ.backup.gz`). |
+| `BACKUP_RETENTION_DAILY_DAYS` | `30` | Сколько дней храним `daily`. |
+| `BACKUP_RETENTION_WEEKLY_DAYS` | `90` | Retention недельных снимков. |
+| `BACKUP_RETENTION_MONTHLY_DAYS` | `365` | Retention месячных снимков. |
+| `BACKUP_WEEKLY_DAY` | `7` | День недели (1=Пн .. 7=Вс), когда копируем в weekly. |
+| `BACKUP_MONTHLY_DAY` | `01` | День месяца, когда формируем monthly. |
+| `BACKUP_ENABLE_RCLONE` | `false` | Включить выгрузку в объектное хранилище. |
+| `BACKUP_REMOTE` | — | Имя `rclone` remote (обязательно при включённой выгрузке). |
+| `BACKUP_REMOTE_PATH` | `backups/<prefix>/<YYYY>/<MM>` | Путь внутри remote. |
+
+**Cron (prod):**
+
 ```cron
-0 3 * * * /scripts/backup.sh >> /var/log/backup.log 2>&1
+0 3 * * * cd /opt/lang-agent && ENV_FILE=/opt/lang-agent/.env ./scripts/backup.sh >> /var/log/lang-agent/backup.log 2>&1
 ```
 
-**2. Point-in-Time Recovery (PITR)**
+### Retention и контроль
 
-**Настройка WAL archiving:**
-```conf
-# postgresql.conf
-wal_level = replica
-archive_mode = on
-archive_command = 'test ! -f /mnt/archive/%f && cp %p /mnt/archive/%f'
-archive_timeout = 300  # 5 минут
+`backup.sh` сам вызывает `find ... -delete`, поэтому дополнительных скриптов не требуется. Раз в неделю проверяем, что:
+
+```bash
+ls -lh /var/backups/postgres/daily | tail -5
+ls -lh /var/backups/postgres/weekly | tail -5
+ls -lh /var/backups/postgres/monthly | tail -5
 ```
 
-**Преимущества:**
-- Восстановление на любую секунду
-- Минимальная потеря данных (RPO < 5 минут)
-
-**3. Streaming Replication (для Production)**
-
-**Настройка standby сервера:**
-```conf
-# primary
-max_wal_senders = 3
-wal_keep_size = 1GB
-
-# standby
-primary_conninfo = 'host=primary-db port=5432 user=replicator password=secret'
-restore_command = 'cp /mnt/archive/%f %p'
-```
+и что объём каталога остаётся в пределах квоты (`du -sh /var/backups/postgres`).
 
 ### Восстановление
 
-**Из полного backup:**
-```bash
-# 1. Остановить приложение
-systemctl stop langbot-backend
-
-# 2. Создать новую БД (если нужно)
-createdb langbot_restore
-
-# 3. Восстановить из backup
-gunzip -c /backups/langbot_2025-01-08.backup.gz | pg_restore -U postgres -d langbot_restore -v
-
-# 4. Проверить данные
-psql -U postgres langbot_restore
-
-# 5. Переключить приложение на новую БД
-# Изменить DATABASE_URL в .env
-
-# 6. Запустить приложение
-systemctl start langbot-backend
-```
-
-**Point-in-Time Recovery:**
-```bash
-# 1. Восстановить последний полный backup
-pg_restore -d langbot_restore /backups/langbot_2025-01-08.backup
-
-# 2. Применить WAL до нужного времени
-# recovery.conf
-restore_command = 'cp /mnt/archive/%f %p'
-recovery_target_time = '2025-01-08 14:30:00'
-
-# 3. Запустить PostgreSQL (автоматически применит WAL)
-```
-
-### Тестирование backup
-
-**Регулярно (раз в месяц):**
-```bash
-# 1. Восстановить backup в тестовую БД
-pg_restore -d test_restore /backups/latest.backup
-
-# 2. Проверить целостность
-psql -d test_restore -c "SELECT COUNT(*) FROM users;"
-psql -d test_restore -c "SELECT COUNT(*) FROM cards;"
-
-# 3. Запустить тесты приложения на тестовой БД
-pytest --database-url=postgresql://localhost/test_restore
-
-# 4. Удалить тестовую БД
-dropdb test_restore
-```
-
-### Мониторинг backups
-
-**Проверка успешности:**
-```bash
-# Последний успешный backup
-ls -lh /backups/postgresql/ | tail -1
-
-# Размер backups
-du -sh /backups/postgresql/
-
-# Alert если backup не создался в последние 25 часов
-find /backups/postgresql/ -name "*.backup.gz" -mtime -1 | grep -q . || \
-  echo "ALERT: No recent backups found!"
-```
-
-### Шифрование backups
+Скрипт `scripts/restore.sh` принимает путь к архиву и (опционально) имя базы, создаёт её при необходимости и прогоняет `pg_restore` c `--clean --if-exists`.
 
 ```bash
-# Шифрование backup перед загрузкой в облако
-pg_dump -U postgres -F c langbot | \
-  gzip | \
-  openssl enc -aes-256-cbc -salt -pass pass:$BACKUP_PASSWORD > \
-  /backups/langbot_encrypted_$DATE.backup.gz.enc
-
-# Расшифровка
-openssl enc -aes-256-cbc -d -pass pass:$BACKUP_PASSWORD \
-  -in /backups/langbot_encrypted_$DATE.backup.gz.enc | \
-  gunzip | \
-  pg_restore -U postgres -d langbot_restore
+# восстановление во временную базу lang_agent_restore
+ENV_FILE=/opt/lang-agent/.env   RESTORE_DROP_EXISTING=true   ./scripts/restore.sh /var/backups/postgres/daily/lang-agent_2025-01-08_030000Z.backup.gz lang_agent_restore
 ```
 
-### Retention Policy
+Опции:
+- `RESTORE_DB` — имя базы (альтернатива второму аргументу);
+- `RESTORE_DROP_EXISTING=true` — удалять базу, если уже существует;
+- `RESTORE_MANAGE_DATABASE=false` — пропускаем `createdb`/`dropdb`, если работаем по `PGSERVICE`.
 
-**Хранение backups:**
-- Ежедневные: 30 дней
-- Еженедельные (воскресенье): 3 месяца
-- Ежемесячные (1-е число): 1 год
+### Проверка процедуры backup/restore
 
-```bash
-# Скрипт для применения retention policy
-#!/bin/bash
-
-BACKUP_DIR=/backups/postgresql
-
-# Ежедневные (старше 30 дней)
-find $BACKUP_DIR/daily -name "*.backup.gz" -mtime +30 -delete
-
-# Еженедельные (старше 90 дней)
-find $BACKUP_DIR/weekly -name "*.backup.gz" -mtime +90 -delete
-
-# Ежемесячные (старше 365 дней)
-find $BACKUP_DIR/monthly -name "*.backup.gz" -mtime +365 -delete
-```
+1. Запускаем backup локально (`ENV_FILE=.env BACKUP_DIR=./var/backups ./scripts/backup.sh`).
+2. Восстанавливаем архив во временную БД (`RESTORE_DROP_EXISTING=true RESTORE_DB=lang_agent_restore ./scripts/restore.sh <backup>`).
+3. Проверяем целостность (`psql -d lang_agent_restore -c "SELECT COUNT(*) FROM users;"`).
+4. Прогоняем тесты против восстановленной БД: `pytest --database-url=postgresql+asyncpg://postgres:postgres@localhost:5432/lang_agent_restore`.
+5. Удаляем временную БД (`dropdb lang_agent_restore`).
 
 ---
-
 ## Мониторинг производительности
 
 ### Key Metrics

@@ -8813,373 +8813,29 @@ Prometheus считывает `/metrics` backend'а каждые 15 секунд
 
 
 
-### База данных
+### Резервные копии
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-**Ежедневные бэкапы:**
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+**Скрипт:** `scripts/backup.sh` (лежит в репозитории, на проде кладываем в `/opt/lang-agent/scripts`). Он подхватывает `.env`, делает `pg_dump` в формате custom, архивирует результат, режет `daily/weekly/monthly` и чистит старые файлы по `BACKUP_RETENTION_*`. Логи отправляем в `/var/log/lang-agent/backup.log`.
 
 ```bash
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#!/bin/bash
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# backup.sh
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-BACKUP_DIR=/var/backups/postgres
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-DATE=$(date +%Y%m%d_%H%M%S)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-pg_dump -h localhost -U postgres langagent | gzip > $BACKUP_DIR/backup_$DATE.sql.gz
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Удаление старых бэкапов (старше 30 дней)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-find $BACKUP_DIR -name "backup_*.sql.gz" -mtime +30 -delete
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+ENV_FILE=/opt/lang-agent/.env BACKUP_DIR=/var/backups/postgres ./scripts/backup.sh
 ```
 
+**Cron (prod):**
 
+```cron
+0 3 * * * cd /opt/lang-agent && ENV_FILE=/opt/lang-agent/.env ./scripts/backup.sh >> /var/log/lang-agent/backup.log 2>&1
+```
 
+**Выгрузка в object storage / S3:**
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-**Cron job:**
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Скрипт сам вызывает `rclone`, достаточно выставить переменные:
 
 ```bash
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-0 2 * * * /usr/local/bin/backup.sh
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+BACKUP_ENABLE_RCLONE=true BACKUP_REMOTE=object-storage:lang-agent BACKUP_REMOTE_PATH=database/$(hostname) ENV_FILE=/opt/lang-agent/.env ./scripts/backup.sh
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-**Копирование во внешнее хранилище:**
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-```bash
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-rclone copy $BACKUP_DIR/backup_$DATE.sql.gz object-storage:lang-agent/database/
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+`rclone` конфиг (ключи) лежит в `/root/.config/rclone/rclone.conf`, доступ ограничен.
 
 ### Файлы пользователей
 
@@ -9263,211 +8919,19 @@ rclone copy $BACKUP_DIR/backup_$DATE.sql.gz object-storage:lang-agent/database/
 
 ### Восстановление
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+1. **Выбираем архив.** По `ls -lh /var/backups/postgres/daily` смотрим последний `.backup.gz`.
+2. **Останавливаем backend.** `docker compose stop backend`.
+3. **Запускаем restore.**
 
 ```bash
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Восстановление из бэкапа
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-gunzip < backup_20250109.sql.gz | psql -h localhost -U postgres langagent
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Восстановление из внешнего хранилища
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-rclone copy object-storage:lang-agent/database/backup_20250109.sql.gz .
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-gunzip < backup_20250109.sql.gz | psql -h localhost -U postgres langagent
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+cd /opt/lang-agent
+ENV_FILE=/opt/lang-agent/.env   RESTORE_DROP_EXISTING=true   ./scripts/restore.sh /var/backups/postgres/daily/lang-agent_2025-01-08_030000Z.backup.gz lang_agent_restore
 ```
 
+4. **Проверяем базу.** `psql -d lang_agent_restore -c 'SELECT COUNT(*) FROM users;'` + `pytest --database-url=postgresql+asyncpg://postgres:postgres@localhost:5432/lang_agent_restore`.
+5. **Переключаемся.** Обновляем `DATABASE_URL` в `.env`, прогоняем `alembic upgrade head`, затем `docker compose up -d backend`.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-## Rollback
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Откат на предыдущую версию при проблемах:
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+`restore.sh` поддерживает `RESTORE_MANAGE_DATABASE=false`, если БД создаётся вручную, и `RESTORE_DB=<name>`, если не хотим передавать вторым аргументом.
 
 ### Процедура ручного rollback
 
@@ -10207,101 +9671,25 @@ docker-compose logs -f backend
 
 ### Восстановление из бэкапа
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Если проблемы сохраняются после rollback:
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+1. **Скачать архив.**
 
 ```bash
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Восстановить БД из бэкапа
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-gunzip < /var/backups/postgres/backup_YYYYMMDD.sql.gz | \
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  docker-compose exec -T db psql -U postgres -d langagent
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+cd /opt/lang-agent
+rclone copy object-storage:lang-agent/database/latest.backup.gz /var/backups/postgres/
 ```
+
+2. **Проверить целостность.** `gunzip -t /var/backups/postgres/latest.backup.gz`.
+3. **Запустить восстановление в рабочую БД.**
+
+```bash
+ENV_FILE=/opt/lang-agent/.env   RESTORE_DROP_EXISTING=true   ./scripts/restore.sh /var/backups/postgres/latest.backup.gz lang_agent
+```
+
+4. **Поднять сервисы.** `docker compose up -d backend redis db`.
+5. **Smoke-тесты.** `curl https://$BACKEND_DOMAIN/health` и `pytest --maxfail=1 --disable-warnings` (опционально на staging).
+
+Если нужно развернуть архив за конкретную дату — меняем путь на `.../backup_YYYYMMDD.sql.gz` или `daily/lang-agent_YYYYMMDD_HHMMSSZ.backup.gz`.
+
 ### NotificationWorker: streak reminders
 
 - NotificationWorker запускается внутри backend-процесса и активируется только при `NOTIFICATION_WORKER_ENABLED=true`. Локально оставляем флаг выключенным, чтобы не держать соединение с продовой БД.
