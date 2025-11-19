@@ -4,10 +4,15 @@ from types import SimpleNamespace
 from typing import cast
 from unittest.mock import AsyncMock
 
+import httpx
 import pytest
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, BadRequestError
 
-from app.services.speech_to_text import SpeechToTextResult, SpeechToTextService
+from app.services.speech_to_text import (
+    SpeechToTextResult,
+    SpeechToTextService,
+    _build_openai_error_context,
+)
 
 
 @pytest.mark.asyncio
@@ -47,3 +52,23 @@ async def test_transcribe_rejects_empty_payload() -> None:
 
     with pytest.raises(ValueError):
         await service.transcribe(b"")
+
+
+def test_build_openai_error_context_includes_response_details() -> None:
+    request = httpx.Request("POST", "https://api.openai.com/v1/audio/transcriptions")
+    response = httpx.Response(
+        status_code=400,
+        request=request,
+        json={"error": {"message": "Invalid audio file", "code": "file_invalid", "param": "file"}},
+        headers={"x-request-id": "req_123456"},
+    )
+    body = response.json()
+    error = BadRequestError("Invalid audio file", response=response, body=body)
+
+    context = _build_openai_error_context(error)
+
+    assert context["status_code"] == 400
+    assert context["openai_code"] == "file_invalid"
+    assert context["openai_param"] == "file"
+    assert context["response_body"] == body
+    assert context["request_id"] == "req_123456"
