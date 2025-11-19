@@ -1138,6 +1138,17 @@ async def track_token_usage(
     await redis.expire(redis_key, 86400)  # 24 часа
 ```
 
+#### Метрики token_usage
+
+- `app_llm_prompt_tokens_total{operation, model}` — входящие токены (prompt).
+- `app_llm_completion_tokens_total{operation, model}` — исходящие токены (completion).
+- `app_llm_total_tokens_total{operation, model}` — общая нагрузка на LLM.
+- `app_llm_estimated_cost_usd_total{operation, model}` — оценочные расходы.
+
+Эти счётчики обновляются в `EnhancedLLMService.track_token_usage` после успешного коммита в базу.
+Grafana-дашборд `backend-observability` (панели “LLM tokens per second” и “LLM spend”) использует их
+через Prometheus. На панели расхода настроен алерт, который срабатывает, если почасовой бюджет превышает `$0.05`.
+
 #### Оптимизация промптов
 
 **1. Сокращение системного промпта:**

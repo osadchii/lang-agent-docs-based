@@ -28,6 +28,7 @@ from app.core.cache import (
     topics_cache_key,
 )
 from app.core.errors import LLMParsingError
+from app.core.token_metrics import record_llm_usage_metrics
 from app.models import TokenUsage
 from app.schemas.llm_responses import (
     CardContent,
@@ -625,6 +626,15 @@ Respond in JSON format:
             if isinstance(add_result, Awaitable):
                 await add_result
             await db_session.commit()
+
+            record_llm_usage_metrics(
+                operation=operation,
+                model=self.model,
+                prompt_tokens=usage.prompt_tokens,
+                completion_tokens=usage.completion_tokens,
+                total_tokens=usage.total_tokens,
+                estimated_cost=usage.estimated_cost,
+            )
 
             logger.info(
                 "Token usage tracked",

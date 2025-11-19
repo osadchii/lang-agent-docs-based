@@ -20,7 +20,10 @@
 
 - Продовый `backend/Dockerfile` + корневой `docker-compose.yml` (backend/db/redis + Loki 3 + Promtail 3 + Grafana 12 + Nginx proxy, healthchecks, Alembic перед стартом)
 
-- Prometheus-инструментация /metrics через prometheus_fastapi_instrumentator (с request_id в гистограммах)
+- Prometheus 2.54 подключён через `infra/prometheus/prometheus.yml`, каждые 15 секунд снимает `/metrics` с backend'а, хранит данные в volume `prometheus_data` и доступен из Grafana как datasource `Prometheus`.
+
+- /metrics включает стандартные http-метрики (`prometheus_fastapi_instrumentator`) и кастомные счётчики LLM (`app_llm_*`) с разбивкой по операции/модели, поэтому бюджет по токенам/стоимости видно прямо в Grafana.
+- Учёт расхода LLM (таблица `token_usage` + Prometheus‑счётчики tokens/cost и Grafana-алерт на почасовой бюджет)
 
 - Telegram Bot API интеграция: `python-telegram-bot` 20.8, вебхук `POST /telegram-webhook/{bot_token}` + helper для polling (`python -m app.telegram.polling`), конфигурация по `docs/backend-telegram.md`
 
@@ -68,7 +71,7 @@
 
 ├── Makefile                 # Команды: local-up/local-down, lint, test
 
-├── infra/                   # Конфиги наблюдаемости (Loki, Promtail, Grafana)
+├── infra/                   # Конфиги наблюдаемости (Loki, Promtail, Grafana, Prometheus)
 
 ├── docs/                    # Источник правды по архитектуре, API и процессам
 
@@ -317,7 +320,7 @@ equest_id (exemplar) — этого достаточно для подключе
 
 equest_id (exemplar) для корреляции с логами.
 
-- При первом старте Grafana 12 автоматически импортирует datasoure `Loki` и дашборд `Backend Observability` из `infra/grafana/provisioning/dashboards/backend-observability.json` (RPS, p95 latency, 4xx/5xx, top endpoints).
+- При первом старте Grafana 12 автоматически импортирует datasoure `Loki` и `Prometheus`, а также дашборд `Backend Observability` из `infra/grafana/provisioning/dashboards/backend-observability.json` (RPS, p95 latency, 4xx/5xx, top endpoints, LLM tokens/sec и почасовой spend c алертом > $0.05).
 
 - Nginx proxy автоматически выпускает Let's Encrypt сертификаты для `GRAFANA_DOMAIN`, `BACKEND_DOMAIN` и `FRONTEND_DOMAIN`, пробрасывая `https://<BACKEND_DOMAIN>` на backend (порт 8000), `https://<FRONTEND_DOMAIN>` на сервис `frontend` и `https://<GRAFANA_DOMAIN>` на Grafana. Для повторных запусков сертификаты кэшируются в volume `nginx_certs` / `nginx_acme`.
 

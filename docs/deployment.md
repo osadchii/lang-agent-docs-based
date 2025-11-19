@@ -8603,6 +8603,8 @@ docker-compose logs --tail=100 backend
 
 - Использование LLM API (tokens, cost)
 
+Prometheus считывает `/metrics` backend'а каждые 15 секунд (см. `infra/prometheus/prometheus.yml`), хранит срезы в volume `prometheus_data` и отдаёт Grafana datasource `Prometheus`. В `/metrics` добавлены кастомные счётчики `app_llm_*` (tokens, cost, operation, model), поэтому бюджет видно на панели “LLM spend” с авт. алертом > $0.05/час в `Backend Observability`.
+
 
 
 

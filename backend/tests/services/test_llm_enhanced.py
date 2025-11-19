@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -298,7 +298,11 @@ async def test_suggest_words_from_text_uses_chat_structured(
 
 
 @pytest.mark.asyncio
-async def test_track_token_usage(llm_service: EnhancedLLMService, mock_cache: AsyncMock) -> None:
+async def test_track_token_usage(
+    llm_service: EnhancedLLMService,
+    mock_cache: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Test track_token_usage method."""
     from uuid import uuid4
 
@@ -311,6 +315,12 @@ async def test_track_token_usage(llm_service: EnhancedLLMService, mock_cache: As
     mock_session.add = AsyncMock()
     mock_session.commit = AsyncMock()
 
+    metrics_recorder = Mock()
+    monkeypatch.setattr(
+        "app.services.llm_enhanced.record_llm_usage_metrics",
+        metrics_recorder,
+    )
+
     await llm_service.track_token_usage(
         db_session=mock_session,
         user_id=user_id,
@@ -322,6 +332,14 @@ async def test_track_token_usage(llm_service: EnhancedLLMService, mock_cache: As
     # Verify token usage was saved
     mock_session.add.assert_called_once()
     mock_session.commit.assert_awaited_once()
+    metrics_recorder.assert_called_once()
+    metric_kwargs = metrics_recorder.call_args.kwargs
+    assert metric_kwargs["operation"] == "chat"
+    assert metric_kwargs["model"] == "gpt-4o-mini"
+    assert metric_kwargs["prompt_tokens"] == 100
+    assert metric_kwargs["completion_tokens"] == 50
+    assert metric_kwargs["total_tokens"] == 150
+    assert metric_kwargs["estimated_cost"] == pytest.approx(usage.estimated_cost)
 
 
 @pytest.mark.asyncio

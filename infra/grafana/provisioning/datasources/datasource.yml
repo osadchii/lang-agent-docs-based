@@ -14,3 +14,9 @@ datasources:
           name: TraceID
           url: "$${__value.raw}"
     editable: false
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    uid: prometheus
+    url: http://prometheus:9090
+    editable: false
