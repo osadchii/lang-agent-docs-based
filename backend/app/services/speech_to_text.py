@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import io
+import json
 import logging
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Literal, Mapping
 
 from openai import (
     APIConnectionError,
@@ -60,6 +61,47 @@ def _build_openai_error_context(exc: OpenAIError) -> dict[str, Any]:
                 extra["reason"] = reason
 
     return extra
+
+
+def _summarize_openai_error_context(
+    context: Mapping[str, Any],
+    *,
+    max_response_chars: int = 400,
+) -> str:
+    ordered_keys = (
+        "status_code",
+        "openai_code",
+        "openai_param",
+        "openai_type",
+        "error",
+        "response_body",
+        "reason",
+        "request_id",
+    )
+
+    parts: list[str] = []
+    for key in ordered_keys:
+        value = context.get(key)
+        if value is None or value == "":
+            continue
+        if key == "response_body":
+            serialized = _stringify_value(value)
+            if len(serialized) > max_response_chars:
+                serialized = serialized[: max_response_chars - 3] + "..."
+            parts.append(f"{key}={serialized}")
+        else:
+            parts.append(f"{key}={_stringify_value(value)}")
+
+    return ", ".join(parts) if parts else "no-extra-context"
+
+
+def _stringify_value(value: object) -> str:
+    if isinstance(value, (dict, list)):
+        try:
+            return json.dumps(value, ensure_ascii=True, separators=(",", ":"))
+        except TypeError:
+            return str(value)
+    return str(value)
 
 
 @dataclass(slots=True)
@@ -131,30 +173,43 @@ class SpeechToTextService:
                 timeout=timeout or self.default_timeout,
             )
         except AuthenticationError as exc:
+            context = _build_openai_error_context(exc)
             logger.error(
-                "Whisper authentication failed",
-                extra=_build_openai_error_context(exc),
+                "Whisper authentication failed | %s",
+                _summarize_openai_error_context(context),
+                extra=context,
             )
             raise
         except BadRequestError as exc:
-            logger.error("Whisper bad request", extra=_build_openai_error_context(exc))
+            context = _build_openai_error_context(exc)
+            logger.error(
+                "Whisper bad request | %s",
+                _summarize_openai_error_context(context),
+                extra=context,
+            )
             raise
         except RateLimitError as exc:
+            context = _build_openai_error_context(exc)
             logger.warning(
-                "Whisper rate limit exceeded, retrying",
-                extra=_build_openai_error_context(exc),
+                "Whisper rate limit exceeded, retrying | %s",
+                _summarize_openai_error_context(context),
+                extra=context,
             )
             raise
         except APIConnectionError as exc:
+            context = _build_openai_error_context(exc)
             logger.warning(
-                "Whisper connection issue, retrying",
-                extra=_build_openai_error_context(exc),
+                "Whisper connection issue, retrying | %s",
+                _summarize_openai_error_context(context),
+                extra=context,
             )
             raise
         except OpenAIError as exc:
+            context = _build_openai_error_context(exc)
             logger.error(
-                "Whisper API error",
-                extra=_build_openai_error_context(exc),
+                "Whisper API error | %s",
+                _summarize_openai_error_context(context),
+                extra=context,
             )
             raise
 

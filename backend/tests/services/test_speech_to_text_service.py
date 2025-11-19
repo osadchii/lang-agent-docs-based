@@ -12,6 +12,7 @@ from app.services.speech_to_text import (
     SpeechToTextResult,
     SpeechToTextService,
     _build_openai_error_context,
+    _summarize_openai_error_context,
 )
 
 
@@ -72,3 +73,20 @@ def test_build_openai_error_context_includes_response_details() -> None:
     assert context["openai_param"] == "file"
     assert context["response_body"] == body
     assert context["request_id"] == "req_123456"
+
+
+def test_summarize_openai_error_context_truncates_large_payload() -> None:
+    context = {
+        "status_code": 400,
+        "openai_code": "file_invalid",
+        "response_body": {"error": {"message": "A" * 1000}},
+        "request_id": "req_truncate",
+    }
+
+    summary = _summarize_openai_error_context(context, max_response_chars=100)
+
+    assert "status_code=400" in summary
+    assert "openai_code=file_invalid" in summary
+    assert "request_id=req_truncate" in summary
+    body_fragment = next(part for part in summary.split(", ") if part.startswith("response_body="))
+    assert body_fragment.endswith("...")
