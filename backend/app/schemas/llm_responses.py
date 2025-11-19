@@ -7,9 +7,9 @@ providing validation, type safety, and parsing capabilities.
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import ClassVar, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class CardContent(BaseModel):
@@ -104,6 +104,26 @@ class WordSuggestion(BaseModel):
     )
     reason: str = Field(description="Why this word is useful")
     priority: int = Field(ge=1, le=10, description="Priority (1=highest)")
+
+    _TYPE_ALIASES: ClassVar[dict[str, str]] = {
+        "preposition": "other",
+        "conjunction": "other",
+        "pronoun": "other",
+        "article": "other",
+        "determiner": "other",
+        "interjection": "other",
+        "particle": "other",
+    }
+
+    @field_validator("type", mode="before")
+    @classmethod
+    def _normalize_type(cls, value: object) -> str:
+        if isinstance(value, str):
+            normalized = value.lower().strip()
+            if normalized in {"verb", "noun", "adjective", "adverb", "phrase", "other"}:
+                return normalized
+            return cls._TYPE_ALIASES.get(normalized, "other")
+        return "other"
 
 
 class WordSuggestions(BaseModel):

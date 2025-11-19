@@ -316,6 +316,15 @@ class TestWordSuggestion:
         assert suggestions.suggestions[0].type == "noun"
         assert suggestions.suggestions[1].type == "phrase"
 
+    def test_word_suggestion_type_aliases(self) -> None:
+        suggestion = WordSuggestion(
+            word="entre",
+            type="preposition",
+            reason="Common connective",
+            priority=3,
+        )
+        assert suggestion.type == "other"
+
 
 class TestSerializationDeserialization:
     """Tests for JSON serialization and deserialization."""
