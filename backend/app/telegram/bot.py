@@ -12,9 +12,11 @@ from urllib.parse import urlsplit
 
 from app.core.cache import CacheClient
 from app.core.config import settings
+from app.core.db import AsyncSessionFactory
 from app.core.errors import ApplicationError
 from app.repositories.card import CardRepository
 from app.schemas.llm_responses import WordSuggestion
+from app.services.llm import TokenUsage as LLMTokenUsage
 from app.services.llm_enhanced import EnhancedLLMService
 from app.services.media import ImageInput, OCRAnalysis, OCRService
 from app.services.speech_to_text import SpeechToTextService
@@ -506,8 +508,8 @@ class TelegramBot:
                         known_lemmas=lemmas,
                     )
                     suggestions = list(llm_result.suggestions[:5])
-                    await llm_service.track_token_usage(
-                        db_session=session,
+                    await self._persist_token_usage(
+                        llm_service=llm_service,
                         user_id=str(dialog_ctx.user.id),
                         profile_id=str(profile.id),
                         usage=usage,
@@ -652,6 +654,30 @@ class TelegramBot:
             reply_markup=reply_markup,
             disable_web_page_preview=True,
         )
+
+    async def _persist_token_usage(
+        self,
+        *,
+        llm_service: EnhancedLLMService,
+        user_id: str,
+        profile_id: str | None,
+        usage: LLMTokenUsage,
+        operation: str,
+    ) -> None:
+        try:
+            async with AsyncSessionFactory() as usage_session:
+                await llm_service.track_token_usage(
+                    db_session=usage_session,
+                    user_id=user_id,
+                    profile_id=profile_id,
+                    usage=usage,
+                    operation=operation,
+                )
+        except Exception as exc:  # pragma: no cover - defensive
+            self._logger.debug(
+                "Token usage tracking skipped",
+                extra={"error": str(exc), "operation": operation, "user_id": user_id},
+            )
 
     async def _download_voice_bytes(
         self,

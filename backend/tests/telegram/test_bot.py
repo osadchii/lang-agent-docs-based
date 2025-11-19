@@ -3,7 +3,7 @@ from __future__ import annotations
 import socket
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from types import MethodType, SimpleNamespace
+from types import MethodType, SimpleNamespace, TracebackType
 from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
@@ -355,6 +355,20 @@ async def test_handle_photo_message_processes(monkeypatch: pytest.MonkeyPatch) -
     bot._build_enhanced_llm_service = AsyncMock(return_value=llm_stub)
     bot._send_ocr_response = AsyncMock()
 
+    class _DummyUsageSession:
+        async def __aenter__(self) -> SimpleNamespace:
+            return SimpleNamespace()
+
+        async def __aexit__(
+            self,
+            exc_type: type[BaseException] | None,
+            exc: BaseException | None,
+            tb: TracebackType | None,
+        ) -> None:
+            return None
+
+    monkeypatch.setattr(telegram_bot_module, "AsyncSessionFactory", lambda: _DummyUsageSession())
+
     class DummyCardRepository:
         def __init__(self, session: object) -> None:
             self.session = session
@@ -412,6 +426,20 @@ async def test_handle_photo_message_surfaces_application_error(
     )
     bot, _ = build_bot(monkeypatch, ocr_service=ocr_service)
     bot._download_file_bytes = AsyncMock(return_value=b"image-bytes")
+
+    class _DummyUsageSession:
+        async def __aenter__(self) -> SimpleNamespace:
+            return SimpleNamespace()
+
+        async def __aexit__(
+            self,
+            exc_type: type[BaseException] | None,
+            exc: BaseException | None,
+            tb: TracebackType | None,
+        ) -> None:
+            return None
+
+    monkeypatch.setattr(telegram_bot_module, "AsyncSessionFactory", lambda: _DummyUsageSession())
 
     dialog_context = SimpleNamespace(
         user=SimpleNamespace(id=uuid4()),
