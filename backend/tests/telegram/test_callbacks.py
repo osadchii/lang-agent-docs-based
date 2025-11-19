@@ -81,10 +81,9 @@ class TestHandleCallbackQuery:
 
         await handle_callback_query(mock_update, mock_context)
 
-        # Check that answer was called
         mock_callback_query.answer.assert_called_once()
-        # Check that message was edited
-        mock_callback_query.edit_message_text.assert_called_once()
+        mock_callback_query.edit_message_text.assert_not_called()
+        mock_callback_query.message.reply_text.assert_awaited_once()
 
     async def test_handle_add_card_from_message(
         self,
@@ -98,7 +97,8 @@ class TestHandleCallbackQuery:
         await handle_callback_query(mock_update, mock_context)
 
         mock_callback_query.answer.assert_called_once()
-        mock_callback_query.edit_message_text.assert_called_once()
+        mock_callback_query.edit_message_text.assert_not_called()
+        mock_callback_query.message.reply_text.assert_awaited_once()
 
     async def test_handle_remove_card_callback(
         self,
@@ -206,6 +206,7 @@ class TestHandleCallbackQuery:
         call_args = mock_callback_query.answer.call_args
         assert call_args is not None
         assert "Не удалось извлечь данные" in call_args.kwargs.get("text", "")
+        assert mock_message.reply_text.await_count == 0
 
     async def test_handle_remove_card_invalid_format(
         self,

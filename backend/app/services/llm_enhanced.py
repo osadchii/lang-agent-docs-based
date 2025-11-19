@@ -517,6 +517,8 @@ Suggest up to 10 useful words or short phrases to add as flashcards:
 - Ignore words already known: {known}
 - Focus on practical usefulness for the learner's level and goals.
 - Provide diverse parts of speech (verb/noun/adjective/adverb/phrase/other).
+- Normalize each word (lowercase) and include the appropriate article/determiner when the language
+  uses them (e.g., \"el coche\", \"la casa\", \"το βιβλίο\"). Avoid the source text casing.
 - Keep the "reason" field in {interface_descriptor}, explaining meanings in that language only.
 
 Return JSON:

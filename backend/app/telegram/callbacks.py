@@ -69,13 +69,8 @@ async def _handle_add_card(
     query: CallbackQuery,
     context: ContextTypes.DEFAULT_TYPE,
 ) -> None:
-    """
-    Обработать запрос на добавление карточки.
+    """Обработать запрос на добавление карточки без скрытия остального контента."""
 
-    Args:
-        query: Callback query
-        context: Контекст бота
-    """
     del context  # Контекст не используется
 
     if not query.data or not query.message:
@@ -83,21 +78,14 @@ async def _handle_add_card(
 
     user = query.from_user
 
-    # Парсим callback_data: "add_card:word:translation" или "add_card:from_message"
     parts = query.data.split(":", 2)
 
     if len(parts) == 3 and parts[1] != "from_message":
         word = parts[1]
         translation = parts[2]
     else:
-        # Извлекаем word и translation из текста сообщения
-        # Формат сообщения: "*word* — translation"
-        # Проверяем что message является Message (а не MaybeInaccessibleMessage)
         if not isinstance(query.message, Message):
-            await query.answer(
-                text="❌ Сообщение недоступно",
-                show_alert=True,
-            )
+            await query.answer(text="❌ Сообщение недоступно", show_alert=True)
             return
 
         text = query.message.text or query.message.caption or ""
@@ -111,10 +99,8 @@ async def _handle_add_card(
             return
 
         word = match.group(1)
-        translation = match.group(2).split("\n")[0].strip()  # Только первая строка
+        translation = match.group(2).split("\n")[0].strip()
 
-    # TODO: Интеграция с CardService когда он будет создан
-    # Пока просто логируем и показываем заглушку
     logger.info(
         "Add card callback triggered",
         extra={
@@ -124,16 +110,15 @@ async def _handle_add_card(
         },
     )
 
-    # Временная заглушка: успешное добавление
     success_text = format_success_message(
         f'Карточка "{word}" будет добавлена ' "(функционал в разработке: требуется CardService)"
     )
 
-    await query.edit_message_text(
-        text=success_text,
-        parse_mode="MarkdownV2",
-        reply_markup=remove_keyboard(),
-    )
+    message = query.message
+    if isinstance(message, Message):
+        await message.reply_text(text=success_text, parse_mode="MarkdownV2")
+    else:  # pragma: no cover - защитная ветка
+        await query.answer(text="Сообщение недоступно", show_alert=True)
 
 
 async def _handle_remove_card(
