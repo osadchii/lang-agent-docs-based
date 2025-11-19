@@ -541,7 +541,8 @@ class TelegramBot:
             await message.reply_text(exc.message)
         except Exception as exc:
             self._logger.error(
-                "Error processing photo message",
+                "Error processing photo message | %s",
+                str(exc),
                 extra={"telegram_id": getattr(user, "id", None), "exception": str(exc)},
                 exc_info=True,
             )
