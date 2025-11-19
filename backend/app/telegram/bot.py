@@ -12,6 +12,7 @@ from urllib.parse import urlsplit
 
 from app.core.cache import CacheClient
 from app.core.config import settings
+from app.core.errors import ApplicationError
 from app.repositories.card import CardRepository
 from app.schemas.llm_responses import WordSuggestion
 from app.services.llm_enhanced import EnhancedLLMService
@@ -526,10 +527,21 @@ class TelegramBot:
                         "has_target_language": analysis.has_target_language,
                     },
                 )
+        except ApplicationError as exc:
+            self._logger.warning(
+                "Photo message rejected",
+                extra={
+                    "telegram_id": getattr(user, "id", None),
+                    "error_code": exc.code,
+                    "details": exc.details,
+                },
+            )
+            await message.reply_text(exc.message)
         except Exception as exc:
             self._logger.error(
                 "Error processing photo message",
                 extra={"telegram_id": getattr(user, "id", None), "exception": str(exc)},
+                exc_info=True,
             )
             await message.reply_text(text=GENERIC_ERROR_MESSAGE)
 

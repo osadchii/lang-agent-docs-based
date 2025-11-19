@@ -10,6 +10,7 @@ from uuid import uuid4
 import pytest
 
 import app.telegram.bot as telegram_bot_module
+from app.core.errors import ApplicationError, ErrorCode
 from app.services.speech_to_text import SpeechToTextResult
 from app.telegram.bot import TelegramBot
 
@@ -393,6 +394,50 @@ async def test_handle_photo_message_processes(monkeypatch: pytest.MonkeyPatch) -
     ocr_service.analyze.assert_awaited_once()
     bot._send_ocr_response.assert_awaited_once()
     assert message.replies == []
+
+
+@pytest.mark.asyncio
+async def test_handle_photo_message_surfaces_application_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    ocr_service = SimpleNamespace(
+        analyze=AsyncMock(
+            side_effect=ApplicationError(
+                code=ErrorCode.INVALID_FIELD_VALUE,
+                message="?? ??????? ?????????? ?????? ???????????.",
+            )
+        ),
+        max_image_bytes=1_000_000,
+    )
+    bot, _ = build_bot(monkeypatch, ocr_service=ocr_service)
+    bot._download_file_bytes = AsyncMock(return_value=b"image-bytes")
+
+    dialog_context = SimpleNamespace(
+        user=SimpleNamespace(id=uuid4()),
+        profile=SimpleNamespace(
+            id=uuid4(),
+            language="es",
+            language_name="Spanish",
+            current_level="A2",
+            goals=["travel"],
+        ),
+        dialog_service=SimpleNamespace(
+            conversation_repo=SimpleNamespace(session=object()),
+        ),
+    )
+
+    @asynccontextmanager
+    async def fake_context() -> AsyncIterator[SimpleNamespace]:
+        yield dialog_context
+
+    bot._dialog_context = MethodType(lambda self, *, telegram_user: fake_context(), bot)
+
+    message = RecordingMessage(photo=[SimpleNamespace(file_id="photo", file_size=123)])
+    update = SimpleNamespace(effective_message=message, effective_user=SimpleNamespace(id=1))
+
+    await bot._handle_photo_message(update, context=SimpleNamespace(bot=SimpleNamespace()))
+
+    assert message.replies == ["?? ??????? ?????????? ?????? ???????????."]
 
 
 @pytest.mark.asyncio
