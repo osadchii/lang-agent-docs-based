@@ -528,8 +528,10 @@ class TelegramBot:
                     },
                 )
         except ApplicationError as exc:
+            error_summary = f"code={exc.code}, message={exc.message}"
             self._logger.warning(
-                "Photo message rejected",
+                "Photo message rejected | %s",
+                error_summary,
                 extra={
                     "telegram_id": getattr(user, "id", None),
                     "error_code": exc.code,
