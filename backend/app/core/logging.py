@@ -17,14 +17,32 @@ _LOGGING_CONFIGURED: bool = False
 class JsonLogFormatter(logging.Formatter):
     """Serialize log records into a JSON structure suitable for log aggregation."""
 
-    EXTRA_FIELDS: Final[tuple[str, ...]] = (
-        "event",
-        "http_method",
-        "http_path",
-        "status_code",
-        "duration_ms",
-        "client_ip",
-        "user_agent",
+    RESERVED_ATTRS: Final[frozenset[str]] = frozenset(
+        {
+            "args",
+            "asctime",
+            "created",
+            "exc_info",
+            "exc_text",
+            "filename",
+            "funcName",
+            "levelname",
+            "levelno",
+            "lineno",
+            "module",
+            "msecs",
+            "message",
+            "msg",
+            "name",
+            "pathname",
+            "process",
+            "processName",
+            "relativeCreated",
+            "stack_info",
+            "thread",
+            "threadName",
+            "request_id",
+        }
     )
 
     def format(self, record: logging.LogRecord) -> str:
@@ -39,10 +57,9 @@ class JsonLogFormatter(logging.Formatter):
         if request_id:
             log_entry["request_id"] = request_id
 
-        for field in self.EXTRA_FIELDS:
-            value = getattr(record, field, None)
-            if value is not None:
-                log_entry[field] = value
+        extra_fields = self._extract_extra_fields(record)
+        if extra_fields:
+            log_entry.update(extra_fields)
 
         if record.exc_info:
             # Replace newlines with space to keep single-line JSON
@@ -56,6 +73,30 @@ class JsonLogFormatter(logging.Formatter):
 
         # Ensure single-line JSON output (no indentation)
         return json.dumps(log_entry, ensure_ascii=True, separators=(",", ":"))
+
+    def _extract_extra_fields(self, record: logging.LogRecord) -> dict[str, Any]:
+        extras: dict[str, Any] = {}
+        for key, value in record.__dict__.items():
+            if key in self.RESERVED_ATTRS or key.startswith("_"):
+                continue
+            if value is None:
+                continue
+            extras[key] = self._normalize_value(value)
+        return extras
+
+    @staticmethod
+    def _normalize_value(value: object) -> object:
+        if isinstance(value, (str, int, float, bool)):
+            return value
+        if value is None:
+            return None
+        if isinstance(value, (list, dict)):
+            try:
+                json.dumps(value)
+                return value
+            except TypeError:
+                return str(value)
+        return str(value)
 
 
 def configure_logging(level_name: str) -> None:

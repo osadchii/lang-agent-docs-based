@@ -77,3 +77,30 @@ def test_json_formatter_enriches_request_context(fresh_logging_module: ModuleTyp
     assert payload["http_path"] == "/health"
     assert payload["status_code"] == 200
     assert payload["duration_ms"] == 12.5
+
+
+def test_json_formatter_includes_arbitrary_extra_fields(
+    fresh_logging_module: ModuleType,
+) -> None:
+    logger = logging.getLogger("test-extra")
+    record = logger.makeRecord(
+        name="test-extra",
+        level=logging.ERROR,
+        fn="test_logging.py",
+        lno=99,
+        msg="whisper failed",
+        args=(),
+        exc_info=None,
+        func="test_json_formatter_includes_arbitrary_extra_fields",
+        extra={
+            "openai_code": "file_invalid",
+            "response_body": {"error": {"message": "bad audio"}},
+            "non_serializable": object(),
+        },
+    )
+
+    payload = json.loads(logging_module.JsonLogFormatter().format(record))
+
+    assert payload["openai_code"] == "file_invalid"
+    assert payload["response_body"] == {"error": {"message": "bad audio"}}
+    assert isinstance(payload["non_serializable"], str)
