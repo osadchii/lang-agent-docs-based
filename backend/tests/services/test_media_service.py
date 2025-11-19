@@ -109,3 +109,31 @@ async def test_analyze_uses_full_text_when_target_missing() -> None:
 
     assert analysis.combined_text == "Bonjour"
     assert analysis.has_target_language is False
+
+
+@pytest.mark.asyncio
+async def test_analyze_supports_list_payloads_from_vision() -> None:
+    response_payload = json.dumps(
+        {
+            "full_text": ["Linea 1", "Linea 2"],
+            "target_text": ["Hola", "Mundo"],
+            "detected_languages": ["es"],
+            "contains_target_language": True,
+        }
+    )
+    mock_client = SimpleNamespace(
+        chat=SimpleNamespace(
+            completions=SimpleNamespace(
+                create=AsyncMock(return_value=_vision_response(response_payload))
+            )
+        )
+    )
+    service = OCRService(api_key="test", client=mock_client)
+
+    analysis = await service.analyze(
+        [ImageInput(name="photo.png", content_type="image/png", data=_image_bytes())],
+        target_language_code="es",
+        target_language_name="Spanish",
+    )
+
+    assert analysis.segments[0].target_text == "Hola Mundo"

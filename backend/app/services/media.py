@@ -20,7 +20,7 @@ from openai import (
 )
 from openai.types.chat.chat_completion import ChatCompletion
 from PIL import Image, ImageOps, UnidentifiedImageError
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from app.core.errors import ApplicationError, ErrorCode
@@ -98,6 +98,18 @@ class _VisionPayload(BaseModel):
     contains_target_language: bool = Field(
         default=False, description="Whether target language text was found."
     )
+
+    @field_validator("full_text", "target_text", mode="before")
+    @classmethod
+    def _coerce_text(cls, value: object) -> str:
+        if value is None:
+            return ""
+        if isinstance(value, str):
+            return value
+        if isinstance(value, (list, tuple)):
+            parts = [str(item).strip() for item in value if item]
+            return "\n".join(parts)
+        return str(value)
 
 
 class OCRService:
