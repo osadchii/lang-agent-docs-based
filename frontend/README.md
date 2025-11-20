@@ -45,24 +45,38 @@ npm run preview
 
 ```
 frontend/
-├── src/
-│   ├── hooks/           # React hooks
-│   │   └── useTelegram.ts
-│   ├── pages/           # Страницы
-│   │   ├── Home/
-│   │   └── Error/
-│   ├── router/          # Роутинг
-│   │   └── index.tsx
-│   ├── styles/          # Глобальные стили
-│   │   └── globals.css
-│   ├── types/           # TypeScript типы
-│   │   └── telegram.ts
-│   ├── App.tsx
-│   └── main.tsx
-├── index.html
-├── package.json
-└── vite.config.ts
+  src/
+    api/
+    components/
+      ui/                # Button, Card, Input/Textarea, Modal/BottomSheet, Badge, Progress, Tabs, Toast, Skeleton, EmptyState
+    hooks/
+      useTelegram.ts
+    pages/
+      Home/
+      Error/
+      UiKit/             # Экран-превью UI-kit (/ui-kit)
+    router/
+      index.tsx
+    styles/
+      globals.css
+      tokens.ts          # Design tokens (цвета/радиусы/шрифты)
+      theme.tsx          # ThemeProvider с Telegram-theme params
+    utils/
+      classNames.ts
+    types/
+      telegram.ts
+    App.tsx
+    main.tsx
+  index.html
+  package.json
+  vite.config.ts
 ```
+
+## UI-kit и темы
+
+- ???????? `src/components/ui`: Button, Card, Input/Textarea, Modal/BottomSheet, Badge, Progress, Tabs, Toast, Skeleton, EmptyState
+- `ThemeProvider` (`src/styles/theme.tsx`) ???????? tokens (`src/styles/tokens.ts`), ???????? Telegram `themeParams` ? ????????? ??????? ??????? ??????????
+- ????? ????????: ??????? `/ui-kit` ?? dev-??????? (Vite)
 
 ## Интеграция с Telegram
 

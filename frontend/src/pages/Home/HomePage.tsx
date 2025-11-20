@@ -1,4 +1,5 @@
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { fetchChatHistory, sendChatMessage } from '../../api/chat';
 import { activateProfile, createProfile, fetchProfiles } from '../../api/profiles';
 import { useAuth } from '../../hooks/useAuth';
@@ -322,6 +323,9 @@ export const HomePage = () => {
                     {telegramUser?.username && (
                         <span className="badge">@{telegramUser.username}</span>
                     )}
+                    <Link to="/ui-kit" className="ghost-button">
+                        UI Kit
+                    </Link>
                 </div>
             </header>
 

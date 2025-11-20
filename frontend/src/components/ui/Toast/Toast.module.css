@@ -1,0 +1,76 @@
+.container {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(520px, calc(100% - 24px));
+    display: grid;
+    gap: 10px;
+    z-index: 1200;
+}
+
+.toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 16px;
+    border-radius: var(--radius-lg);
+    background: rgba(16, 22, 45, 0.85);
+    border: 1px solid var(--color-border-subtle);
+    box-shadow: var(--shadow-hard);
+    color: var(--color-text-primary);
+    animation: slideUp 180ms ease;
+}
+
+.title {
+    font-weight: var(--font-weight-heading);
+    font-size: 15px;
+}
+
+.message {
+    color: var(--color-text-secondary);
+    font-size: 14px;
+    margin-top: 2px;
+}
+
+.close {
+    background: transparent;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    margin-left: auto;
+}
+
+.accent {
+    width: 6px;
+    height: 100%;
+    border-radius: var(--radius-pill);
+    background: var(--gradient-accent);
+}
+
+.typeSuccess .accent {
+    background: linear-gradient(180deg, #3fd6a5, #1ea475);
+}
+
+.typeError .accent {
+    background: linear-gradient(180deg, #ff7b70, #ff3556);
+}
+
+.typeWarning .accent {
+    background: linear-gradient(180deg, #f5c56a, #d68a1f);
+}
+
+.typeInfo .accent {
+    background: linear-gradient(180deg, #5ac8ff, #187bc0);
+}
+
+@keyframes slideUp {
+    from {
+        transform: translate(-50%, 20px);
+        opacity: 0;
+    }
+    to {
+        transform: translate(-50%, 0);
+        opacity: 1;
+    }
+}

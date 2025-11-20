@@ -1,0 +1,47 @@
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: var(--radius-pill);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--color-text-secondary);
+}
+
+.sizeMd {
+    font-size: 13px;
+    padding: 8px 12px;
+}
+
+.variantDefault {
+    border-color: var(--color-border-subtle);
+}
+
+.variantSuccess {
+    border-color: rgba(63, 214, 165, 0.4);
+    background: rgba(63, 214, 165, 0.12);
+    color: #d6fff0;
+}
+
+.variantError {
+    border-color: rgba(255, 123, 112, 0.5);
+    background: rgba(255, 123, 112, 0.15);
+    color: #ffe5e0;
+}
+
+.variantWarning {
+    border-color: rgba(245, 197, 106, 0.55);
+    background: rgba(245, 197, 106, 0.16);
+    color: #fff3d6;
+}
+
+.variantInfo {
+    border-color: rgba(90, 200, 255, 0.5);
+    background: rgba(90, 200, 255, 0.14);
+    color: #e3f6ff;
+}

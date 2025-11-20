@@ -1,0 +1,63 @@
+.wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.labelRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: var(--color-text-muted);
+}
+
+.bar {
+    position: relative;
+    width: 100%;
+    height: 10px;
+    border-radius: var(--radius-pill);
+    background: rgba(255, 255, 255, 0.06);
+    overflow: hidden;
+}
+
+.value {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--gradient-accent);
+    transition: width 0.2s ease;
+}
+
+.indeterminate {
+    width: 35%;
+    animation: slide 1.2s infinite;
+}
+
+.spinner {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 4px solid rgba(255, 255, 255, 0.14);
+    border-top-color: var(--color-accent);
+    animation: spin 0.9s linear infinite;
+    align-self: center;
+}
+
+@keyframes slide {
+    0% {
+        transform: translateX(-100%);
+    }
+    50% {
+        transform: translateX(40%);
+    }
+    100% {
+        transform: translateX(120%);
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

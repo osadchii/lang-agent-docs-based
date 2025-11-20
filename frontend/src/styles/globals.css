@@ -1,9 +1,5 @@
-/**
- * Global Styles
- * Base styles and CSS reset
- */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap');
 
-/* Reset and Base Styles */
 * {
     margin: 0;
     padding: 0;
@@ -12,29 +8,24 @@
 
 html,
 body {
-    margin: 0;
-    padding: 0;
     width: 100%;
     min-height: 100vh;
-    font-family:
-        -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell',
-        'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    background: #0a0e27;
-    color: #ffffff;
+    background:
+        radial-gradient(120% 120% at 10% 10%, rgba(255, 126, 94, 0.12), transparent),
+        radial-gradient(120% 120% at 90% 20%, rgba(141, 139, 255, 0.1), transparent),
+        linear-gradient(190deg, var(--color-bg-primary), var(--color-bg-secondary));
+    color: var(--color-text-primary);
     overflow-x: hidden;
+    font-family: var(--font-sans);
 }
 
 body {
-    /* Telegram WebApp specific */
     overscroll-behavior: none;
     -webkit-tap-highlight-color: transparent;
     user-select: none;
     -webkit-user-select: none;
 }
 
-/* Allow text selection in specific elements */
 input,
 textarea,
 [contenteditable] {
@@ -42,52 +33,54 @@ textarea,
     -webkit-user-select: text;
 }
 
-/* Links */
 a {
-    color: #ff6b35;
+    color: var(--color-link);
     text-decoration: none;
-    transition: color 0.2s;
+    transition: color 0.2s ease;
+    font-weight: 600;
 }
 
 a:hover {
-    color: #ff8c5a;
+    color: var(--color-accent-strong);
 }
 
-/* Scrollbar Styles (for desktop) */
+ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-    background: rgba(26, 29, 53, 0.5);
+    background: rgba(26, 29, 53, 0.4);
 }
 
 ::-webkit-scrollbar-thumb {
-    background: rgba(255, 107, 53, 0.5);
-    border-radius: 4px;
+    background: rgba(255, 122, 60, 0.4);
+    border-radius: 6px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 107, 53, 0.7);
+    background: rgba(255, 63, 110, 0.6);
 }
 
-/* Selection */
 ::selection {
-    background: rgba(255, 107, 53, 0.3);
-    color: #ffffff;
+    background: rgba(255, 126, 94, 0.26);
+    color: var(--color-text-inverted);
 }
 
-/* Focus Styles */
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 textarea:focus-visible {
-    outline: 2px solid #ff6b35;
+    outline: 2px solid var(--color-accent);
     outline-offset: 2px;
 }
 
-/* Image Rendering */
 img {
     max-width: 100%;
     height: auto;

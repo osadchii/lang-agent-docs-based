@@ -6,6 +6,7 @@
 import { createBrowserRouter } from 'react-router-dom';
 import { HomePage } from '../pages/Home/HomePage';
 import { ErrorPage } from '../pages/Error/ErrorPage';
+import { UiKitPage } from '../pages/UiKit/UiKitPage';
 
 export const router = createBrowserRouter([
     {
@@ -16,6 +17,10 @@ export const router = createBrowserRouter([
     {
         path: '/error',
         element: <ErrorPage />,
+    },
+    {
+        path: '/ui-kit',
+        element: <UiKitPage />,
     },
     {
         path: '*',

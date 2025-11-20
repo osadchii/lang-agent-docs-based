@@ -4,7 +4,7 @@
  */
 
 import { startTransition, useEffect, useState } from 'react';
-import type { TelegramWebApp, TelegramUser } from '../types/telegram';
+import type { TelegramWebApp, TelegramUser, ThemeParams } from '../types/telegram';
 
 interface UseTelegramReturn {
     webApp: TelegramWebApp | null;
@@ -13,11 +13,14 @@ interface UseTelegramReturn {
     colorScheme: 'light' | 'dark';
     platform: string;
     isReady: boolean;
+    themeParams: ThemeParams | null;
 }
 
 export const useTelegram = (): UseTelegramReturn => {
     const [isReady, setIsReady] = useState(false);
     const [webApp, setWebApp] = useState<TelegramWebApp | null>(null);
+    const [themeParams, setThemeParams] = useState<ThemeParams | null>(null);
+    const [colorScheme, setColorScheme] = useState<'light' | 'dark'>('dark');
 
     useEffect(() => {
         const tg = window.Telegram?.WebApp;
@@ -34,10 +37,18 @@ export const useTelegram = (): UseTelegramReturn => {
             tg.setHeaderColor('#0A0E27');
             tg.setBackgroundColor('#0A0E27');
 
+            const syncTheme = () => {
+                setThemeParams({ ...tg.themeParams });
+                setColorScheme(tg.colorScheme || 'dark');
+            };
+
             startTransition(() => {
                 setWebApp(tg);
                 setIsReady(true);
+                syncTheme();
             });
+
+            tg.onEvent('themeChanged', syncTheme);
 
             console.log('Telegram WebApp initialized:', {
                 version: tg.version,
@@ -45,6 +56,10 @@ export const useTelegram = (): UseTelegramReturn => {
                 colorScheme: tg.colorScheme,
                 user: tg.initDataUnsafe.user,
             });
+
+            return () => {
+                tg.offEvent('themeChanged', syncTheme);
+            };
         } else {
             console.warn('Telegram WebApp is not available. Running in browser mode.');
             // For development: create mock data
@@ -52,6 +67,12 @@ export const useTelegram = (): UseTelegramReturn => {
                 const mockWebApp = createMockWebApp();
                 startTransition(() => {
                     setWebApp(mockWebApp);
+                    setIsReady(true);
+                    setThemeParams(mockWebApp.themeParams);
+                    setColorScheme(mockWebApp.colorScheme);
+                });
+            } else {
+                startTransition(() => {
                     setIsReady(true);
                 });
             }
@@ -62,9 +83,10 @@ export const useTelegram = (): UseTelegramReturn => {
         webApp,
         user: webApp?.initDataUnsafe.user || null,
         initData: webApp?.initData || '',
-        colorScheme: webApp?.colorScheme || 'dark',
+        colorScheme,
         platform: webApp?.platform || 'unknown',
         isReady,
+        themeParams,
     };
 };
 

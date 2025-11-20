@@ -1,0 +1,39 @@
+.emptyState {
+    display: grid;
+    justify-items: center;
+    gap: 12px;
+    padding: 24px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px dashed var(--color-border-subtle);
+    border-radius: var(--radius-xl);
+}
+
+.icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.04);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+}
+
+.title {
+    font-size: 18px;
+    font-weight: var(--font-weight-heading);
+}
+
+.description {
+    color: var(--color-text-secondary);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}

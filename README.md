@@ -47,6 +47,7 @@
 - Nginx reverse proxy + ACME companion, который автоматически выпускает Let's Encrypt сертификат для Grafana (наружу торчит только HTTPS)
 
 - Mini App проходит авторизацию через `/api/auth/validate` и экран «Задать вопрос» отправляет сообщения в `/api/sessions/chat` + читает историю из `/api/dialog/history` (см. `frontend/src/pages/Home`, `docs/backend-api.md`)
+- Базовый UI-kit для Mini App: Button, Card, Input/Textarea, Modal/BottomSheet, Badge, Progress, Tabs, Toast, Skeleton, EmptyState; поддержка тем Telegram через ThemeProvider и токены (frontend/src/styles/theme.tsx).
 
 
 

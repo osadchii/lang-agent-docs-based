@@ -1,68 +1,56 @@
 :root {
-    font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+    --color-bg-primary: #090f27;
+    --color-bg-secondary: #0e1634;
+    --color-surface: #111a3d;
+    --color-elevated: #192355;
+    --color-overlay: rgba(2, 6, 23, 0.7);
+
+    --color-text-primary: #f7f8ff;
+    --color-text-secondary: #c8cee6;
+    --color-text-muted: #9fa6c5;
+    --color-text-inverted: #050915;
+
+    --color-accent: #ff7a3c;
+    --color-accent-strong: #ff5e78;
+    --color-accent-highlight: #8d8bff;
+    --color-link: #5ac8ff;
+
+    --color-success: #3fd6a5;
+    --color-warning: #f5c56a;
+    --color-danger: #ff7b70;
+    --color-info: #5ac8ff;
+
+    --color-border-subtle: #242d52;
+    --color-border-strong: #2f3a63;
+
+    --gradient-accent: linear-gradient(120deg, #ff7a3c, #ff3f6e 45%, #8d8bff 100%);
+    --gradient-surface: linear-gradient(145deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0));
+    --gradient-soft: linear-gradient(180deg, rgba(255, 126, 94, 0.12), rgba(141, 139, 255, 0.08));
+
+    --shadow-soft: 0 14px 45px rgba(0, 0, 0, 0.35);
+    --shadow-medium: 0 10px 30px rgba(11, 14, 38, 0.5);
+    --shadow-hard: 0 20px 50px rgba(0, 0, 0, 0.55);
+
+    --radius-xs: 6px;
+    --radius-sm: 10px;
+    --radius-md: 14px;
+    --radius-lg: 18px;
+    --radius-xl: 24px;
+    --radius-pill: 999px;
+
+    --font-sans:
+        'Space Grotesk', 'Manrope', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+        sans-serif;
+    --font-mono: 'JetBrains Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+    --font-weight-heading: 700;
+    --font-weight-body: 500;
+
+    font-family: var(--font-sans);
     line-height: 1.5;
-    font-weight: 400;
-
-    color-scheme: light dark;
-    color: rgba(255, 255, 255, 0.87);
-    background-color: #242424;
-
-    font-synthesis: none;
+    font-weight: var(--font-weight-body);
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-    font-weight: 500;
-    color: #646cff;
-    text-decoration: inherit;
-}
-a:hover {
-    color: #535bf2;
-}
-
-body {
-    margin: 0;
-    display: flex;
-    place-items: center;
-    min-width: 320px;
-    min-height: 100vh;
-}
-
-h1 {
-    font-size: 3.2em;
-    line-height: 1.1;
-}
-
-button {
-    border-radius: 8px;
-    border: 1px solid transparent;
-    padding: 0.6em 1.2em;
-    font-size: 1em;
-    font-weight: 500;
-    font-family: inherit;
-    background-color: #1a1a1a;
-    cursor: pointer;
-    transition: border-color 0.25s;
-}
-button:hover {
-    border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-    outline: 4px auto -webkit-focus-ring-color;
-}
-
-@media (prefers-color-scheme: light) {
-    :root {
-        color: #213547;
-        background-color: #ffffff;
-    }
-    a:hover {
-        color: #747bff;
-    }
-    button {
-        background-color: #f9f9f9;
-    }
 }

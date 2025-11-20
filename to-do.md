@@ -145,7 +145,8 @@
 
 - [x] **25) CI фронтенда и деплой**
   - Workflows: `frontend-quality` + `frontend-build` jobs в `.github/workflows/backend-deploy.yml` (см. `docs/ci-cd.md`)
-   - Prod hosting: Docker-образ (rontend/Dockerfile) публикуется в GHCR, Docker Compose тянет FRONTEND_IMAGE (см. docs/deployment.md)
+   - Prod hosting: Docker-образ (
+rontend/Dockerfile) публикуется в GHCR, Docker Compose тянет FRONTEND_IMAGE (см. docs/deployment.md)
    - Acceptance: пуш в `main` деплоит фронтенд; страница грузится с сервера
 
 ## Этап H. Расширение базовой функциональности (после MVP)
@@ -214,7 +215,7 @@
   - Acceptance: тестовый backup/restore успешно проходит; cron настроен на сервере
 
 ## Этап L. Mini App — полная реализация
-- [ ] **40) Дизайн‑система и тема**
+- [x] **40) Дизайн‑система и тема**
   - Токены: цвета, размеры, тени; компоненты: Button, Card, Input/Textarea, Modal/BottomSheet, Badge, Progress, Tabs, Toast, Skeleton, EmptyState (см. `docs/frontend-structure.md`)
   - Интеграция темы Telegram WebApp (светлая/тёмная), адаптивные шрифты и отступы
   - Acceptance: библиотека UI компонентов покрывает основные экраны; переключение темы работает

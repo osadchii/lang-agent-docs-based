@@ -1,8 +1,13 @@
 .home-page {
     min-height: 100vh;
     padding: 32px 20px 40px;
-    background: linear-gradient(180deg, #0a0e27 0%, #15183a 40%, #090b1e 100%);
-    color: #ffffff;
+    background: linear-gradient(
+        180deg,
+        var(--color-bg-primary) 0%,
+        var(--color-bg-secondary) 45%,
+        var(--color-bg-primary) 100%
+    );
+    color: var(--color-text-primary);
     display: flex;
     flex-direction: column;
     gap: 24px;
@@ -17,7 +22,7 @@
 
 .home-page.error-state .hint {
     margin-top: 8px;
-    color: #c5c8db;
+    color: var(--color-text-muted);
     font-size: 14px;
 }
 
@@ -25,30 +30,30 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--gradient-surface);
+    border: 1px solid var(--color-border-subtle);
     border-radius: 20px;
     padding: 20px;
-    backdrop-filter: blur(12px);
+    box-shadow: var(--shadow-soft);
 }
 
 .eyebrow {
     text-transform: uppercase;
     letter-spacing: 0.2em;
     font-size: 11px;
-    color: #9ea2c2;
+    color: var(--color-text-muted);
     margin: 0;
 }
 
 .title {
     margin: 4px 0 4px;
     font-size: 32px;
-    font-weight: 700;
+    font-weight: var(--font-weight-heading);
 }
 
 .subtitle {
     margin: 0;
-    color: #c5c8db;
+    color: var(--color-text-secondary);
     font-size: 15px;
     line-height: 1.4;
 }
@@ -64,17 +69,19 @@
     border-radius: 999px;
     padding: 6px 12px;
     font-size: 12px;
-    color: #d8dbf1;
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border-subtle);
 }
 
 .chat-panel {
     background: rgba(7, 9, 22, 0.9);
     border-radius: 24px;
     padding: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--color-border-subtle);
     display: flex;
     flex-direction: column;
     gap: 16px;
+    box-shadow: var(--shadow-soft);
 }
 
 .chat-history {
@@ -85,11 +92,11 @@
 
 .load-more {
     align-self: center;
-    border: 1px solid rgba(255, 255, 255, 0.18);
+    border: 1px solid var(--color-border-strong);
     border-radius: 999px;
     padding: 6px 16px;
     background: transparent;
-    color: #ffffff;
+    color: var(--color-text-primary);
     cursor: pointer;
 }
 
@@ -109,18 +116,18 @@
 }
 
 .message.user {
-    border-left-color: #ff8c5a;
+    border-left-color: var(--color-accent);
 }
 
 .message.assistant {
-    border-left-color: #5ac8ff;
+    border-left-color: var(--color-info);
 }
 
 .message-meta {
     display: flex;
     justify-content: space-between;
     font-size: 12px;
-    color: #b6bad5;
+    color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
@@ -129,14 +136,14 @@
     margin: 0;
     font-size: 15px;
     line-height: 1.5;
-    color: #f4f6ff;
+    color: var(--color-text-primary);
 }
 
 .empty-state {
     text-align: center;
     padding: 24px;
-    color: #b6bad5;
-    border: 1px dashed rgba(255, 255, 255, 0.15);
+    color: var(--color-text-muted);
+    border: 1px dashed var(--color-border-subtle);
     border-radius: 12px;
 }
 
@@ -150,15 +157,15 @@
     font-size: 13px;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: #a7abc8;
+    color: var(--color-text-muted);
 }
 
 .chat-form textarea {
     border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--color-border-subtle);
     background: rgba(255, 255, 255, 0.05);
     padding: 12px;
-    color: #ffffff;
+    color: var(--color-text-primary);
     font-size: 15px;
     resize: none;
     font-family: inherit;
@@ -175,8 +182,8 @@
     padding: 12px 18px;
     font-size: 15px;
     font-weight: 600;
-    background: linear-gradient(120deg, #ff8c5a, #ff4d97);
-    color: #ffffff;
+    background: var(--gradient-accent);
+    color: var(--color-text-inverted);
     cursor: pointer;
 }
 
@@ -189,10 +196,11 @@
     background: rgba(7, 9, 22, 0.9);
     border-radius: 24px;
     padding: 20px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--color-border-subtle);
     display: flex;
     flex-direction: column;
     gap: 16px;
+    box-shadow: var(--shadow-soft);
 }
 
 .profiles-header {
@@ -204,23 +212,20 @@
 
 .profiles-subtitle {
     margin: 4px 0 0;
-    color: #b6bad5;
+    color: var(--color-text-muted);
     font-size: 14px;
 }
 
 .ghost-button {
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid var(--color-border-strong);
     background: transparent;
-    color: #ffffff;
+    color: var(--color-text-primary);
     border-radius: 999px;
     padding: 8px 16px;
     cursor: pointer;
 }
 
 .profile-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 12px;
@@ -229,7 +234,7 @@
 .profile-card {
     border-radius: 18px;
     padding: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--color-border-subtle);
     background: rgba(255, 255, 255, 0.02);
     display: flex;
     flex-direction: column;
@@ -237,7 +242,7 @@
 }
 
 .profile-card.active {
-    border-color: #5ac8ff;
+    border-color: var(--color-info);
     background: rgba(90, 200, 255, 0.08);
 }
 
@@ -254,13 +259,13 @@
 
 .profile-language span {
     font-size: 12px;
-    color: #9ea2c2;
+    color: var(--color-text-muted);
 }
 
 .profile-levels {
     margin: 0;
     font-size: 14px;
-    color: #c5c8db;
+    color: var(--color-text-secondary);
 }
 
 .profile-goals {
@@ -288,7 +293,7 @@
     border-radius: 12px;
     padding: 6px 12px;
     background: rgba(255, 255, 255, 0.15);
-    color: #ffffff;
+    color: var(--color-text-primary);
     cursor: pointer;
 }
 
@@ -299,12 +304,12 @@
 
 .profile-streak {
     font-size: 14px;
-    color: #ffcf5a;
+    color: var(--color-warning);
 }
 
 .profile-form {
     border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--color-border-subtle);
     padding: 16px;
     display: flex;
     flex-direction: column;
@@ -324,19 +329,19 @@
     gap: 6px;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #a7abc8;
+    color: var(--color-text-muted);
 }
 
 .profile-form select {
     border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--color-border-subtle);
     background: rgba(255, 255, 255, 0.04);
-    color: #ffffff;
+    color: var(--color-text-primary);
     padding: 8px;
 }
 
 .checkbox-group {
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--color-border-subtle);
     border-radius: 12px;
     padding: 12px;
 }
@@ -356,7 +361,7 @@
 }
 
 .checkbox-item input {
-    accent-color: #ff8c5a;
+    accent-color: var(--color-accent);
 }
 
 .active-profile-badge {
@@ -388,7 +393,7 @@
     height: 48px;
     border-radius: 50%;
     border: 4px solid rgba(255, 255, 255, 0.15);
-    border-top-color: #ff8c5a;
+    border-top-color: var(--color-accent);
     animation: spin 1s linear infinite;
 }
 

@@ -1,0 +1,125 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--color-overlay);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 160ms ease;
+}
+
+.sheetOverlay {
+    align-items: flex-end;
+}
+
+.dialog {
+    width: min(680px, calc(100% - 32px));
+    background: var(--color-elevated);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--color-border-strong);
+    box-shadow: var(--shadow-hard);
+    padding: 20px;
+    color: var(--color-text-primary);
+    animation: scaleIn 180ms ease;
+}
+
+.bottomSheet {
+    width: 100%;
+    max-width: 720px;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-top-left-radius: 28px;
+    border-top-right-radius: 28px;
+    margin: 0 auto;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+    transform-origin: bottom;
+}
+
+.fullscreen {
+    width: 100%;
+    min-height: 100vh;
+    border-radius: 0;
+}
+
+.header {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.title {
+    font-size: 18px;
+    font-weight: var(--font-weight-heading);
+}
+
+.subtitle {
+    margin-top: 4px;
+    color: var(--color-text-muted);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.content {
+    display: grid;
+    gap: 12px;
+}
+
+.footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.closeButton {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--color-border-subtle);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.closeButton:hover {
+    color: var(--color-text-primary);
+    border-color: var(--color-border-strong);
+}
+
+.sheetHandle {
+    width: 44px;
+    height: 5px;
+    border-radius: var(--radius-pill);
+    background: rgba(255, 255, 255, 0.14);
+    margin: 0 auto 12px;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        transform: translateY(10px) scale(0.98);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
