@@ -151,3 +151,78 @@ export interface StreakResponse {
 export interface CalendarResponse {
     data: ActivityEntry[];
 }
+
+export interface Deck {
+    id: string;
+    profile_id: string;
+    name: string;
+    description?: string | null;
+    is_active: boolean;
+    is_group: boolean;
+    owner_id?: string | null;
+    owner_name?: string | null;
+    cards_count: number;
+    new_cards_count: number;
+    due_cards_count: number;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface DeckListResponse {
+    data: Deck[];
+}
+
+export type CardStatus = 'new' | 'learning' | 'review';
+export type CardRating = 'know' | 'repeat' | 'dont_know';
+
+export interface Card {
+    id: string;
+    deck_id: string;
+    word: string;
+    translation: string;
+    example: string;
+    example_translation: string;
+    lemma: string;
+    notes?: string | null;
+    status: CardStatus;
+    interval_days: number;
+    next_review: string;
+    reviews_count: number;
+    ease_factor: number;
+    last_rating?: CardRating | null;
+    last_reviewed_at?: string | null;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface CardListResponse {
+    data: Card[];
+    pagination: PaginationMeta;
+}
+
+export interface CardCreateResponse {
+    created: Card[];
+    duplicates: string[];
+    failed: string[];
+}
+
+export interface NextCardResponse {
+    id: string;
+    deck_id: string;
+    word: string;
+    translation: string;
+    example: string;
+    example_translation: string;
+    status: CardStatus;
+    next_review: string;
+}
+
+export interface RateCardResponse {
+    id: string;
+    status: CardStatus;
+    interval_days: number;
+    next_review: string;
+    reviews_count: number;
+    last_rating: CardRating;
+    last_reviewed_at: string;
+}

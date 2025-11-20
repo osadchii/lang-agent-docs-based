@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
 
 from sqlalchemy import Select, func, or_, select
 from sqlalchemy.orm import selectinload
@@ -60,6 +61,52 @@ class CardRepository(BaseRepository[Card]):
         total = int(total_result.scalar_one())
         return cards, total
 
+    async def find_by_lemma(self, deck_id: uuid.UUID, lemma: str) -> Card | None:
+        """Return a single card by lemma within the deck to prevent duplicates."""
+        stmt = (
+            select(Card)
+            .where(
+                Card.deck_id == deck_id,
+                Card.deleted.is_(False),
+                func.lower(Card.lemma) == lemma.lower(),
+            )
+            .limit(1)
+        )
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def get_next_for_deck(self, deck_id: uuid.UUID) -> Card | None:
+        """Return the next card for study: due first, then the oldest new one."""
+        now = datetime.now(timezone.utc)
+
+        due_stmt = (
+            select(Card)
+            .where(
+                Card.deck_id == deck_id,
+                Card.deleted.is_(False),
+                Card.next_review <= now,
+            )
+            .order_by(Card.next_review.asc())
+            .limit(1)
+        )
+        due_result = await self.session.execute(due_stmt)
+        due_card = due_result.scalar_one_or_none()
+        if due_card:
+            return due_card
+
+        new_stmt = (
+            select(Card)
+            .where(
+                Card.deck_id == deck_id,
+                Card.deleted.is_(False),
+                Card.status == CardStatus.NEW,
+            )
+            .order_by(Card.created_at.asc())
+            .limit(1)
+        )
+        new_result = await self.session.execute(new_stmt)
+        return new_result.scalar_one_or_none()
+
     async def get_for_user(self, card_id: uuid.UUID, user_id: uuid.UUID) -> Card | None:
         stmt = (
             select(Card)
@@ -93,6 +140,19 @@ class CardRepository(BaseRepository[Card]):
         )
         result = await self.session.execute(stmt)
         return [row[0] for row in result.all()]
+
+    async def counters_for_deck(self, deck_id: uuid.UUID) -> tuple[int, int, int]:
+        """Return total, new, and due counters for the deck."""
+        now = datetime.now(timezone.utc)
+        stmt = select(
+            func.count(),
+            func.count().filter(Card.status == CardStatus.NEW),
+            func.count().filter(Card.next_review <= now),
+        ).where(Card.deck_id == deck_id, Card.deleted.is_(False))
+
+        result = await self.session.execute(stmt)
+        total, new_count, due_count = result.one()
+        return int(total or 0), int(new_count or 0), int(due_count or 0)
 
 
 class CardReviewRepository(BaseRepository[CardReview]):

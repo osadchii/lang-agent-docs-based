@@ -1,0 +1,200 @@
+.page {
+    display: grid;
+    gap: 16px;
+    padding: 8px 0 40px;
+}
+
+.header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.title {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--color-text-primary);
+}
+
+.subtitle {
+    color: var(--color-text-secondary);
+    font-size: 14px;
+    margin-top: 4px;
+}
+
+.tabs {
+    margin-top: -4px;
+}
+
+.hero {
+    background: linear-gradient(135deg, rgba(255, 170, 120, 0.2), rgba(86, 123, 219, 0.2));
+    border: 1px solid rgba(255, 170, 120, 0.35);
+}
+
+.heroBody {
+    display: grid;
+    gap: 14px;
+}
+
+.heroFooter {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.statBlock {
+    display: grid;
+    gap: 6px;
+}
+
+.statLabel {
+    font-size: 14px;
+    color: var(--color-text-secondary);
+}
+
+.caption {
+    color: var(--color-text-secondary);
+    font-size: 13px;
+}
+
+.actionsRow {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+}
+
+.dashboard {
+    background: linear-gradient(145deg, rgba(32, 34, 45, 0.6), rgba(56, 62, 82, 0.5));
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dashboardRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.sectionLabel {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+}
+
+.deckName {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--color-text-primary);
+}
+
+.badgeStack {
+    display: grid;
+    gap: 6px;
+}
+
+.deckGrid {
+    display: grid;
+    gap: 12px;
+}
+
+.deckCard {
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition:
+        transform 180ms ease,
+        border-color 180ms ease;
+}
+
+.deckCard:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255, 170, 120, 0.4);
+}
+
+.activeDeck {
+    border-color: rgba(86, 123, 219, 0.6);
+    box-shadow: 0 12px 30px rgba(86, 123, 219, 0.18);
+}
+
+.deckHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.deckFooter {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.selectLabel {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.select {
+    width: 100%;
+    margin: 6px 0 12px;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(17, 19, 26, 0.9);
+    color: var(--color-text-primary);
+}
+
+.input {
+    margin-top: 4px;
+}
+
+.textarea {
+    width: 100%;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    padding: 12px;
+    background: rgba(18, 20, 28, 0.85);
+    color: var(--color-text-primary);
+    font-size: 14px;
+    resize: vertical;
+}
+
+.skeleton {
+    height: 140px;
+}
+
+.modalContent {
+    display: grid;
+    gap: 8px;
+}
+
+.modalFooter {
+    display: grid;
+    gap: 8px;
+}
+
+.previewCard {
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.previewList {
+    display: grid;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.previewItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.previewItem:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}

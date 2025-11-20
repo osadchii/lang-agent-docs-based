@@ -69,5 +69,29 @@ class DeckRepository(BaseRepository[Deck]):
         result = await self.session.execute(stmt)
         return list(result.scalars().unique())
 
+    async def get_active_for_profile(
+        self,
+        profile_id: uuid.UUID,
+        *,
+        user_id: uuid.UUID | None = None,
+    ) -> Deck | None:
+        """Return the active deck for the given profile (ensuring ownership when provided)."""
+        stmt = (
+            select(Deck)
+            .join(LanguageProfile, Deck.profile_id == LanguageProfile.id)
+            .options(selectinload(Deck.owner))
+            .where(
+                Deck.profile_id == profile_id,
+                Deck.deleted.is_(False),
+                Deck.is_active.is_(True),
+                LanguageProfile.deleted.is_(False),
+            )
+        )
+        if user_id is not None:
+            stmt = stmt.where(LanguageProfile.user_id == user_id)
+
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
 
 __all__ = ["DeckRepository"]
