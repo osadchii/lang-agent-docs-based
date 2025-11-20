@@ -8,6 +8,10 @@ const languages = [
     { id: 'es', label: 'Испанский' },
     { id: 'de', label: 'Немецкий' },
     { id: 'fr', label: 'Французский' },
+    { id: 'el', label: 'Греческий' },
+    { id: 'it', label: 'Итальянский' },
+    { id: 'ka', label: 'Грузинский' },
+    { id: 'pt', label: 'Португальский' },
 ];
 
 export const OnboardingLanguageStep = () => {
