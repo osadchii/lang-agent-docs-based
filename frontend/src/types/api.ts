@@ -89,3 +89,65 @@ export interface LanguageProfileUpdatePayload {
     goals?: string[];
     interface_language?: string;
 }
+
+export type StatsPeriod = 'week' | 'month' | '3months' | 'year' | 'all';
+
+export type ActivityLevel = 'none' | 'low' | 'medium' | 'high';
+
+export interface ActivityEntry {
+    date: string;
+    cards_studied: number;
+    exercises_completed: number;
+    time_minutes: number;
+    activity_level?: ActivityLevel;
+}
+
+export interface StatsResponse {
+    profile_id: string;
+    language: string;
+    current_level: string;
+    period: StatsPeriod;
+    streak: {
+        current: number;
+        best: number;
+        total_days: number;
+    };
+    cards: {
+        total: number;
+        studied: number;
+        new: number;
+        stats: {
+            know: number;
+            repeat: number;
+            dont_know: number;
+        };
+    };
+    exercises: {
+        total: number;
+        stats: {
+            correct: number;
+            partial: number;
+            incorrect: number;
+        };
+        accuracy: number;
+    };
+    time: {
+        total_minutes: number;
+        average_per_day: number;
+    };
+    activity: ActivityEntry[];
+}
+
+export interface StreakResponse {
+    profile_id: string;
+    current_streak: number;
+    best_streak: number;
+    total_active_days: number;
+    today_completed: boolean;
+    last_activity: string | null;
+    streak_safe_until: string | null;
+}
+
+export interface CalendarResponse {
+    data: ActivityEntry[];
+}

@@ -110,6 +110,14 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = [
+  "email_validator",
+  "orjson",
+  "numpy",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
   "pillow_heif",
 ]
 ignore_missing_imports = true

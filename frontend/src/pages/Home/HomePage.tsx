@@ -1,572 +1,404 @@
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { type FormEvent, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { getErrorMessage } from '../../api/errors';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { activateProfile, fetchProfiles } from '../../api/profiles';
+import { fetchStats, fetchStreak } from '../../api/stats';
 import { queryKeys } from '../../api/queryKeys';
-import { fetchChatHistory, sendChatMessage } from '../../api/chat';
-import { activateProfile, createProfile, fetchProfiles } from '../../api/profiles';
+import { Header } from '../../components/layout/Header/Header';
 import { QueryState } from '../../components/state/QueryState';
-import { useAuthContext } from '../../providers/AuthProvider';
+import { Badge, Button, Card, Progress, Skeleton } from '../../components/ui';
+import { useHapticFeedback } from '../../hooks/useHapticFeedback';
 import { useTelegram } from '../../hooks/useTelegram';
-import type { CEFRLevel, ChatMessage, LanguageProfileCreatePayload } from '../../types/api';
-import './HomePage.css';
+import { useAuthContext } from '../../providers/AuthProvider';
+import type { ActivityEntry, LanguageProfile } from '../../types/api';
+import { classNames } from '../../utils/classNames';
+import styles from './HomePage.module.css';
 
-const PAGE_SIZE = 20;
-const CEFR_LEVELS: CEFRLevel[] = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
-const LANGUAGE_OPTIONS = [
-    { value: 'en', label: 'Английский' },
-    { value: 'es', label: 'Испанский' },
-    { value: 'de', label: 'Немецкий' },
-    { value: 'fr', label: 'Французский' },
-    { value: 'it', label: 'Итальянский' },
-    { value: 'pt', label: 'Португальский' },
-    { value: 'tr', label: 'Турецкий' },
-    { value: 'zh', label: 'Китайский' },
-];
-const GOAL_OPTIONS = [
-    { value: 'communication', label: 'Общение' },
-    { value: 'travel', label: 'Путешествия' },
-    { value: 'work', label: 'Работа' },
-    { value: 'study', label: 'Учёба' },
-    { value: 'reading', label: 'Чтение' },
-    { value: 'self_development', label: 'Саморазвитие' },
-    { value: 'relationships', label: 'Отношения' },
-    { value: 'relocation', label: 'Переезд' },
-];
-const INTERFACE_LANGUAGES = [
-    { value: 'ru', label: 'Русский' },
-    { value: 'en', label: 'English' },
-];
+const DAILY_CARD_GOAL = 12;
+const DAILY_EXERCISE_GOAL = 4;
+const DAILY_TIME_GOAL = 20;
+
+const todayKey = () => new Date().toISOString().slice(0, 10);
+
+const toDate = (value: string) => new Date(`${value}T00:00:00Z`);
+
+const formatDateLabel = (value: string) => {
+    const target = toDate(value);
+    const today = toDate(todayKey());
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+
+    if (target.toDateString() === today.toDateString()) {
+        return 'Сегодня';
+    }
+    if (target.toDateString() === yesterday.toDateString()) {
+        return 'Вчера';
+    }
+
+    return new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' }).format(target);
+};
+
+const ratio = (value: number, goal: number) =>
+    goal <= 0 ? 0 : Math.min(100, Math.round((value / goal) * 100));
+
+const activityHighlight = (entry: ActivityEntry) => {
+    const parts: string[] = [];
+    if (entry.cards_studied > 0) {
+        parts.push(`Карточки: ${entry.cards_studied}`);
+    }
+    if (entry.exercises_completed > 0) {
+        parts.push(`Упражнения: ${entry.exercises_completed}`);
+    }
+    if (entry.time_minutes > 0) {
+        parts.push(`${entry.time_minutes} мин`);
+    }
+    return parts.join(' · ');
+};
 
 export const HomePage = () => {
-    const { user: telegramUser, platform, colorScheme, isReady } = useTelegram();
-    const { user, status: authStatus, error: authError, isAuthenticated } = useAuthContext();
+    const navigate = useNavigate();
     const queryClient = useQueryClient();
+    const { selectionChanged } = useHapticFeedback();
+    const { user, isAuthenticated } = useAuthContext();
+    const { platform, colorScheme } = useTelegram();
 
-    const [profilesError, setProfilesError] = useState<string | null>(null);
-    const [messageText, setMessageText] = useState('');
-    const [formError, setFormError] = useState<string | null>(null);
-    const [isCreatingProfile, setIsCreatingProfile] = useState(false);
-    const [profileFormError, setProfileFormError] = useState<string | null>(null);
-    const defaultProfileForm = useMemo<LanguageProfileCreatePayload>(
-        () => ({
-            language: 'en',
-            current_level: 'A1',
-            target_level: 'A2',
-            goals: ['communication'],
-            interface_language: 'ru',
-        }),
-        [],
-    );
-    const [profileForm, setProfileForm] = useState<LanguageProfileCreatePayload>(() => ({
-        ...defaultProfileForm,
-    }));
-
-    const username = user?.first_name ?? telegramUser?.first_name ?? 'друг';
-    const isAuthReady = authStatus === 'success' || isAuthenticated;
-    const isInitialLoading = !isReady || authStatus === 'idle' || authStatus === 'loading';
     const profilesQuery = useQuery({
         queryKey: queryKeys.profiles,
         queryFn: fetchProfiles,
-        enabled: isAuthReady,
-        staleTime: 5 * 60 * 1000,
+        enabled: isAuthenticated,
+        staleTime: 30 * 1000,
+        refetchOnMount: 'always',
+        refetchOnWindowFocus: true,
     });
+
     const profiles = useMemo(() => profilesQuery.data ?? [], [profilesQuery.data]);
-    const activeProfile = useMemo(
+    const activeProfile = useMemo<LanguageProfile | null>(
         () => profiles.find((profile) => profile.is_active) ?? profiles[0] ?? null,
         [profiles],
     );
     const profileId = activeProfile?.id ?? null;
 
-    const profilesErrorMessage =
-        profilesError ??
-        (profilesQuery.error
-            ? getErrorMessage(profilesQuery.error, 'Не удалось загрузить профили.')
-            : null);
-
-    const chatHistoryQuery = useInfiniteQuery({
-        queryKey: queryKeys.chatHistory(profileId),
-        enabled: isAuthReady && Boolean(profileId),
-        initialPageParam: 0,
-        queryFn: ({ pageParam = 0 }) =>
-            fetchChatHistory({
-                profileId: profileId as string,
-                limit: PAGE_SIZE,
-                offset: Number(pageParam) || 0,
-            }),
-        getNextPageParam: (lastPage) =>
-            lastPage.pagination.has_more ? lastPage.pagination.next_offset : undefined,
+    const statsQuery = useQuery({
+        queryKey: queryKeys.stats(profileId),
+        queryFn: () => fetchStats({ profileId }),
+        enabled: Boolean(profileId),
+        staleTime: 20 * 1000,
+        refetchOnMount: 'always',
+        refetchOnWindowFocus: true,
     });
 
-    const chatMessages = useMemo<ChatMessage[]>(() => {
-        const pages = chatHistoryQuery.data?.pages ?? [];
-        const merged = pages.flatMap((page) => page.messages);
-        return merged
-            .slice()
-            .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-    }, [chatHistoryQuery.data]);
-
-    const historyErrorMessage = chatHistoryQuery.error
-        ? getErrorMessage(chatHistoryQuery.error, 'Не удалось загрузить сообщения.')
-        : null;
-
-    const profilesLoading = profilesQuery.isPending || profilesQuery.isRefetching;
-    const isInitialHistoryLoading = chatHistoryQuery.isPending && Boolean(profileId);
-    const isFetchingHistory = chatHistoryQuery.isFetching;
-    const isFetchingMoreHistory = chatHistoryQuery.isFetchingNextPage;
-
-    const sendMessageMutation = useMutation({
-        mutationFn: (payload: { profileId: string; message: string }) =>
-            sendChatMessage({ message: payload.message, profile_id: payload.profileId }),
-        onSuccess: async () => {
-            setMessageText('');
-            await queryClient.invalidateQueries({ queryKey: queryKeys.chatHistory(profileId) });
-        },
-        onError: (error) => {
-            setFormError(
-                getErrorMessage(error, 'Не удалось отправить сообщение. Попробуйте ещё раз.'),
-            );
-        },
+    const streakQuery = useQuery({
+        queryKey: queryKeys.streak(profileId),
+        queryFn: () => fetchStreak(profileId),
+        enabled: Boolean(profileId),
+        staleTime: 30 * 1000,
+        refetchOnMount: 'always',
+        refetchOnWindowFocus: true,
     });
 
     const activateProfileMutation = useMutation({
         mutationFn: (nextProfileId: string) => activateProfile(nextProfileId),
-        onSuccess: async () => {
-            setProfilesError(null);
+        onSuccess: async (_, nextProfileId) => {
             await Promise.all([
                 queryClient.invalidateQueries({ queryKey: queryKeys.profiles }),
-                queryClient.removeQueries({ queryKey: queryKeys.chatHistoryRoot }),
+                queryClient.invalidateQueries({ queryKey: queryKeys.stats(nextProfileId) }),
+                queryClient.invalidateQueries({ queryKey: queryKeys.streak(nextProfileId) }),
             ]);
         },
-        onError: (error) => {
-            setProfilesError(getErrorMessage(error, 'Не удалось переключить профиль.'));
-        },
     });
 
-    const createProfileMutation = useMutation({
-        mutationFn: (payload: LanguageProfileCreatePayload) => createProfile(payload),
-        onSuccess: async () => {
-            setIsCreatingProfile(false);
-            setProfileForm({ ...defaultProfileForm });
-            setProfileFormError(null);
-            await queryClient.invalidateQueries({ queryKey: queryKeys.profiles });
-        },
-        onError: (error) => {
-            setProfileFormError(getErrorMessage(error, 'Не удалось создать профиль.'));
-        },
-    });
+    const greeting = useMemo(() => {
+        const hour = new Date().getHours();
+        if (hour < 12) return 'Доброе утро';
+        if (hour < 18) return 'Добрый день';
+        return 'Добрый вечер';
+    }, []);
 
-    const isSending = sendMessageMutation.isPending;
-    const isSavingProfile = createProfileMutation.isPending;
+    const todayStats = useMemo(() => {
+        if (!statsQuery.data) return null;
+        return statsQuery.data.activity.find((entry) => entry.date === todayKey()) ?? null;
+    }, [statsQuery.data]);
 
-    const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        if (!messageText.trim() || !isAuthReady) {
-            return;
-        }
+    const recentActivity = useMemo<ActivityEntry[]>(() => {
+        if (!statsQuery.data) return [];
+        return statsQuery.data.activity
+            .filter(
+                (entry) =>
+                    entry.cards_studied > 0 ||
+                    entry.exercises_completed > 0 ||
+                    entry.time_minutes > 0,
+            )
+            .sort((a, b) => toDate(b.date).getTime() - toDate(a.date).getTime())
+            .slice(0, 3);
+    }, [statsQuery.data]);
 
-        if (!profileId) {
-            setFormError('Пожалуйста, выберите или создайте профиль.');
-            return;
-        }
+    const streakValue = streakQuery.data?.current_streak ?? activeProfile?.progress.streak ?? 0;
+    const cardsToday = todayStats?.cards_studied ?? 0;
+    const exercisesToday = todayStats?.exercises_completed ?? 0;
+    const timeToday = todayStats?.time_minutes ?? 0;
+    const todayCompleted =
+        streakQuery.data?.today_completed ?? cardsToday + exercisesToday + timeToday > 0;
 
-        setFormError(null);
-        sendMessageMutation.mutate({ profileId, message: messageText.trim() });
+    const cardsProgress = statsQuery.data?.cards ?? null;
+    const cardProgressValue =
+        cardsProgress && cardsProgress.total > 0
+            ? Math.round((cardsProgress.studied / cardsProgress.total) * 100)
+            : 0;
+
+    const handleQuickNav = (path: string) => {
+        selectionChanged();
+        navigate(path);
     };
 
-    const handleActivateProfile = (nextProfileId: string) => {
-        if (nextProfileId === profileId) {
+    const handleProfileChange = (nextProfileId: string) => {
+        if (!nextProfileId || nextProfileId === profileId) {
             return;
         }
-        setProfilesError(null);
         activateProfileMutation.mutate(nextProfileId);
     };
 
-    const handleCreateProfile = (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        setProfileFormError(null);
-        createProfileMutation.mutate(profileForm);
-    };
-
-    const handleLoadOlder = () => {
-        if (!chatHistoryQuery.hasNextPage || chatHistoryQuery.isFetchingNextPage) {
-            return;
-        }
-        chatHistoryQuery.fetchNextPage().catch(() => null);
-    };
-
-    const toggleProfileForm = () => {
-        setIsCreatingProfile((prev) => {
-            if (prev) {
-                setProfileForm({ ...defaultProfileForm });
-                setProfileFormError(null);
-            }
-            return !prev;
-        });
-    };
-
-    const formattedMessages = useMemo(() => {
-        const formatter = new Intl.DateTimeFormat('ru-RU', {
-            hour: '2-digit',
-            minute: '2-digit',
-        });
-
-        return chatMessages.map((message) => ({
-            ...message,
-            formattedTime: formatter.format(new Date(message.timestamp)),
-        }));
-    }, [chatMessages]);
-
-    const availableTargetLevels = useMemo(() => {
-        const currentIndex = CEFR_LEVELS.indexOf(profileForm.current_level);
-        return CEFR_LEVELS.slice(currentIndex);
-    }, [profileForm.current_level]);
-
-    if (isInitialLoading) {
+    if (profilesQuery.isError) {
         return (
-            <div className="home-page loading">
-                <div className="loader" />
-                <p>Инициализация Mini App...</p>
-            </div>
-        );
-    }
-
-    if (authStatus === 'error') {
-        return (
-            <div className="home-page error-state">
-                <h2>Не получилось авторизоваться</h2>
-                <p>{authError}</p>
-                <p className="hint">
-                    Убедитесь, что Mini App открыта внутри Telegram и включена автоматическая
-                    авторизация.
-                </p>
-            </div>
+            <QueryState
+                variant="error"
+                title="Не удалось загрузить профили"
+                description="Обновите страницу или попробуйте позже."
+                actionLabel="Повторить"
+                onAction={() => profilesQuery.refetch()}
+            />
         );
     }
 
     return (
-        <div className="home-page">
-            <header className="home-header">
-                <div>
-                    <p className="eyebrow">Lang Agent</p>
-                    <h1 className="title">Персональный языковой тренер</h1>
-                    <p className="subtitle">
-                        Привет, {username}! Выбирайте профиль, ставьте цели и занимайтесь в удобном
-                        ритме.
-                    </p>
-                </div>
-                <div className="status-badges">
-                    <span className="badge">
-                        Платформа: <strong>{platform}</strong>
-                    </span>
-                    <span className="badge">
-                        Тема: <strong>{colorScheme}</strong>
-                    </span>
-                    {telegramUser?.username && (
-                        <span className="badge">@{telegramUser.username}</span>
-                    )}
-                    <Link to="/ui-kit" className="ghost-button">
-                        UI Kit
-                    </Link>
-                </div>
-            </header>
-
-            <section className="profiles-panel">
-                <div className="profiles-header">
-                    <div>
-                        <h2>Профили изучения</h2>
-                        <p className="profiles-subtitle">
-                            Управляйте языками, целями и интерфейсом Mini App.
-                        </p>
+        <div className={styles.screen}>
+            <Header
+                title="Главная"
+                subtitle="Быстрые действия и ваш прогресс за день"
+                actions={
+                    <div className={styles.headerBadges}>
+                        <Badge variant="info" size="md">
+                            {platform}
+                        </Badge>
+                        <Badge variant="warning" size="md">
+                            {colorScheme === 'dark' ? 'Тёмная' : 'Светлая'} тема
+                        </Badge>
                     </div>
-                    <button type="button" className="ghost-button" onClick={toggleProfileForm}>
-                        {isCreatingProfile ? 'Закрыть' : 'Новый профиль'}
-                    </button>
-                </div>
+                }
+            />
 
-                {profilesErrorMessage && (
+            <Card
+                gradient
+                elevated
+                className={styles.hero}
+                title={`${greeting}, ${user?.first_name ?? 'друг'}!`}
+                subtitle="Синхронизировано с ботом и профилями Telegram"
+                footer={
+                    <div className={styles.heroFooter}>
+                        <Badge variant="success">Стрик: {streakValue} 🔥</Badge>
+                        <Badge variant="info">
+                            Карточек: {activeProfile?.progress.cards_count ?? 0}
+                        </Badge>
+                        <Badge variant="warning">
+                            Упражнений: {activeProfile?.progress.exercises_count ?? 0}
+                        </Badge>
+                    </div>
+                }
+            >
+                <div className={styles.heroContent}>
+                    {profilesQuery.isPending && <Skeleton height={64} />}
+                    {activeProfile && (
+                        <div className={styles.profileHeader}>
+                            <div>
+                                <div className={styles.language}>
+                                    {activeProfile.language_name}{' '}
+                                    <span>({activeProfile.language.toUpperCase()})</span>
+                                </div>
+                                <div className={styles.levels}>
+                                    {activeProfile.current_level} → {activeProfile.target_level}
+                                </div>
+                            </div>
+                            {profiles.length > 1 && (
+                                <div className={styles.profileSelect}>
+                                    <label htmlFor="profile-select">Профиль</label>
+                                    <select
+                                        id="profile-select"
+                                        value={profileId ?? ''}
+                                        onChange={(event) =>
+                                            handleProfileChange(event.target.value)
+                                        }
+                                        disabled={activateProfileMutation.isPending}
+                                    >
+                                        {profiles.map((profile) => (
+                                            <option key={profile.id} value={profile.id}>
+                                                {profile.language_name}{' '}
+                                                {profile.is_active ? ' • активный' : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                    <Progress
+                        label="Прогресс уровня"
+                        value={cardProgressValue}
+                        indeterminate={statsQuery.isPending}
+                        showValue
+                    />
+                </div>
+            </Card>
+
+            <section aria-label="Быстрые действия" className={styles.quickSection}>
+                <div className={styles.sectionTitle}>Быстрые действия</div>
+                <div className={styles.quickGrid}>
+                    <Card
+                        className={classNames(styles.quickCard, styles.cards)}
+                        padding="lg"
+                        interactive
+                        title="Карточка"
+                        subtitle="Закрепить слова из активной колоды"
+                        footer={
+                            <div className={styles.quickFooter}>
+                                <Badge variant="info">
+                                    Сегодня: {cardsToday}/{DAILY_CARD_GOAL}
+                                </Badge>
+                                <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    onClick={() => handleQuickNav('/practice/cards')}
+                                >
+                                    Учить
+                                </Button>
+                            </div>
+                        }
+                    >
+                        <div className={styles.quickBody}>
+                            <div className={styles.quickLabel}>5 коротких карточек за минуту</div>
+                            <Progress
+                                value={ratio(cardsToday, DAILY_CARD_GOAL)}
+                                indeterminate={statsQuery.isPending}
+                            />
+                        </div>
+                    </Card>
+                    <Card
+                        className={classNames(styles.quickCard, styles.exercises)}
+                        padding="lg"
+                        interactive
+                        title="Упражнение"
+                        subtitle="Свежая тема для практики"
+                        footer={
+                            <div className={styles.quickFooter}>
+                                <Badge variant="warning">
+                                    Завершено: {exercisesToday}/{DAILY_EXERCISE_GOAL}
+                                </Badge>
+                                <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    onClick={() => handleQuickNav('/practice/exercises')}
+                                >
+                                    Старт
+                                </Button>
+                            </div>
+                        }
+                    >
+                        <div className={styles.quickBody}>
+                            <div className={styles.quickLabel}>Фокус на говорение и ошибки</div>
+                            <Progress
+                                value={ratio(exercisesToday, DAILY_EXERCISE_GOAL)}
+                                indeterminate={statsQuery.isPending}
+                            />
+                        </div>
+                    </Card>
+                </div>
+            </section>
+
+            <Card className={styles.sectionCard} title="Сегодня" subtitle="Цели на день">
+                {statsQuery.isPending ? (
+                    <Skeleton height={96} />
+                ) : (
+                    <>
+                        <div className={styles.progressList}>
+                            <div className={styles.progressItem}>
+                                <div className={styles.progressHeader}>
+                                    <span>Карточки</span>
+                                    <Badge variant="info">
+                                        {cardsToday}/{DAILY_CARD_GOAL}
+                                    </Badge>
+                                </div>
+                                <Progress value={ratio(cardsToday, DAILY_CARD_GOAL)} />
+                            </div>
+                            <div className={styles.progressItem}>
+                                <div className={styles.progressHeader}>
+                                    <span>Упражнения</span>
+                                    <Badge variant="warning">
+                                        {exercisesToday}/{DAILY_EXERCISE_GOAL}
+                                    </Badge>
+                                </div>
+                                <Progress value={ratio(exercisesToday, DAILY_EXERCISE_GOAL)} />
+                            </div>
+                            <div className={styles.progressItem}>
+                                <div className={styles.progressHeader}>
+                                    <span>Время</span>
+                                    <Badge variant="success">
+                                        {timeToday} мин / {DAILY_TIME_GOAL}
+                                    </Badge>
+                                </div>
+                                <Progress value={ratio(timeToday, DAILY_TIME_GOAL)} />
+                            </div>
+                        </div>
+                        <div
+                            className={classNames(
+                                styles.streakBanner,
+                                todayCompleted ? styles.bannerSuccess : styles.bannerWarning,
+                            )}
+                        >
+                            {todayCompleted
+                                ? 'Стрик сохранён — можно выдохнуть 🔥'
+                                : 'Нужно действие сегодня, чтобы не сбросить стрик'}
+                        </div>
+                    </>
+                )}
+            </Card>
+
+            <Card className={styles.sectionCard} title="Недавняя активность">
+                {statsQuery.isError && (
                     <QueryState
                         variant="error"
-                        title="Не удалось загрузить профили"
-                        description={profilesErrorMessage}
-                        actionLabel="Повторить"
-                        onAction={() => profilesQuery.refetch()}
+                        title="Не получилось получить статистику"
+                        actionLabel="Обновить"
+                        onAction={() => statsQuery.refetch()}
                     />
                 )}
-
-                {profilesLoading && profiles.length === 0 && (
-                    <QueryState
-                        variant="loading"
-                        title="Загружаем профили"
-                        description="Синхронизируем ваши языки и прогресс."
-                    />
-                )}
-
-                {!profilesLoading && profiles.length === 0 && !profilesErrorMessage && (
+                {statsQuery.isPending && <Skeleton height={88} />}
+                {!statsQuery.isPending && recentActivity.length === 0 && (
                     <QueryState
                         variant="empty"
-                        title="Пока нет профилей"
-                        description="Создайте первый профиль, чтобы начать занятия."
-                        actionLabel="Создать профиль"
-                        onAction={toggleProfileForm}
+                        title="Пока нет данных"
+                        description="Сделайте карточку или упражнение — и прогресс появится здесь."
                     />
                 )}
-
-                {profiles.length > 0 && (
-                    <ul className="profile-list">
-                        {profiles.map((profile) => (
-                            <li
-                                key={profile.id}
-                                className={`profile-card ${profile.is_active ? 'active' : ''}`}
-                            >
-                                <div className="profile-info">
-                                    <p className="profile-language">
-                                        {profile.language_name}{' '}
-                                        <span>({profile.language.toUpperCase()})</span>
-                                    </p>
-                                    <p className="profile-levels">
-                                        {profile.current_level} → {profile.target_level}
-                                    </p>
-                                    <p className="profile-goals">
-                                        {profile.goals.map((goal) => {
-                                            const label =
-                                                GOAL_OPTIONS.find((option) => option.value === goal)
-                                                    ?.label ?? goal;
-                                            return <span key={goal}>{label}</span>;
-                                        })}
-                                    </p>
+                {recentActivity.length > 0 && (
+                    <ul className={styles.activityList}>
+                        {recentActivity.map((entry) => (
+                            <li key={entry.date} className={styles.activityItem}>
+                                <div className={styles.activityDate}>
+                                    <span
+                                        className={classNames(
+                                            styles.dot,
+                                            entry.activity_level &&
+                                                styles[`level${entry.activity_level}`],
+                                        )}
+                                    />
+                                    {formatDateLabel(entry.date)}
                                 </div>
-                                <div className="profile-actions">
-                                    <span className="profile-streak">
-                                        🔥 {profile.progress.streak ?? 0}
-                                    </span>
-                                    <button
-                                        type="button"
-                                        disabled={
-                                            profile.id === profileId ||
-                                            activateProfileMutation.isPending
-                                        }
-                                        onClick={() => handleActivateProfile(profile.id)}
-                                    >
-                                        {profile.id === profileId ? 'Активный' : 'Сделать активным'}
-                                    </button>
+                                <div className={styles.activityMeta}>
+                                    {activityHighlight(entry) || 'Без активностей'}
                                 </div>
                             </li>
                         ))}
                     </ul>
                 )}
-
-                {isCreatingProfile && (
-                    <form className="profile-form" onSubmit={handleCreateProfile}>
-                        <div className="profile-form-grid">
-                            <label>
-                                Язык
-                                <select
-                                    value={profileForm.language}
-                                    onChange={(event) =>
-                                        setProfileForm((prev) => ({
-                                            ...prev,
-                                            language: event.target.value,
-                                        }))
-                                    }
-                                >
-                                    {LANGUAGE_OPTIONS.map((option) => (
-                                        <option key={option.value} value={option.value}>
-                                            {option.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-                            <label>
-                                Текущий уровень
-                                <select
-                                    value={profileForm.current_level}
-                                    onChange={(event) =>
-                                        setProfileForm((prev) => ({
-                                            ...prev,
-                                            current_level: event.target.value as CEFRLevel,
-                                        }))
-                                    }
-                                >
-                                    {CEFR_LEVELS.map((level) => (
-                                        <option key={level} value={level}>
-                                            {level}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-                            <label>
-                                Целевой уровень
-                                <select
-                                    value={profileForm.target_level}
-                                    onChange={(event) =>
-                                        setProfileForm((prev) => ({
-                                            ...prev,
-                                            target_level: event.target.value as CEFRLevel,
-                                        }))
-                                    }
-                                >
-                                    {availableTargetLevels.map((level) => (
-                                        <option key={level} value={level}>
-                                            {level}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-                            <label>
-                                Язык интерфейса
-                                <select
-                                    value={profileForm.interface_language}
-                                    onChange={(event) =>
-                                        setProfileForm((prev) => ({
-                                            ...prev,
-                                            interface_language: event.target.value,
-                                        }))
-                                    }
-                                >
-                                    {INTERFACE_LANGUAGES.map((option) => (
-                                        <option key={option.value} value={option.value}>
-                                            {option.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-                        </div>
-
-                        <fieldset className="checkbox-group">
-                            <legend>Цели</legend>
-                            <div className="checkbox-grid">
-                                {GOAL_OPTIONS.map((option) => {
-                                    const checked = profileForm.goals.includes(option.value);
-                                    return (
-                                        <label key={option.value} className="checkbox-item">
-                                            <input
-                                                type="checkbox"
-                                                checked={checked}
-                                                onChange={() =>
-                                                    setProfileForm((prev) => {
-                                                        const includes = prev.goals.includes(
-                                                            option.value,
-                                                        );
-                                                        if (includes && prev.goals.length === 1) {
-                                                            return prev;
-                                                        }
-                                                        const nextGoals = includes
-                                                            ? prev.goals.filter(
-                                                                  (goal) => goal !== option.value,
-                                                              )
-                                                            : [...prev.goals, option.value];
-                                                        return {
-                                                            ...prev,
-                                                            goals: nextGoals,
-                                                        };
-                                                    })
-                                                }
-                                            />
-                                            <span>{option.label}</span>
-                                        </label>
-                                    );
-                                })}
-                            </div>
-                        </fieldset>
-
-                        {profileFormError && <div className="alert error">{profileFormError}</div>}
-
-                        <button type="submit" disabled={isSavingProfile}>
-                            {isSavingProfile ? 'Сохраняем...' : 'Создать профиль'}
-                        </button>
-                    </form>
-                )}
-            </section>
-
-            <section className="chat-panel">
-                {activeProfile && (
-                    <div className="active-profile-badge">
-                        Активный профиль:{' '}
-                        <strong>
-                            {activeProfile.language_name} ({activeProfile.current_level} →{' '}
-                            {activeProfile.target_level})
-                        </strong>
-                    </div>
-                )}
-                {historyErrorMessage && (
-                    <QueryState
-                        variant="error"
-                        title="Не удалось загрузить сообщения"
-                        description={historyErrorMessage}
-                        actionLabel="Обновить"
-                        onAction={() => chatHistoryQuery.refetch()}
-                    />
-                )}
-                {formError && <div className="alert error">{formError}</div>}
-
-                <div className="chat-history">
-                    {profileId && isInitialHistoryLoading && (
-                        <QueryState
-                            variant="loading"
-                            title="Загружаем историю"
-                            description="Собираем диалог с ассистентом..."
-                        />
-                    )}
-
-                    {chatHistoryQuery.hasNextPage && profileId && (
-                        <button
-                            type="button"
-                            className="load-more"
-                            disabled={isFetchingMoreHistory}
-                            onClick={handleLoadOlder}
-                        >
-                            {isFetchingMoreHistory ? 'Загружаем...' : 'Показать более ранние'}
-                        </button>
-                    )}
-
-                    {!profileId ? (
-                        <QueryState
-                            variant="empty"
-                            title="Нет активного профиля"
-                            description="Сначала создайте и активируйте профиль, чтобы начать диалог."
-                            actionLabel="Создать профиль"
-                            onAction={toggleProfileForm}
-                        />
-                    ) : formattedMessages.length === 0 && !isFetchingHistory ? (
-                        <QueryState
-                            variant="empty"
-                            title="История пока пустая"
-                            description="Задайте первый вопрос ассистенту, чтобы начать диалог."
-                        />
-                    ) : (
-                        formattedMessages.map((message) => (
-                            <div key={message.id} className={`message ${message.role}`}>
-                                <div className="message-meta">
-                                    <span className="role">
-                                        {message.role === 'assistant' ? 'Lang Agent' : 'Вы'}
-                                    </span>
-                                    <span className="timestamp">{message.formattedTime}</span>
-                                </div>
-                                <p className="message-text">{message.content}</p>
-                            </div>
-                        ))
-                    )}
-                </div>
-
-                <form className="chat-form" onSubmit={handleSubmit}>
-                    <label htmlFor="message">Ваш вопрос</label>
-                    <textarea
-                        id="message"
-                        value={messageText}
-                        placeholder="Например: “Как спросить дорогу до метро на испанском?”"
-                        onChange={(event) => setMessageText(event.target.value)}
-                        disabled={!isAuthReady || isSending || !profileId}
-                        rows={3}
-                    />
-                    <button
-                        type="submit"
-                        disabled={!isAuthReady || isSending || !messageText.trim() || !profileId}
-                    >
-                        {isSending ? 'Отправляем...' : 'Отправить'}
-                    </button>
-                </form>
-            </section>
+            </Card>
         </div>
     );
 };
