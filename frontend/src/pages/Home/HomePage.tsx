@@ -67,6 +67,9 @@ export const HomePage = () => {
         queryFn: fetchProfiles,
         enabled: isAuthenticated,
         staleTime: 5 * 60 * 1000,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false,
+        retry: false,
     });
 
     const profiles = useMemo(() => profilesQuery.data ?? [], [profilesQuery.data]);
