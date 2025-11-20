@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { type PropsWithChildren, useEffect } from 'react';
 import { Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthContext } from '../providers/AuthProvider';
 import { useOnboarding } from '../providers/OnboardingProvider';
@@ -66,7 +66,7 @@ export const AuthGuard = () => {
     return <Outlet />;
 };
 
-export const OnboardingGuard = () => {
+export const OnboardingGuard = ({ children }: PropsWithChildren) => {
     const { completed } = useOnboarding();
     const location = useLocation();
     const navigate = useNavigate();
@@ -79,6 +79,10 @@ export const OnboardingGuard = () => {
 
     if (!completed && !location.pathname.startsWith('/onboarding')) {
         return null;
+    }
+
+    if (children) {
+        return <>{children}</>;
     }
 
     return <Outlet />;
