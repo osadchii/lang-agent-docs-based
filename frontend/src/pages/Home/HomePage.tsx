@@ -1,16 +1,14 @@
-import { type FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { type FormEvent, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { getErrorMessage } from '../../api/errors';
+import { queryKeys } from '../../api/queryKeys';
 import { fetchChatHistory, sendChatMessage } from '../../api/chat';
 import { activateProfile, createProfile, fetchProfiles } from '../../api/profiles';
+import { QueryState } from '../../components/state/QueryState';
 import { useAuthContext } from '../../providers/AuthProvider';
 import { useTelegram } from '../../hooks/useTelegram';
-import type {
-    CEFRLevel,
-    ChatMessage,
-    LanguageProfile,
-    LanguageProfileCreatePayload,
-    PaginationMeta,
-} from '../../types/api';
+import type { CEFRLevel, ChatMessage, LanguageProfileCreatePayload } from '../../types/api';
 import './HomePage.css';
 
 const PAGE_SIZE = 20;
@@ -40,45 +38,15 @@ const INTERFACE_LANGUAGES = [
     { value: 'en', label: 'English' },
 ];
 
-type ApiError = {
-    response?: {
-        data?: {
-            error?: {
-                message?: string;
-            };
-        };
-    };
-};
-
-const extractErrorMessage = (error: unknown): string => {
-    if (
-        typeof error === 'object' &&
-        error !== null &&
-        'response' in error &&
-        typeof (error as ApiError).response?.data?.error?.message === 'string'
-    ) {
-        return (error as ApiError).response?.data?.error?.message as string;
-    }
-    return 'Не удалось выполнить действие. Попробуйте позже.';
-};
-
 export const HomePage = () => {
     const { user: telegramUser, platform, colorScheme, isReady } = useTelegram();
     const { user, status: authStatus, error: authError, isAuthenticated } = useAuthContext();
+    const queryClient = useQueryClient();
 
-    const [messages, setMessages] = useState<ChatMessage[]>([]);
-    const [pagination, setPagination] = useState<PaginationMeta | null>(null);
-    const [profiles, setProfiles] = useState<LanguageProfile[]>([]);
     const [profilesError, setProfilesError] = useState<string | null>(null);
-    const [profilesLoading, setProfilesLoading] = useState(false);
-    const [profileId, setProfileId] = useState<string | null>(null);
     const [messageText, setMessageText] = useState('');
-    const [historyError, setHistoryError] = useState<string | null>(null);
     const [formError, setFormError] = useState<string | null>(null);
-    const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-    const [isSending, setIsSending] = useState(false);
     const [isCreatingProfile, setIsCreatingProfile] = useState(false);
-    const [isSavingProfile, setIsSavingProfile] = useState(false);
     const [profileFormError, setProfileFormError] = useState<string | null>(null);
     const defaultProfileForm = useMemo<LanguageProfileCreatePayload>(
         () => ({
@@ -97,89 +65,101 @@ export const HomePage = () => {
     const username = user?.first_name ?? telegramUser?.first_name ?? 'друг';
     const isAuthReady = authStatus === 'success' || isAuthenticated;
     const isInitialLoading = !isReady || authStatus === 'idle' || authStatus === 'loading';
+    const profilesQuery = useQuery({
+        queryKey: queryKeys.profiles,
+        queryFn: fetchProfiles,
+        enabled: isAuthReady,
+        staleTime: 5 * 60 * 1000,
+    });
+    const profiles = useMemo(() => profilesQuery.data ?? [], [profilesQuery.data]);
     const activeProfile = useMemo(
-        () => profiles.find((profile) => profile.id === profileId) ?? null,
-        [profiles, profileId],
+        () => profiles.find((profile) => profile.is_active) ?? profiles[0] ?? null,
+        [profiles],
     );
+    const profileId = activeProfile?.id ?? null;
 
-    const loadProfiles = useCallback(async () => {
-        if (!isAuthReady) {
-            return;
-        }
-        setProfilesLoading(true);
-        setProfilesError(null);
-        try {
-            const items = await fetchProfiles();
-            setProfiles(items);
-            const active = items.find((item) => item.is_active) ?? items.at(0) ?? null;
-            setProfileId(active?.id ?? null);
-        } catch (error) {
-            console.error('Failed to load profiles', error);
-            setProfilesError('Не удалось загрузить профили.');
-        } finally {
-            setProfilesLoading(false);
-        }
-    }, [isAuthReady]);
+    const profilesErrorMessage =
+        profilesError ??
+        (profilesQuery.error
+            ? getErrorMessage(profilesQuery.error, 'Не удалось загрузить профили.')
+            : null);
 
-    useEffect(() => {
-        if (isAuthReady) {
-            loadProfiles().catch(() => null);
-        }
-    }, [isAuthReady, loadProfiles]);
+    const chatHistoryQuery = useInfiniteQuery({
+        queryKey: queryKeys.chatHistory(profileId),
+        enabled: isAuthReady && Boolean(profileId),
+        initialPageParam: 0,
+        queryFn: ({ pageParam = 0 }) =>
+            fetchChatHistory({
+                profileId: profileId as string,
+                limit: PAGE_SIZE,
+                offset: Number(pageParam) || 0,
+            }),
+        getNextPageParam: (lastPage) =>
+            lastPage.pagination.has_more ? lastPage.pagination.next_offset : undefined,
+    });
 
-    const loadHistory = useCallback(
-        async (options?: { offset?: number; append?: boolean; profileOverride?: string }) => {
-            if (!isAuthReady) {
-                return;
-            }
+    const chatMessages = useMemo<ChatMessage[]>(() => {
+        const pages = chatHistoryQuery.data?.pages ?? [];
+        const merged = pages.flatMap((page) => page.messages);
+        return merged
+            .slice()
+            .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    }, [chatHistoryQuery.data]);
 
-            const offset = options?.offset ?? 0;
-            const append = options?.append ?? false;
-            const profileForRequest = options?.profileOverride ?? profileId;
-            if (!profileForRequest) {
-                setMessages([]);
-                setPagination(null);
-                return;
-            }
+    const historyErrorMessage = chatHistoryQuery.error
+        ? getErrorMessage(chatHistoryQuery.error, 'Не удалось загрузить сообщения.')
+        : null;
 
-            setIsLoadingHistory(true);
-            setHistoryError(null);
+    const profilesLoading = profilesQuery.isPending || profilesQuery.isRefetching;
+    const isInitialHistoryLoading = chatHistoryQuery.isPending && Boolean(profileId);
+    const isFetchingHistory = chatHistoryQuery.isFetching;
+    const isFetchingMoreHistory = chatHistoryQuery.isFetchingNextPage;
 
-            try {
-                const response = await fetchChatHistory({
-                    profileId: profileForRequest,
-                    limit: PAGE_SIZE,
-                    offset,
-                });
-
-                setMessages((prev) =>
-                    append ? [...response.messages, ...prev] : response.messages,
-                );
-                setPagination(response.pagination);
-            } catch (error) {
-                console.error('Failed to load history', error);
-                setHistoryError('Не удалось загрузить сообщения.');
-            } finally {
-                setIsLoadingHistory(false);
-            }
+    const sendMessageMutation = useMutation({
+        mutationFn: (payload: { profileId: string; message: string }) =>
+            sendChatMessage({ message: payload.message, profile_id: payload.profileId }),
+        onSuccess: async () => {
+            setMessageText('');
+            await queryClient.invalidateQueries({ queryKey: queryKeys.chatHistory(profileId) });
         },
-        [isAuthReady, profileId],
-    );
+        onError: (error) => {
+            setFormError(
+                getErrorMessage(error, 'Не удалось отправить сообщение. Попробуйте ещё раз.'),
+            );
+        },
+    });
 
-    useEffect(() => {
-        if (isAuthReady && profileId) {
-            loadHistory({ offset: 0, append: false }).catch(() => null);
-        }
-    }, [isAuthReady, profileId, loadHistory]);
+    const activateProfileMutation = useMutation({
+        mutationFn: (nextProfileId: string) => activateProfile(nextProfileId),
+        onSuccess: async () => {
+            setProfilesError(null);
+            await Promise.all([
+                queryClient.invalidateQueries({ queryKey: queryKeys.profiles }),
+                queryClient.removeQueries({ queryKey: queryKeys.chatHistoryRoot }),
+            ]);
+        },
+        onError: (error) => {
+            setProfilesError(getErrorMessage(error, 'Не удалось переключить профиль.'));
+        },
+    });
 
-    const handleLoadOlder = useCallback(() => {
-        if (!profileId || !pagination?.has_more || pagination.next_offset == null) {
-            return;
-        }
-        loadHistory({ offset: pagination.next_offset, append: true }).catch(() => null);
-    }, [pagination, loadHistory, profileId]);
+    const createProfileMutation = useMutation({
+        mutationFn: (payload: LanguageProfileCreatePayload) => createProfile(payload),
+        onSuccess: async () => {
+            setIsCreatingProfile(false);
+            setProfileForm({ ...defaultProfileForm });
+            setProfileFormError(null);
+            await queryClient.invalidateQueries({ queryKey: queryKeys.profiles });
+        },
+        onError: (error) => {
+            setProfileFormError(getErrorMessage(error, 'Не удалось создать профиль.'));
+        },
+    });
 
-    const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    const isSending = sendMessageMutation.isPending;
+    const isSavingProfile = createProfileMutation.isPending;
+
+    const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         if (!messageText.trim() || !isAuthReady) {
             return;
@@ -190,56 +170,29 @@ export const HomePage = () => {
             return;
         }
 
-        setIsSending(true);
         setFormError(null);
-
-        try {
-            await sendChatMessage({
-                message: messageText.trim(),
-                profile_id: profileId,
-            });
-
-            setMessageText('');
-            await loadHistory({ offset: 0, append: false });
-        } catch (error) {
-            console.error('Failed to send message', error);
-            setFormError('Не удалось отправить сообщение. Попробуйте ещё раз.');
-        } finally {
-            setIsSending(false);
-        }
+        sendMessageMutation.mutate({ profileId, message: messageText.trim() });
     };
 
-    const handleActivateProfile = async (nextProfileId: string) => {
+    const handleActivateProfile = (nextProfileId: string) => {
         if (nextProfileId === profileId) {
             return;
         }
         setProfilesError(null);
-        try {
-            await activateProfile(nextProfileId);
-            setProfileId(nextProfileId);
-            await loadProfiles();
-            await loadHistory({ offset: 0, append: false, profileOverride: nextProfileId });
-        } catch (error) {
-            console.error('Failed to activate profile', error);
-            setProfilesError(extractErrorMessage(error));
-        }
+        activateProfileMutation.mutate(nextProfileId);
     };
 
-    const handleCreateProfile = async (event: FormEvent<HTMLFormElement>) => {
+    const handleCreateProfile = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setProfileFormError(null);
-        setIsSavingProfile(true);
-        try {
-            await createProfile(profileForm);
-            setIsCreatingProfile(false);
-            setProfileForm({ ...defaultProfileForm });
-            await loadProfiles();
-        } catch (error) {
-            console.error('Failed to create profile', error);
-            setProfileFormError(extractErrorMessage(error));
-        } finally {
-            setIsSavingProfile(false);
+        createProfileMutation.mutate(profileForm);
+    };
+
+    const handleLoadOlder = () => {
+        if (!chatHistoryQuery.hasNextPage || chatHistoryQuery.isFetchingNextPage) {
+            return;
         }
+        chatHistoryQuery.fetchNextPage().catch(() => null);
     };
 
     const toggleProfileForm = () => {
@@ -252,28 +205,17 @@ export const HomePage = () => {
         });
     };
 
-    useEffect(() => {
-        const currentIndex = CEFR_LEVELS.indexOf(profileForm.current_level);
-        const targetIndex = CEFR_LEVELS.indexOf(profileForm.target_level);
-        if (targetIndex < currentIndex) {
-            setProfileForm((prev) => ({
-                ...prev,
-                target_level: prev.current_level,
-            }));
-        }
-    }, [profileForm.current_level, profileForm.target_level]);
-
     const formattedMessages = useMemo(() => {
         const formatter = new Intl.DateTimeFormat('ru-RU', {
             hour: '2-digit',
             minute: '2-digit',
         });
 
-        return messages.map((message) => ({
+        return chatMessages.map((message) => ({
             ...message,
             formattedTime: formatter.format(new Date(message.timestamp)),
         }));
-    }, [messages]);
+    }, [chatMessages]);
 
     const availableTargetLevels = useMemo(() => {
         const currentIndex = CEFR_LEVELS.indexOf(profileForm.current_level);
@@ -342,11 +284,35 @@ export const HomePage = () => {
                     </button>
                 </div>
 
-                {profilesError && <div className="alert error">{profilesError}</div>}
+                {profilesErrorMessage && (
+                    <QueryState
+                        variant="error"
+                        title="Не удалось загрузить профили"
+                        description={profilesErrorMessage}
+                        actionLabel="Повторить"
+                        onAction={() => profilesQuery.refetch()}
+                    />
+                )}
 
-                {profilesLoading && profiles.length === 0 ? (
-                    <div className="empty-state">Загружаем профили...</div>
-                ) : (
+                {profilesLoading && profiles.length === 0 && (
+                    <QueryState
+                        variant="loading"
+                        title="Загружаем профили"
+                        description="Синхронизируем ваши языки и прогресс."
+                    />
+                )}
+
+                {!profilesLoading && profiles.length === 0 && !profilesErrorMessage && (
+                    <QueryState
+                        variant="empty"
+                        title="Пока нет профилей"
+                        description="Создайте первый профиль, чтобы начать занятия."
+                        actionLabel="Создать профиль"
+                        onAction={toggleProfileForm}
+                    />
+                )}
+
+                {profiles.length > 0 && (
                     <ul className="profile-list">
                         {profiles.map((profile) => (
                             <li
@@ -376,7 +342,10 @@ export const HomePage = () => {
                                     </span>
                                     <button
                                         type="button"
-                                        disabled={profile.id === profileId}
+                                        disabled={
+                                            profile.id === profileId ||
+                                            activateProfileMutation.isPending
+                                        }
                                         onClick={() => handleActivateProfile(profile.id)}
                                     >
                                         {profile.id === profileId ? 'Активный' : 'Сделать активным'}
@@ -384,12 +353,6 @@ export const HomePage = () => {
                                 </div>
                             </li>
                         ))}
-
-                        {!profilesLoading && profiles.length === 0 && (
-                            <li className="profile-card empty">
-                                <p>У вас пока нет профилей. Создайте первый, чтобы начать.</p>
-                            </li>
-                        )}
                     </ul>
                 )}
 
@@ -526,29 +489,51 @@ export const HomePage = () => {
                         </strong>
                     </div>
                 )}
-                {historyError && <div className="alert warning">{historyError}</div>}
+                {historyErrorMessage && (
+                    <QueryState
+                        variant="error"
+                        title="Не удалось загрузить сообщения"
+                        description={historyErrorMessage}
+                        actionLabel="Обновить"
+                        onAction={() => chatHistoryQuery.refetch()}
+                    />
+                )}
                 {formError && <div className="alert error">{formError}</div>}
 
                 <div className="chat-history">
-                    {pagination?.has_more && profileId && (
+                    {profileId && isInitialHistoryLoading && (
+                        <QueryState
+                            variant="loading"
+                            title="Загружаем историю"
+                            description="Собираем диалог с ассистентом..."
+                        />
+                    )}
+
+                    {chatHistoryQuery.hasNextPage && profileId && (
                         <button
                             type="button"
                             className="load-more"
-                            disabled={isLoadingHistory}
+                            disabled={isFetchingMoreHistory}
                             onClick={handleLoadOlder}
                         >
-                            {isLoadingHistory ? 'Загружаем...' : 'Показать более ранние'}
+                            {isFetchingMoreHistory ? 'Загружаем...' : 'Показать более ранние'}
                         </button>
                     )}
 
                     {!profileId ? (
-                        <div className="empty-state">
-                            Сначала создайте профиль, чтобы начать диалог с преподавателем.
-                        </div>
-                    ) : formattedMessages.length === 0 && !isLoadingHistory ? (
-                        <div className="empty-state">
-                            <p>История пока пустая. Задайте первый вопрос ассистенту!</p>
-                        </div>
+                        <QueryState
+                            variant="empty"
+                            title="Нет активного профиля"
+                            description="Сначала создайте и активируйте профиль, чтобы начать диалог."
+                            actionLabel="Создать профиль"
+                            onAction={toggleProfileForm}
+                        />
+                    ) : formattedMessages.length === 0 && !isFetchingHistory ? (
+                        <QueryState
+                            variant="empty"
+                            title="История пока пустая"
+                            description="Задайте первый вопрос ассистенту, чтобы начать диалог."
+                        />
                     ) : (
                         formattedMessages.map((message) => (
                             <div key={message.id} className={`message ${message.role}`}>

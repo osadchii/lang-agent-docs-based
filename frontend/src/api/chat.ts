@@ -2,7 +2,7 @@ import { httpClient } from './httpClient';
 import type { ChatHistoryResponse, ChatRequestPayload, ChatResponse } from '../types/api';
 
 interface HistoryParams {
-    profileId?: string;
+    profileId: string;
     limit?: number;
     offset?: number;
 }
@@ -16,10 +16,10 @@ export async function sendChatMessage(payload: ChatRequestPayload): Promise<Chat
 }
 
 export async function fetchChatHistory(params: HistoryParams): Promise<ChatHistoryResponse> {
-    const query: Record<string, number | string> = {};
-    if (params.profileId) {
-        query.profile_id = params.profileId;
-    }
+    const query: Record<string, number | string> = {
+        profile_id: params.profileId,
+    };
+
     if (typeof params.limit === 'number') {
         query.limit = params.limit;
     }

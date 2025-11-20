@@ -225,7 +225,7 @@ rontend/Dockerfile) публикуется в GHCR, Docker Compose тянет FR
   - Поддержка Telegram BackButton/MainButton/Haptics (см. `docs/backend-telegram.md` и `docs/frontend-structure.md`)
   - Acceptance: переходы между разделами стабильны, BackButton синхронизирован с историей
 
-- [ ] **42) API‑клиент и состояние**
+- [x] **42) API‑клиент и состояние**
   - Axios с интерсепторами (JWT + refresh при необходимости), React Query, типы API (TS)
   - ErrorBoundary, глобальные заглушки загрузки/ошибок, стратегия кэширования и инвалидации
   - Acceptance: все запросы централизованно конфигурируются, стандартные ошибки отображаются единообразно

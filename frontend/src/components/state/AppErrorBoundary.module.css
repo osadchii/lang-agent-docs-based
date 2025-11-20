@@ -1,0 +1,93 @@
+.wrapper {
+    min-height: 100vh;
+    padding: 32px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+        radial-gradient(circle at 20% 20%, rgba(255, 107, 53, 0.12), transparent 40%),
+        radial-gradient(circle at 80% 10%, rgba(181, 101, 232, 0.12), transparent 35%), #0a0e27;
+    color: #f7f8ff;
+    text-align: center;
+}
+
+.card {
+    max-width: 520px;
+    padding: 28px 24px;
+    background: rgba(26, 29, 53, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(8px);
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: linear-gradient(120deg, rgba(255, 107, 53, 0.25), rgba(255, 94, 120, 0.28));
+    color: #ffc6d6;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+.title {
+    margin: 16px 0 10px;
+    font-size: 26px;
+    line-height: 1.2;
+    color: #ffffff;
+}
+
+.description {
+    margin: 0 0 14px;
+    color: #c2c6d9;
+    line-height: 1.5;
+}
+
+.errorText {
+    display: block;
+    margin: 0 auto 16px;
+    padding: 12px;
+    width: fit-content;
+    max-width: 100%;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    font-size: 13px;
+    color: #ffb3c0;
+    text-align: left;
+}
+
+.reloadButton {
+    border: none;
+    outline: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 18px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 15px;
+    color: #0a0e27;
+    background: linear-gradient(120deg, #ff6b35, #ff5e78);
+    box-shadow: 0 10px 30px rgba(255, 107, 53, 0.35);
+    transition:
+        transform 120ms ease,
+        box-shadow 120ms ease;
+}
+
+.reloadButton:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 36px rgba(255, 107, 53, 0.45);
+}
+
+.reloadButton:active {
+    transform: translateY(0);
+    box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
+}

@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { validateInitData } from '../api/auth';
-import { setAuthToken } from '../api/httpClient';
+import { setAuthToken, setTokenRefresher, setUnauthorizedHandler } from '../api/httpClient';
 import type { ApiUser } from '../types/api';
 
 type AuthStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -18,6 +18,31 @@ export const useAuth = (initData: string | null): UseAuthResult => {
     const [token, setToken] = useState<string | null>(null);
     const [status, setStatus] = useState<AuthStatus>('idle');
     const [error, setError] = useState<string | null>(null);
+    const mountedRef = useRef(true);
+
+    useEffect(() => {
+        return () => {
+            mountedRef.current = false;
+        };
+    }, []);
+
+    const refreshSession = useCallback(async (): Promise<string | null> => {
+        if (!initData) {
+            return null;
+        }
+
+        const response = await validateInitData(initData);
+
+        if (!mountedRef.current) {
+            return response.token;
+        }
+
+        setUser(response.user);
+        setToken(response.token);
+        setAuthToken(response.token);
+
+        return response.token;
+    }, [initData]);
 
     useEffect(() => {
         if (!initData) {
@@ -31,20 +56,16 @@ export const useAuth = (initData: string | null): UseAuthResult => {
             setError(null);
 
             try {
-                const response = await validateInitData(initData);
-                if (isCancelled) {
-                    return;
+                await refreshSession();
+                if (!isCancelled) {
+                    setStatus('success');
                 }
-
-                setUser(response.user);
-                setToken(response.token);
-                setAuthToken(response.token);
-                setStatus('success');
             } catch (err) {
                 console.error('Auth failed', err);
                 if (isCancelled) {
                     return;
                 }
+                setAuthToken(null);
                 setError('Не удалось авторизоваться. Попробуйте открыть Mini App заново.');
                 setStatus('error');
             }
@@ -55,7 +76,26 @@ export const useAuth = (initData: string | null): UseAuthResult => {
         return () => {
             isCancelled = true;
         };
-    }, [initData]);
+    }, [initData, refreshSession]);
+
+    useEffect(() => {
+        setTokenRefresher(initData ? () => refreshSession() : null);
+        setUnauthorizedHandler(() => {
+            if (!mountedRef.current) {
+                return;
+            }
+            setStatus('error');
+            setError('Сессия истекла. Откройте Mini App заново, чтобы продолжить.');
+            setUser(null);
+            setToken(null);
+            setAuthToken(null);
+        });
+
+        return () => {
+            setTokenRefresher(null);
+            setUnauthorizedHandler(null);
+        };
+    }, [initData, refreshSession]);
 
     return useMemo(
         () => ({
