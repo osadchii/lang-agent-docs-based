@@ -1,4 +1,4 @@
-import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosHeaders, type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { toApiError } from './errors';
 
 declare module 'axios' {
@@ -66,14 +66,14 @@ export const httpClient = axios.create({
 
 httpClient.interceptors.request.use((config) => {
     const nextConfig = { ...config };
-    if (!nextConfig.headers) {
-        nextConfig.headers = {};
-    }
+    const headers = new AxiosHeaders(nextConfig.headers ?? {});
+
     if (authToken && !nextConfig.skipAuth) {
-        nextConfig.headers.Authorization = `Bearer ${authToken}`;
+        headers.Authorization = `Bearer ${authToken}`;
     }
-    const headers = nextConfig.headers as Record<string, string>;
     headers.Accept = headers.Accept ?? 'application/json';
+
+    nextConfig.headers = headers;
     return nextConfig;
 });
 
