@@ -3,16 +3,16 @@ import { AppFrame } from '../components/layout/AppFrame/AppFrame';
 import { OnboardingLayout } from '../components/layout/OnboardingLayout/OnboardingLayout';
 import { PracticeLayout } from '../components/layout/PracticeLayout/PracticeLayout';
 import { RootLayout } from '../components/layout/RootLayout/RootLayout';
-import { AuthGuard } from './guards';
+import { AuthGuard, OnboardingCompletedRedirect } from './guards';
 import type { AppRouteHandle } from './types';
 import { ErrorPage } from '../pages/Error/ErrorPage';
 import { GroupsPage } from '../pages/Groups/GroupsPage';
 import { HomePage } from '../pages/Home/HomePage';
-import { OnboardingCurrentLevelStep } from '../pages/Onboarding/OnboardingCurrentLevelStep';
-import { OnboardingGoalStep } from '../pages/Onboarding/OnboardingGoalStep';
+import { OnboardingGoalsStep } from '../pages/Onboarding/OnboardingGoalsStep';
 import { OnboardingInterfaceStep } from '../pages/Onboarding/OnboardingInterfaceStep';
 import { OnboardingLanguageStep } from '../pages/Onboarding/OnboardingLanguageStep';
-import { OnboardingTargetStep } from '../pages/Onboarding/OnboardingTargetStep';
+import { OnboardingLevelsStep } from '../pages/Onboarding/OnboardingLevelsStep';
+import { OnboardingWelcomeStep } from '../pages/Onboarding/OnboardingWelcomeStep';
 import { CardSessionPage } from '../pages/Practice/CardSessionPage';
 import { CardsPage } from '../pages/Practice/CardsPage';
 import { ExerciseSessionPage } from '../pages/Practice/ExerciseSessionPage';
@@ -93,7 +93,11 @@ export const router = createBrowserRouter([
                     },
                     {
                         path: 'onboarding',
-                        element: <OnboardingLayout />,
+                        element: (
+                            <OnboardingCompletedRedirect>
+                                <OnboardingLayout />
+                            </OnboardingCompletedRedirect>
+                        ),
                         handle: {
                             hideBottomNav: true,
                             hideBackButton: true,
@@ -101,12 +105,12 @@ export const router = createBrowserRouter([
                         children: [
                             {
                                 index: true,
-                                element: <Navigate to="/onboarding/language" replace />,
+                                element: <Navigate to="/onboarding/welcome" replace />,
                             },
+                            { path: 'welcome', element: <OnboardingWelcomeStep /> },
                             { path: 'language', element: <OnboardingLanguageStep /> },
-                            { path: 'current', element: <OnboardingCurrentLevelStep /> },
-                            { path: 'target', element: <OnboardingTargetStep /> },
-                            { path: 'goal', element: <OnboardingGoalStep /> },
+                            { path: 'levels', element: <OnboardingLevelsStep /> },
+                            { path: 'goals', element: <OnboardingGoalsStep /> },
                             { path: 'interface', element: <OnboardingInterfaceStep /> },
                         ],
                     },

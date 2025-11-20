@@ -34,3 +34,98 @@
     flex-wrap: wrap;
     align-items: center;
 }
+
+.levelsGrid {
+    display: grid;
+    gap: 16px;
+}
+
+.levelGroup {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 126, 94, 0.18);
+    background: rgba(255, 126, 94, 0.06);
+}
+
+.sectionHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    color: var(--color-text-secondary);
+    font-weight: 700;
+}
+
+.checklist {
+    display: grid;
+    gap: 12px;
+}
+
+.checklistItem {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    align-items: center;
+}
+
+.checkIcon {
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--gradient-accent);
+    color: #0b0d20;
+    font-weight: 900;
+    box-shadow: 0 10px 24px rgba(255, 122, 60, 0.3);
+}
+
+.checkTitle {
+    font-weight: 800;
+}
+
+.checkNote {
+    color: var(--color-text-secondary);
+}
+
+.summaryCard {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 14px;
+    background: rgba(141, 139, 255, 0.06);
+    border: 1px solid rgba(141, 139, 255, 0.18);
+}
+
+.summaryList {
+    display: grid;
+    gap: 8px;
+}
+
+.summaryList dt {
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin: 0;
+}
+
+.summaryList dd {
+    margin: 0;
+    font-weight: 800;
+}
+
+.error {
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 107, 53, 0.3);
+    background: rgba(255, 107, 53, 0.08);
+    color: #ffb199;
+    font-weight: 700;
+}

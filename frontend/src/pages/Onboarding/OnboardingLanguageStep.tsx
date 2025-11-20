@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Badge, Button } from '../../components/ui';
 import { OnboardingStep } from './OnboardingStep';
 import { useOnboardingFlow } from './useOnboardingFlow';
@@ -12,8 +11,8 @@ const languages = [
 ];
 
 export const OnboardingLanguageStep = () => {
-    const { goNext } = useOnboardingFlow();
-    const [selected, setSelected] = useState<string>('en');
+    const { goNext, form, updateField, submitting } = useOnboardingFlow();
+    const selected = form.language;
 
     return (
         <OnboardingStep
@@ -22,7 +21,9 @@ export const OnboardingLanguageStep = () => {
             actions={
                 <>
                     <Badge variant="info">Можно поменять позже</Badge>
-                    <Button onClick={goNext}>Дальше</Button>
+                    <Button onClick={goNext} disabled={submitting}>
+                        Дальше
+                    </Button>
                 </>
             }
         >
@@ -33,7 +34,8 @@ export const OnboardingLanguageStep = () => {
                         variant={selected === language.id ? 'secondary' : 'ghost'}
                         className={styles.optionButton}
                         fullWidth
-                        onClick={() => setSelected(language.id)}
+                        onClick={() => updateField('language', language.id)}
+                        disabled={submitting}
                     >
                         {language.label}
                         {selected === language.id && <span aria-hidden>✓</span>}

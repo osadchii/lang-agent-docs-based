@@ -67,15 +67,24 @@ export const AuthGuard = () => {
 };
 
 export const OnboardingGuard = ({ children }: PropsWithChildren) => {
-    const { completed } = useOnboarding();
+    const { completed, checking } = useOnboarding();
     const location = useLocation();
     const navigate = useNavigate();
 
     useEffect(() => {
-        if (!completed && !location.pathname.startsWith('/onboarding')) {
+        if (!checking && !completed && !location.pathname.startsWith('/onboarding')) {
             navigate('/onboarding', { replace: true, state: { from: location.pathname } });
         }
-    }, [completed, location.pathname, navigate]);
+    }, [checking, completed, location.pathname, navigate]);
+
+    if (checking) {
+        return (
+            <GuardState
+                title="Проверяем профиль"
+                description="Синхронизируем прогресс и настройки"
+            />
+        );
+    }
 
     if (!completed && !location.pathname.startsWith('/onboarding')) {
         return null;
@@ -88,11 +97,24 @@ export const OnboardingGuard = ({ children }: PropsWithChildren) => {
     return <Outlet />;
 };
 
-export const OnboardingCompletedRedirect = () => {
-    const { completed } = useOnboarding();
+export const OnboardingCompletedRedirect = ({ children }: PropsWithChildren) => {
+    const { completed, checking } = useOnboarding();
+
+    if (checking) {
+        return (
+            <GuardState
+                title="Проверяем профиль"
+                description="Синхронизируем прогресс и настройки"
+            />
+        );
+    }
 
     if (completed) {
         return <Navigate to="/" replace />;
+    }
+
+    if (children) {
+        return <>{children}</>;
     }
 
     return <Outlet />;

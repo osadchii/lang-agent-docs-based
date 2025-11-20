@@ -137,12 +137,12 @@
 
 ```
 /                          → Home (главный экран)
-/onboarding               → Онбординг (5 шагов)
-  /onboarding/language    → Шаг 1: выбор языка
-  /onboarding/current     → Шаг 2: текущий уровень
-  /onboarding/target      → Шаг 3: целевой уровень
-  /onboarding/goal        → Шаг 4: цель изучения
-  /onboarding/interface   → Шаг 5: язык интерфейса
+/onboarding                → Онбординг (5 шагов)
+  /onboarding/welcome      → Шаг 1: приветствие
+  /onboarding/language     → Шаг 2: выбор языка
+  /onboarding/levels       → Шаг 3: текущий и целевой уровень
+  /onboarding/goals        → Шаг 4: цели и фокус
+  /onboarding/interface    → Шаг 5: язык интерфейса
 
 /practice                 → Практика (redirect to /practice/cards)
   /practice/cards         → Карточки (tab: Учить | Колоды)
