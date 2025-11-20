@@ -37,7 +37,7 @@ export const CardsPage = () => {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const toast = useToast();
-    const { selectionChanged, notify } = useHapticFeedback();
+    const { selectionChanged } = useHapticFeedback();
 
     const [tab, setTab] = useState<TabId>('study');
     const [addModalOpen, setAddModalOpen] = useState(false);
@@ -179,7 +179,7 @@ export const CardsPage = () => {
                             <Button
                                 variant="secondary"
                                 onClick={() => {
-                                    notify('selection');
+                                    selectionChanged();
                                     setAddModalOpen(true);
                                 }}
                             >
@@ -225,7 +225,7 @@ export const CardsPage = () => {
                                         <div className={styles.deckName}>{item.word}</div>
                                         <div className={styles.caption}>{item.translation}</div>
                                     </div>
-                                    <Badge variant="secondary">{statusLabel(item.status)}</Badge>
+                                    <Badge variant="info">{statusLabel(item.status)}</Badge>
                                 </div>
                             ))}
                         </div>
@@ -275,7 +275,7 @@ export const CardsPage = () => {
                             <div className={styles.deckFooter}>
                                 <Badge variant="info">Новых: {item.new_cards_count}</Badge>
                                 <Badge variant="warning">Сегодня: {item.due_cards_count}</Badge>
-                                {item.is_group && <Badge variant="secondary">Групповая</Badge>}
+                                {item.is_group && <Badge variant="info">Групповая</Badge>}
                             </div>
                         }
                     >
