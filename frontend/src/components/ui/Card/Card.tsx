@@ -4,7 +4,7 @@ import styles from './Card.module.css';
 
 type CardPadding = 'none' | 'sm' | 'md' | 'lg';
 
-export interface CardProps extends HTMLAttributes<HTMLDivElement> {
+export interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
     padding?: CardPadding;
     interactive?: boolean;
     elevated?: boolean;

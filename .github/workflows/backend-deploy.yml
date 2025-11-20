@@ -129,6 +129,9 @@ jobs:
     permissions:
       contents: read
       packages: write
+    env:
+      TELEGRAM_DEPLOY_CHAT_ID: ${{ secrets.TELEGRAM_DEPLOY_CHAT_ID }}
+      CI_BOT_TOKEN: ${{ secrets.CI_BOT_TOKEN }}
 
     steps:
       - name: Checkout repository
@@ -165,6 +168,21 @@ jobs:
           build-args: |
             VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}
             VITE_ENVIRONMENT=production
+
+      - name: Notify Telegram about failed frontend Docker build
+        if: ${{ failure() && env.TELEGRAM_DEPLOY_CHAT_ID != '' && env.CI_BOT_TOKEN != '' }}
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ env.TELEGRAM_DEPLOY_CHAT_ID }}
+          token: ${{ env.CI_BOT_TOKEN }}
+          message: |
+            ❌ Frontend Docker build failed in ${{ github.workflow }} #${{ github.run_number }}
+
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+
+            Details: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
   build-and-push:
     needs:
