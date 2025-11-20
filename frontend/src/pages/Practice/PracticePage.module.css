@@ -1,0 +1,72 @@
+.section {
+    display: grid;
+    gap: 10px;
+    padding: 10px 0;
+}
+
+.sectionTitle {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--color-text-primary);
+}
+
+.muted {
+    color: var(--color-text-secondary);
+    font-size: 14px;
+}
+
+.grid {
+    display: grid;
+    gap: 10px;
+}
+
+.deckCard {
+    display: grid;
+    gap: 8px;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.pill {
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--color-text-secondary);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.sessionBox {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 16px;
+    background: linear-gradient(145deg, rgba(255, 122, 60, 0.14), rgba(141, 139, 255, 0.08));
+    border: 1px solid rgba(255, 122, 60, 0.25);
+    box-shadow: var(--shadow-soft);
+}
+
+.controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.ratingRow {
+    display: flex;
+    gap: 8px;
+}
+
+.chip {
+    border-radius: 12px;
+    border: 1px dashed rgba(255, 255, 255, 0.16);
+    padding: 6px 10px;
+    color: var(--color-text-secondary);
+    font-size: 13px;
+}

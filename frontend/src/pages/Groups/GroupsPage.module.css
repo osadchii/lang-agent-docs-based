@@ -1,0 +1,26 @@
+.screen {
+    display: grid;
+    gap: 12px;
+    padding: 8px 0 20px;
+}
+
+.headerRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.title {
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.muted {
+    color: var(--color-text-secondary);
+}
+
+.grid {
+    display: grid;
+    gap: 10px;
+}

@@ -1,0 +1,64 @@
+.guardState {
+    display: grid;
+    gap: 8px;
+    align-items: center;
+    padding: 20px;
+    border-radius: 16px;
+    background: linear-gradient(145deg, rgba(255, 121, 60, 0.08), rgba(141, 139, 255, 0.05));
+    border: 1px solid rgba(255, 126, 94, 0.2);
+    box-shadow: var(--shadow-soft);
+    color: var(--color-text-primary);
+}
+
+.guardState .title {
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.guardState .subtitle {
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    margin-top: 4px;
+}
+
+.spinner {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 126, 94, 0.3);
+    border-top-color: var(--color-accent-strong);
+    animation: spin 1s linear infinite;
+}
+
+.retryButton {
+    justify-self: start;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: none;
+    background: var(--gradient-accent);
+    color: var(--color-text-inverted);
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+        transform 0.12s ease,
+        box-shadow 0.12s ease;
+}
+
+.retryButton:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-medium);
+}
+
+.error {
+    border-color: rgba(255, 123, 112, 0.45);
+    background: linear-gradient(145deg, rgba(255, 123, 112, 0.12), rgba(17, 26, 61, 0.7));
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}

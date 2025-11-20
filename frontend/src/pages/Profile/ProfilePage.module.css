@@ -1,0 +1,25 @@
+.screen {
+    display: grid;
+    gap: 12px;
+    padding: 8px 0 20px;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.title {
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.muted {
+    color: var(--color-text-secondary);
+}
+
+.cardGrid {
+    display: grid;
+    gap: 10px;
+}

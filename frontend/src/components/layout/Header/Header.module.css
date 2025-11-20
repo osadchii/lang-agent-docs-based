@@ -1,0 +1,62 @@
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 4px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: linear-gradient(180deg, rgba(9, 15, 39, 0.95), rgba(9, 15, 39, 0.75));
+    backdrop-filter: blur(12px);
+}
+
+.dense {
+    padding: 10px 0;
+}
+
+.left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.title {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+}
+
+.subtitle {
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    margin-top: 2px;
+}
+
+.back {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 126, 94, 0.35);
+    background: linear-gradient(145deg, rgba(255, 122, 60, 0.18), rgba(17, 26, 61, 0.7));
+    color: var(--color-text-primary);
+    font-weight: 800;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45);
+    transition:
+        transform 0.12s ease,
+        box-shadow 0.12s ease;
+}
+
+.back:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.5);
+}
+
+.actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}

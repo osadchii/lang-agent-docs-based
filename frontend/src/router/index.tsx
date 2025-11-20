@@ -1,29 +1,119 @@
-/**
- * React Router configuration
- * Defines all routes for the Mini App
- */
-
-import { createBrowserRouter } from 'react-router-dom';
-import { HomePage } from '../pages/Home/HomePage';
+import { Navigate, createBrowserRouter } from 'react-router-dom';
+import { AppFrame } from '../components/layout/AppFrame/AppFrame';
+import { OnboardingLayout } from '../components/layout/OnboardingLayout/OnboardingLayout';
+import { PracticeLayout } from '../components/layout/PracticeLayout/PracticeLayout';
+import { RootLayout } from '../components/layout/RootLayout/RootLayout';
+import { AuthGuard } from './guards';
+import type { AppRouteHandle } from './types';
 import { ErrorPage } from '../pages/Error/ErrorPage';
+import { GroupsPage } from '../pages/Groups/GroupsPage';
+import { HomePage } from '../pages/Home/HomePage';
+import { OnboardingCurrentLevelStep } from '../pages/Onboarding/OnboardingCurrentLevelStep';
+import { OnboardingGoalStep } from '../pages/Onboarding/OnboardingGoalStep';
+import { OnboardingInterfaceStep } from '../pages/Onboarding/OnboardingInterfaceStep';
+import { OnboardingLanguageStep } from '../pages/Onboarding/OnboardingLanguageStep';
+import { OnboardingTargetStep } from '../pages/Onboarding/OnboardingTargetStep';
+import { CardSessionPage } from '../pages/Practice/CardSessionPage';
+import { CardsPage } from '../pages/Practice/CardsPage';
+import { ExerciseSessionPage } from '../pages/Practice/ExerciseSessionPage';
+import { ExercisesPage } from '../pages/Practice/ExercisesPage';
+import { ProfilePage } from '../pages/Profile/ProfilePage';
 import { UiKitPage } from '../pages/UiKit/UiKitPage';
 
 export const router = createBrowserRouter([
     {
         path: '/',
-        element: <HomePage />,
+        element: <AppFrame />,
         errorElement: <ErrorPage />,
+        children: [
+            {
+                element: <AuthGuard />,
+                children: [
+                    {
+                        element: <RootLayout />,
+                        children: [
+                            { index: true, element: <HomePage /> },
+                            {
+                                path: 'practice',
+                                element: (
+                                    <PracticeLayout
+                                        title="Практика"
+                                        subtitle="Карточки и упражнения"
+                                        tabs={[
+                                            { id: 'cards', label: 'Карточки', icon: '🃏' },
+                                            { id: 'exercises', label: 'Упражнения', icon: '🧠' },
+                                        ]}
+                                    />
+                                ),
+                                children: [
+                                    {
+                                        index: true,
+                                        element: <Navigate to="/practice/cards" replace />,
+                                    },
+                                    { path: 'cards', element: <CardsPage /> },
+                                    { path: 'exercises', element: <ExercisesPage /> },
+                                    {
+                                        path: 'cards/study',
+                                        element: (
+                                            <PracticeLayout
+                                                title="Сессия карточек"
+                                                subtitle="Полноэкранный режим без BottomNav"
+                                                backTo="/practice/cards"
+                                                fullHeight
+                                            >
+                                                <CardSessionPage />
+                                            </PracticeLayout>
+                                        ),
+                                        handle: { hideBottomNav: true } satisfies AppRouteHandle,
+                                    },
+                                    {
+                                        path: 'exercises/session',
+                                        element: (
+                                            <PracticeLayout
+                                                title="Сессия упражнений"
+                                                subtitle="Отвечайте, мы дадим фидбек"
+                                                backTo="/practice/exercises"
+                                                fullHeight
+                                            >
+                                                <ExerciseSessionPage />
+                                            </PracticeLayout>
+                                        ),
+                                        handle: { hideBottomNav: true } satisfies AppRouteHandle,
+                                    },
+                                ],
+                            },
+                            { path: 'groups', element: <GroupsPage /> },
+                            { path: 'profile', element: <ProfilePage /> },
+                            {
+                                path: 'ui-kit',
+                                element: <UiKitPage />,
+                                handle: { hideBottomNav: true } satisfies AppRouteHandle,
+                            },
+                        ],
+                    },
+                    {
+                        path: 'onboarding',
+                        element: <OnboardingLayout />,
+                        handle: {
+                            hideBottomNav: true,
+                            hideBackButton: true,
+                        } satisfies AppRouteHandle,
+                        children: [
+                            {
+                                index: true,
+                                element: <Navigate to="/onboarding/language" replace />,
+                            },
+                            { path: 'language', element: <OnboardingLanguageStep /> },
+                            { path: 'current', element: <OnboardingCurrentLevelStep /> },
+                            { path: 'target', element: <OnboardingTargetStep /> },
+                            { path: 'goal', element: <OnboardingGoalStep /> },
+                            { path: 'interface', element: <OnboardingInterfaceStep /> },
+                        ],
+                    },
+                    { path: 'error', element: <ErrorPage /> },
+                ],
+            },
+        ],
     },
-    {
-        path: '/error',
-        element: <ErrorPage />,
-    },
-    {
-        path: '/ui-kit',
-        element: <UiKitPage />,
-    },
-    {
-        path: '*',
-        element: <ErrorPage />,
-    },
+    { path: '*', element: <ErrorPage /> },
 ]);

@@ -220,7 +220,7 @@ rontend/Dockerfile) публикуется в GHCR, Docker Compose тянет FR
   - Интеграция темы Telegram WebApp (светлая/тёмная), адаптивные шрифты и отступы
   - Acceptance: библиотека UI компонентов покрывает основные экраны; переключение темы работает
 
-- [ ] **41) Навигация и лэйауты**
+- [x] **41) Навигация и лэйауты**
   - Routing, BottomNav, Header, TabBar; RootLayout/PracticeLayout/OnboardingLayout; guards для маршрутов
   - Поддержка Telegram BackButton/MainButton/Haptics (см. `docs/backend-telegram.md` и `docs/frontend-structure.md`)
   - Acceptance: переходы между разделами стабильны, BackButton синхронизирован с историей

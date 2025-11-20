@@ -1,0 +1,16 @@
+.shell {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background:
+        radial-gradient(120% 120% at 12% 8%, rgba(255, 126, 94, 0.12), transparent),
+        radial-gradient(120% 120% at 85% 15%, rgba(141, 139, 255, 0.1), transparent),
+        linear-gradient(190deg, var(--color-bg-primary), var(--color-bg-secondary));
+}
+
+.inner {
+    flex: 1;
+    width: min(840px, 100%);
+    margin: 0 auto;
+    padding: 10px 14px 18px;
+}

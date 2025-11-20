@@ -2,7 +2,7 @@ import { type FormEvent, useCallback, useEffect, useMemo, useState } from 'react
 import { Link } from 'react-router-dom';
 import { fetchChatHistory, sendChatMessage } from '../../api/chat';
 import { activateProfile, createProfile, fetchProfiles } from '../../api/profiles';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuthContext } from '../../providers/AuthProvider';
 import { useTelegram } from '../../hooks/useTelegram';
 import type {
     CEFRLevel,
@@ -63,8 +63,8 @@ const extractErrorMessage = (error: unknown): string => {
 };
 
 export const HomePage = () => {
-    const { user: telegramUser, platform, colorScheme, isReady, initData } = useTelegram();
-    const { user, status: authStatus, error: authError } = useAuth(initData);
+    const { user: telegramUser, platform, colorScheme, isReady } = useTelegram();
+    const { user, status: authStatus, error: authError, isAuthenticated } = useAuthContext();
 
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [pagination, setPagination] = useState<PaginationMeta | null>(null);
@@ -95,7 +95,7 @@ export const HomePage = () => {
     }));
 
     const username = user?.first_name ?? telegramUser?.first_name ?? 'друг';
-    const isAuthReady = authStatus === 'success';
+    const isAuthReady = authStatus === 'success' || isAuthenticated;
     const isInitialLoading = !isReady || authStatus === 'idle' || authStatus === 'loading';
     const activeProfile = useMemo(
         () => profiles.find((profile) => profile.id === profileId) ?? null,

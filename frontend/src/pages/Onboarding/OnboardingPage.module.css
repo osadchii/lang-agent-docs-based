@@ -1,0 +1,36 @@
+.card {
+    padding: 16px;
+    border-radius: 18px;
+    background: linear-gradient(145deg, rgba(255, 122, 60, 0.14), rgba(141, 139, 255, 0.1));
+    border: 1px solid rgba(255, 126, 94, 0.2);
+    display: grid;
+    gap: 12px;
+    box-shadow: var(--shadow-soft);
+}
+
+.title {
+    font-size: 18px;
+    font-weight: 800;
+}
+
+.description {
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+}
+
+.options {
+    display: grid;
+    gap: 8px;
+}
+
+.optionButton {
+    width: 100%;
+    justify-content: space-between;
+}
+
+.footActions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+}

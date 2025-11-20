@@ -1,0 +1,47 @@
+.tabBar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    align-items: center;
+    gap: 10px;
+    padding: 10px 4px 2px;
+}
+
+.tab {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 126, 94, 0.16);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--color-text-secondary);
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+        transform 0.12s ease,
+        box-shadow 0.18s ease,
+        color 0.18s ease,
+        border-color 0.18s ease,
+        background 0.18s ease;
+}
+
+.tab:hover {
+    transform: translateY(-1px);
+}
+
+.tab:active {
+    transform: translateY(0);
+}
+
+.active {
+    color: var(--color-text-primary);
+    background: linear-gradient(145deg, rgba(255, 122, 60, 0.22), rgba(141, 139, 255, 0.16));
+    border-color: rgba(255, 122, 60, 0.6);
+    box-shadow: 0 14px 24px rgba(0, 0, 0, 0.45);
+}
+
+.icon {
+    font-size: 16px;
+}
